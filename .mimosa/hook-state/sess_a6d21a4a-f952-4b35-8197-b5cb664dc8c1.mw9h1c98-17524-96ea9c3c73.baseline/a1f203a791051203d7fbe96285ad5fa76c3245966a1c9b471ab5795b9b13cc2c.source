@@ -1,0 +1,154 @@
+import {
+  limitToLast,
+  onValue,
+  orderByChild,
+  query,
+  ref,
+  runTransaction,
+  serverTimestamp,
+} from 'firebase/database'
+import { database } from './firebase.js'
+
+const REVIEW_EVENTS_KEY = 'kognit_leaderboard_review_events'
+const pendingEvents = new Set()
+
+export const XP_BY_QUALITY = Object.freeze([2, 4, 6, 8, 10, 12])
+export const XP_PER_LEVEL = 100
+
+function requireEventId(eventId) {
+  if (typeof eventId !== 'string' || !eventId.trim() || eventId.length > 200) {
+    throw new TypeError('eventId must be a non-empty string of at most 200 characters')
+  }
+  return eventId.trim()
+}
+
+function cleanProfileString(value, maxLength) {
+  return Array.from(String(value ?? ''))
+    .filter((character) => character.charCodeAt(0) >= 32)
+    .join('')
+    .trim()
+    .slice(0, maxLength)
+}
+
+function idempotencyKey(uid, eventId) {
+  return `${uid}:${eventId}`
+}
+
+function readSubmittedEvents() {
+  if (typeof localStorage === 'undefined') return []
+
+  try {
+    const parsed = JSON.parse(localStorage.getItem(REVIEW_EVENTS_KEY) || '[]')
+    return Array.isArray(parsed) ? parsed.filter((item) => typeof item === 'string') : []
+  } catch {
+    return []
+  }
+}
+
+function hasSubmitted(key) {
+  return readSubmittedEvents().includes(key)
+}
+
+function markSubmitted(key) {
+  if (typeof localStorage === 'undefined') return
+  const events = readSubmittedEvents().filter((item) => item !== key)
+  events.push(key)
+  localStorage.setItem(REVIEW_EVENTS_KEY, JSON.stringify(events.slice(-2000)))
+}
+
+export function getReviewXp(quality) {
+  const parsedQuality = Number(quality)
+  if (!Number.isInteger(parsedQuality) || parsedQuality < 0 || parsedQuality > 5) {
+    throw new RangeError('quality must be an integer from 0 to 5')
+  }
+  return XP_BY_QUALITY[parsedQuality]
+}
+
+export function getLevelFromXp(xp) {
+  const normalizedXp = Math.max(0, Math.trunc(Number(xp) || 0))
+  return Math.floor(normalizedXp / XP_PER_LEVEL) + 1
+}
+
+export function getLevelProgress(xp) {
+  const normalizedXp = Math.max(0, Math.trunc(Number(xp) || 0))
+  return {
+    level: getLevelFromXp(normalizedXp),
+    current: normalizedXp % XP_PER_LEVEL,
+    required: XP_PER_LEVEL,
+  }
+}
+
+export async function awardReviewXp(user, eventId, quality) {
+  if (!user || typeof user.uid !== 'string' || !user.uid) {
+    throw new TypeError('An authenticated user is required')
+  }
+
+  const normalizedEventId = requireEventId(eventId)
+  const key = idempotencyKey(user.uid, normalizedEventId)
+  const xpAwarded = getReviewXp(quality)
+
+  if (hasSubmitted(key) || pendingEvents.has(key)) {
+    return { awarded: false, xpAwarded: 0, reason: 'duplicate' }
+  }
+
+  pendingEvents.add(key)
+  try {
+    const leaderboardRef = ref(database, `leaderboard/${user.uid}`)
+    const result = await runTransaction(leaderboardRef, (current) => {
+      const currentXp = Number.isSafeInteger(current?.xp) && current.xp >= 0 ? current.xp : 0
+      const currentReviews =
+        Number.isSafeInteger(current?.reviews) && current.reviews >= 0 ? current.reviews : 0
+
+      return {
+        uid: user.uid,
+        displayName: cleanProfileString(user.displayName || 'Anonymous learner', 80),
+        photoURL: '',
+        xp: currentXp + xpAwarded,
+        reviews: currentReviews + 1,
+        lastReviewAt: serverTimestamp(),
+      }
+    })
+
+    if (!result.committed) {
+      throw new Error('The Study XP transaction was not committed')
+    }
+
+    markSubmitted(key)
+    return {
+      awarded: true,
+      xpAwarded,
+      record: result.snapshot.val(),
+    }
+  } finally {
+    pendingEvents.delete(key)
+  }
+}
+
+export function subscribeToLeaderboard(callback, error) {
+  if (typeof callback !== 'function') {
+    throw new TypeError('callback must be a function')
+  }
+
+  const leaderboardQuery = query(
+    ref(database, 'leaderboard'),
+    orderByChild('xp'),
+    limitToLast(50),
+  )
+
+  return onValue(
+    leaderboardQuery,
+    (snapshot) => {
+      const leaders = []
+      snapshot.forEach((child) => {
+        const value = child.val()
+        if (value && typeof value === 'object') {
+          leaders.push({ ...value, uid: value.uid || child.key })
+        }
+      })
+
+      leaders.sort((a, b) => (Number(b.xp) || 0) - (Number(a.xp) || 0))
+      callback(leaders.map((leader, index) => ({ ...leader, rank: index + 1 })))
+    },
+    typeof error === 'function' ? error : undefined,
+  )
+}

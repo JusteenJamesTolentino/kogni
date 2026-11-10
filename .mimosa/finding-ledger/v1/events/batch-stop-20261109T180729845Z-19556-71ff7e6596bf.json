@@ -1,0 +1,69 @@
+{
+  "schemaVersion": "mimosa-finding-ledger-batch/v1",
+  "batchId": "stop-20261109T180729845Z-19556-71ff7e6596bf",
+  "runId": "20261109T180729845Z-19556-71ff7e6596bf",
+  "runStatus": "completed",
+  "coverage": {
+    "status": "complete",
+    "reasons": []
+  },
+  "source": {
+    "component": "zcode-hook",
+    "operationId": "Stop"
+  },
+  "revision": null,
+  "diffHash": "d8619e19ecdb0d3165386acb581eb0a9b1cb78262f6d0a55b1c45941968d76de",
+  "rulesVersion": "unavailable",
+  "sessionHash": "c96ef80056d3d491d75c4eec7ed83e750ba7370810a8e6007ddd6e1500bf64d3",
+  "reportRef": ".mimosa/reports/task-review-sess_4df15913-0ba7-4972-8b21-ebc5d316082c-20261109T180729845Z-19556-71ff7e6596bf.json",
+  "events": [],
+  "observedFindingIds": [],
+  "verifiedFiles": [
+    {
+      "file": "src/lib/geminiSettings.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/components/ApiKeyModal.tsx",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/App.tsx",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/context/AuthContext.tsx",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/lib/gemini.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/components/MagicImport.tsx",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/components/Navbar.tsx",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/lib/geminiSettings.test.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/lib/gemini.test.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    }
+  ],
+  "recordedAt": "2026-11-09T18:07:30.482Z"
+}

@@ -1,0 +1,62 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const strict_1 = __importDefault(require("node:assert/strict"));
+const node_test_1 = __importDefault(require("node:test"));
+const projections_js_1 = require("./projections.js");
+const privacyVersion = 'privacy-current';
+const account = {
+    uid: 'owner',
+    status: 'ready',
+    nickname: 'Owner_1',
+    nicknameCanonical: 'owner_1',
+    privacy: {
+        currentVersion: privacyVersion,
+        acknowledgements: { [privacyVersion]: 100 },
+    },
+    preferences: { discoverable: true, presence: true },
+};
+const head = {
+    id: 'deck-one',
+    ownerId: 'owner',
+    visibility: 'public',
+    status: 'active',
+    latestVersion: 3,
+    title: 'Biology 101',
+    description: 'Cell basics',
+    cardCount: 12,
+    updatedAt: 1234,
+    cards: { secret: true },
+    studyGuide: 'must never project',
+};
+(0, node_test_1.default)('active player requires current privacy, both opt-ins, and actual live session', () => {
+    strict_1.default.deepEqual((0, projections_js_1.buildActivePlayerProjection)(account, 'owner', { tab: true }, privacyVersion), {
+        uid: 'owner', nickname: 'Owner_1', nicknameCanonical: 'owner_1',
+    });
+    strict_1.default.equal((0, projections_js_1.buildActivePlayerProjection)(account, 'owner', {}, privacyVersion), null);
+    strict_1.default.equal((0, projections_js_1.buildActivePlayerProjection)({ ...account, preferences: { discoverable: false, presence: true } }, 'owner', { tab: true }, privacyVersion), null);
+    strict_1.default.equal((0, projections_js_1.buildActivePlayerProjection)(account, 'owner', { tab: true }, 'privacy-next'), null);
+});
+(0, node_test_1.default)('tombstone cleanup targets catalog and every known owner index', () => {
+    strict_1.default.deepEqual((0, projections_js_1.buildOnlineDeckProjectionRemoval)('deck-one', 'owner', 'previous-owner'), {
+        catalogDeckId: 'deck-one',
+        ownerDeckIds: ['owner', 'previous-owner'],
+    });
+    strict_1.default.deepEqual((0, projections_js_1.buildOnlineDeckProjectionRemoval)('deck-one', 'owner', 'owner').ownerDeckIds, ['owner']);
+});
+(0, node_test_1.default)('deck catalog exposes only safe metadata for active public heads and discoverable current owners', () => {
+    const projection = (0, projections_js_1.buildPublicOnlineDeckProjection)(head, 'deck-one', account, privacyVersion);
+    strict_1.default.deepEqual(projection, {
+        id: 'deck-one', ownerId: 'owner', ownerNickname: 'Owner_1', ownerNicknameCanonical: 'owner_1',
+        title: 'Biology 101', titleCanonical: 'biology 101', description: 'Cell basics', cardCount: 12,
+        latestVersion: 3, updatedAt: 1234,
+    });
+    strict_1.default.equal(Object.hasOwn(projection ?? {}, 'cards'), false);
+    strict_1.default.equal(Object.hasOwn(projection ?? {}, 'studyGuide'), false);
+    strict_1.default.equal((0, projections_js_1.buildPublicOnlineDeckProjection)({ ...head, status: 'archived' }, 'deck-one', account, privacyVersion), null);
+    strict_1.default.equal((0, projections_js_1.buildPublicOnlineDeckProjection)({ ...head, visibility: 'unlisted' }, 'deck-one', account, privacyVersion), null);
+    strict_1.default.equal((0, projections_js_1.buildPublicOnlineDeckProjection)(head, 'deck-one', { ...account, preferences: { discoverable: false, presence: true } }, privacyVersion), null);
+});
+//# sourceMappingURL=projections.test.js.map

@@ -1,0 +1,436 @@
+import type { DBSchema } from 'idb'
+
+export interface CardSchedule {
+  interval: number
+  repetition: number
+  easinessFactor: number
+  nextReviewDate: number
+}
+
+export interface GeneratedCard {
+  question: string
+  answer: string
+  distractors: string[]
+}
+
+export interface CardDraft extends Partial<CardSchedule> {
+  id?: string
+  question?: string
+  answer?: string
+  distractors?: string[]
+}
+
+export interface StudyCard extends GeneratedCard, CardSchedule {
+  id: string
+  deckId: string
+  ownerId: string
+  /** Optional stable local display order; legacy records may omit it. */
+  order?: number
+}
+
+export interface DeckDraft {
+  id?: string
+  lineageId?: string
+  title?: string
+  description?: string
+  studyGuide?: string
+  studyGuideCoverage?: StudyGuideCoverage
+  createdAt?: number
+}
+
+export interface StudyDeck {
+  id: string
+  ownerId: string
+  lineageId?: string
+  title: string
+  description: string
+  studyGuide?: string
+  studyGuideCoverage?: StudyGuideCoverage
+  cardCount: number
+  createdAt: number
+}
+
+export interface StudyDeckWithCards extends StudyDeck {
+  cards: StudyCard[]
+}
+
+export type StudyGuideCoverage = 'literal-answers-v1'
+
+export interface GeneratedDeck {
+  title: string
+  description: string
+  studyGuide: string
+  studyGuideCoverage?: StudyGuideCoverage
+  cards: GeneratedCard[]
+}
+
+export interface LocalOfflineSnapshotRecord {
+  id: string
+  ownerId: string
+  sourceDeckId: string
+  sourceOwnerId: string
+  sourceVersion: number
+  sourceCardCount: number
+  includedCardCount: number
+  questionLimit: number
+  selectedSourceCardIds: string[]
+  savedAt: number
+  seriesId?: string
+  partNumber?: number
+}
+
+export interface KognitDB extends DBSchema {
+  decks: {
+    key: string
+    value: StudyDeck
+    indexes: {
+      createdAt: number
+    }
+  }
+  cards: {
+    key: string
+    value: StudyCard
+    indexes: {
+      deckId: string
+      nextReviewDate: number
+    }
+  }
+  offlineSnapshots: {
+    key: string
+    value: LocalOfflineSnapshotRecord
+    indexes: {
+      ownerId: string
+      sourceDeckId: string
+    }
+  }
+  migrationState: {
+    key: string
+    value: { id: string; completedAt: number }
+  }
+}
+
+export interface LeaderboardUser {
+  uid: string
+  displayName: string | null
+  photoURL?: string | null
+}
+
+export interface LeaderboardRecord {
+  uid: string
+  displayName: string
+  photoURL: string
+  xp: number
+  reviews: number
+  lastReviewAt: number | object
+}
+
+export interface RankedLeaderboardEntry extends LeaderboardRecord {
+  rank: number
+}
+
+export type AwardReviewXpResult =
+  | {
+      awarded: false
+      xpAwarded: 0
+      reason: 'duplicate'
+    }
+  | {
+      awarded: true
+      xpAwarded: number
+      record: LeaderboardRecord
+    }
+
+export interface LevelProgress {
+  level: number
+  current: number
+  required: number
+}
+
+export interface PublicProfile {
+  uid: string
+  displayName: string
+  displayNameNormalized: string
+  photoURL: string
+  updatedAt: number | object
+}
+
+export interface SharedDeckCard extends GeneratedCard {
+  id: string
+}
+
+export interface SharedDeckSnapshot {
+  id: string
+  ownerId: string
+  recipientId: string
+  senderDisplayName: string
+  lineageId: string
+  title: string
+  description: string
+  studyGuide?: string
+  studyGuideCoverage?: StudyGuideCoverage
+  cardCount: number
+  createdAt: number | object
+  cards: Record<string, SharedDeckCard>
+}
+
+export interface SharedDeckInboxItem {
+  id: string
+  sharedDeckId: string
+  ownerId: string
+  senderDisplayName: string
+  lineageId: string
+  title: string
+  description?: string
+  cardCount: number
+  createdAt: number | object
+}
+
+export type DeckPortalStatus = 'active' | 'revoked'
+
+/** A schedule-free card copied into a reusable deck portal snapshot. */
+export interface DeckPortalCard extends GeneratedCard {
+  id: string
+}
+
+/**
+ * Immutable, importable deck content. Local ownership, source card IDs, and
+ * spaced-repetition progress are deliberately excluded.
+ */
+export interface DeckPortalSnapshot {
+  lineageId: string
+  title: string
+  description: string
+  studyGuide?: string
+  studyGuideCoverage?: StudyGuideCoverage
+  cardCount: number
+  cards: Record<string, DeckPortalCard>
+}
+
+export interface DeckPortalRecord {
+  /** The normalized 12-character Crockford Base32 database key. */
+  id: string
+  ownerId: string
+  ownerDisplayName: string
+  /** The owner's local-only deck identity; recipients must not import it. */
+  sourceDeckId: string
+  status: DeckPortalStatus
+  createdAt: number
+  expiresAt: number
+  revokedAt?: number
+  snapshot: DeckPortalSnapshot
+}
+
+export type DeckPortalLookupResult =
+  | {
+      ok: true
+      portal: DeckPortalRecord
+    }
+  | {
+      ok: false
+      code: 'invalid_portal'
+      message: string
+    }
+
+export type OnlineDeckVisibility = 'private' | 'unlisted' | 'public'
+export type OnlineDeckStatus = 'active' | 'archived' | 'deleted'
+
+export interface OnlineDeckOfflinePolicy {
+  allowed: boolean
+  maxQuestions: number
+}
+
+/** Mutable pointer and policy metadata; published content lives only in versions. */
+export interface OnlineDeckHead {
+  id: string
+  ownerId: string
+  visibility: OnlineDeckVisibility
+  status: OnlineDeckStatus
+  latestVersion: number
+  title: string
+  description: string
+  cardCount: number
+  offlinePolicy: OnlineDeckOfflinePolicy
+  createdAt: number
+  updatedAt: number
+  seriesId?: string
+  partNumber?: number
+  archivedAt?: number
+  deletedAt?: number
+}
+
+export interface OnlineDeckCard extends GeneratedCard {
+  id: string
+  order: number
+  /** Increments only when this stable card ID's learning content changes. */
+  contentRevision: number
+}
+
+/** Immutable published content addressed by its monotonically increasing version. */
+export interface OnlineDeckVersion {
+  deckId: string
+  ownerId: string
+  version: number
+  baseVersion: number
+  title: string
+  description: string
+  studyGuide?: string
+  studyGuideCoverage?: StudyGuideCoverage
+  cardCount: number
+  publishedAt: number
+  cardOrder: Record<string, string>
+  cards: Record<string, OnlineDeckCard>
+}
+
+export interface OnlineDeckRecord {
+  head: OnlineDeckHead
+  versions?: Record<string, OnlineDeckVersion>
+}
+
+export interface DeckSeriesPart {
+  seriesId: string
+  partNumber: number
+  deckId: string
+  ownerId: string
+  createdAt: number
+}
+
+/** Owner-managed linkage across independently addressable online decks. */
+export interface DeckSeries {
+  id: string
+  ownerId: string
+  topic: string
+  rootDeckId: string
+  latestDeckId: string
+  latestPartNumber: number
+  createdAt: number
+  updatedAt: number
+  parts: Record<string, DeckSeriesPart>
+}
+
+export interface OnlinePartProgress {
+  uid: string
+  seriesId: string
+  partNumber: number
+  deckId: string
+  ratedCardIds: Record<string, true>
+  ratedCount: number
+  lastRatedCardId: string
+  complete: boolean
+  completedAt?: number
+  updatedAt: number
+}
+
+export type RecordOnlinePartRatingResult =
+  | { applied: true; progress: OnlinePartProgress }
+  | { applied: false; reason: 'duplicate'; progress: OnlinePartProgress }
+
+export interface OnlineDeckAccessGrant {
+  deckId: string
+  uid: string
+  grantedBy: string
+  grantedAt: number
+}
+
+export interface OnlineOfflineProvenance {
+  source: 'online-deck'
+  deckId: string
+  ownerId: string
+  version: number
+  savedByUid: string
+  savedAt: number
+  creatorMaxQuestions: number
+  saverQuestionLimit: number
+  selectedQuestionCount: number
+  seriesId?: string
+  partNumber?: number
+}
+
+/** Schedule-free deterministic first-N content suitable for an offline cache. */
+export interface OnlineDeckOfflineSnapshot {
+  provenance: OnlineOfflineProvenance
+  title: string
+  description: string
+  studyGuide?: string
+  cards: OnlineDeckCard[]
+}
+
+export interface OnlineCardScheduleState extends CardSchedule {
+  deckId: string
+  cardId: string
+  deckVersion: number
+  contentRevision: number
+  scheduleRevision: number
+  reviewCount: number
+  lastReviewedAt: number
+  lastEventId: string
+  updatedAt: number
+}
+
+export interface OnlineReviewEvent {
+  id: string
+  uid: string
+  deckId: string
+  cardId: string
+  deckVersion: number
+  contentRevision: number
+  rating: number
+  reviewedAt: number
+  scheduleRevisionBefore: number
+  interval: number
+  repetition: number
+  easinessFactor: number
+  nextReviewDate: number
+}
+
+export interface OnlineCardScheduleRecord {
+  state: OnlineCardScheduleState
+  events?: Record<string, OnlineReviewEvent>
+}
+
+export type RecordOnlineReviewResult =
+  | { applied: true; state: OnlineCardScheduleState; event: OnlineReviewEvent }
+  | { applied: false; reason: 'duplicate'; state: OnlineCardScheduleState }
+
+export type DatabaseTimestamp = number | object
+
+export interface AccountPreferences {
+  discoverable: boolean
+  presence: boolean
+}
+
+export interface AccountPrivacyRecord {
+  currentVersion: string
+  acknowledgedAt: DatabaseTimestamp
+  acknowledgements: Record<string, DatabaseTimestamp>
+}
+
+/** Owner-private account state. Authentication provider data such as email is excluded. */
+export interface AccountRecord {
+  uid: string
+  status: 'ready'
+  nickname: string
+  nicknameCanonical: string
+  createdAt: DatabaseTimestamp
+  updatedAt: DatabaseTimestamp
+  privacy: AccountPrivacyRecord
+  preferences: AccountPreferences
+}
+
+/** Deliberately small projection readable by other ready accounts. */
+export interface PublicAccountProfile {
+  uid: string
+  nickname: string
+  nicknameCanonical: string
+  updatedAt: DatabaseTimestamp
+}
+
+/** Public presence intentionally omits timestamps, session IDs, and last-seen data. */
+export interface PublicPresence {
+  online: boolean
+}
+
+export interface NicknameIdentity {
+  uid: string
+  nickname: string
+  nicknameCanonical: string
+}

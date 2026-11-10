@@ -1,0 +1,63 @@
+import type { Database } from 'firebase-admin/database';
+import { type CallableRequest } from 'firebase-functions/v2/https';
+export declare const XP_TRUST: "client-reported";
+export declare const SOCIAL_UNAVAILABLE_MESSAGE = "Player is unavailable.";
+export declare const SOCIAL_SERVICE_UNAVAILABLE_MESSAGE = "Player service is unavailable.";
+export interface PublicPlayerProfile {
+    uid: string;
+    nickname: string;
+    nicknameCanonical: string;
+    communityXp: number;
+    xpTrust: typeof XP_TRUST;
+    followerCount: number;
+    followingCount: number;
+    publishedDeckCount: number;
+}
+export interface FollowEdge {
+    followerUid: string;
+    followedUid: string;
+    createdAt: number;
+}
+export interface PlayerProfileResult {
+    profile: PublicPlayerProfile;
+    social: {
+        following: boolean;
+        followedBy: boolean;
+    };
+}
+export interface FollowResult {
+    targetUid: string;
+    following: boolean;
+}
+export interface BlockResult {
+    targetUid: string;
+    blocked: boolean;
+}
+export declare class SocialUnavailableError extends Error {
+    constructor(message?: string);
+}
+export declare function requireTargetUid(data: unknown): string;
+export declare function followEdgeId(followerUid: string, followedUid: string): string;
+export declare function isFollowEdge(value: unknown): value is FollowEdge;
+export declare function isPublicPlayerProfile(value: unknown): value is PublicPlayerProfile;
+export declare function buildPublicPlayerProfile(accountValue: unknown, uid: string, expectedPrivacyVersion: string, sources: {
+    leaderboardValue: unknown;
+    followerCount: number;
+    followingCount: number;
+    publishedDeckCount: number;
+}): PublicPlayerProfile | null;
+export declare function reconcilePublicPlayerProfile(database: Database, uid: string, expectedPrivacyVersion: string): Promise<PublicPlayerProfile | null>;
+export declare function reconcileFollowProjection(database: Database, edgeId: string, beforeValue: unknown, afterValue: unknown, expectedPrivacyVersion: string): Promise<void>;
+export declare function followPlayerService(database: Database, actorUid: string, targetUid: string, expectedPrivacyVersion: string, now?: number): Promise<FollowResult>;
+export declare function unfollowPlayerService(database: Database, actorUid: string, targetUid: string, expectedPrivacyVersion: string): Promise<FollowResult>;
+export declare function blockPlayerService(database: Database, actorUid: string, targetUid: string, expectedPrivacyVersion: string, now?: number): Promise<BlockResult>;
+export declare function unblockPlayerService(database: Database, actorUid: string, targetUid: string, expectedPrivacyVersion: string): Promise<BlockResult>;
+export declare function getPlayerProfileService(database: Database, actorUid: string, targetUid: string, expectedPrivacyVersion: string): Promise<PlayerProfileResult>;
+export declare function cleanupPrivatePlayer(database: Database, uid: string, expectedPrivacyVersion: string): Promise<void>;
+export declare function createSocialCallableHandlers(database: Database, privacyVersion: () => string): {
+    getPlayerProfile: (request: CallableRequest<unknown>) => Promise<PlayerProfileResult>;
+    followPlayer: (request: CallableRequest<unknown>) => Promise<FollowResult>;
+    unfollowPlayer: (request: CallableRequest<unknown>) => Promise<FollowResult>;
+    blockPlayer: (request: CallableRequest<unknown>) => Promise<BlockResult>;
+    unblockPlayer: (request: CallableRequest<unknown>) => Promise<BlockResult>;
+};

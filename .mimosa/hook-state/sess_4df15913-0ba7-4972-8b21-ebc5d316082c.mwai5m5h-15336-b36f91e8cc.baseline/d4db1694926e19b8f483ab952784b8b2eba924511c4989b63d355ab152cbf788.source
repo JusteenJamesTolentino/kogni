@@ -1,0 +1,58 @@
+import { Navigate, Outlet, useLocation } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
+import LoadingScreen from './LoadingScreen'
+import { createAuthRedirectState, getSafeRedirectTarget, paths } from './paths'
+
+export function ProtectedRoute() {
+  const { user, account, loading, accountLoading } = useAuth()
+  const location = useLocation()
+
+  if (loading || accountLoading) return <LoadingScreen />
+  if (!user) {
+    return <Navigate
+      to={paths.signIn}
+      replace
+      state={createAuthRedirectState(location.pathname, location.search, location.hash)}
+    />
+  }
+  if (!account) {
+    return <Navigate
+      to={paths.onboarding}
+      replace
+      state={createAuthRedirectState(location.pathname, location.search, location.hash)}
+    />
+  }
+
+  return <Outlet />
+}
+
+export function GuestOnlyRoute() {
+  const { user, account, loading, accountLoading } = useAuth()
+  const location = useLocation()
+
+  if (loading || (user && accountLoading)) return <LoadingScreen />
+  if (user) {
+    const state = location.state as { from?: unknown } | null
+    return <Navigate
+      to={account ? getSafeRedirectTarget(state?.from) : paths.onboarding}
+      replace
+      state={account ? undefined : { from: getSafeRedirectTarget(state?.from) }}
+    />
+  }
+
+  return <Outlet />
+}
+
+export function OnboardingOnlyRoute() {
+  const { user, account, loading, accountLoading } = useAuth()
+  const location = useLocation()
+
+  if (loading || accountLoading) return <LoadingScreen />
+  if (!user) return <Navigate to={paths.signIn} replace state={location.state} />
+  if (account) {
+    const state = location.state as { from?: unknown } | null
+    return <Navigate to={getSafeRedirectTarget(state?.from)} replace />
+  }
+
+  return <Outlet />
+}

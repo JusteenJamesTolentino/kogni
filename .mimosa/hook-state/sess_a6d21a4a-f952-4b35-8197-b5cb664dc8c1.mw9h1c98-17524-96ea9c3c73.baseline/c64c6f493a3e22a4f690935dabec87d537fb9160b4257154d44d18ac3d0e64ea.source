@@ -1,0 +1,31 @@
+import { describe, expect, it } from 'vitest'
+import { normalizeGeneratedDeck } from './gemini.js'
+
+describe('normalizeGeneratedDeck', () => {
+  it('normalizes and deduplicates generated cards', () => {
+    const result = normalizeGeneratedDeck({
+      title: '  Biology  ',
+      description: ' Cell basics ',
+      cards: [
+        {
+          question: ' What is ATP? ',
+          answer: 'Energy currency',
+          distractors: ['Protein', 'protein', 'Energy currency', 'Lipid'],
+        },
+      ],
+    })
+
+    expect(result.title).toBe('Biology')
+    expect(result.cards[0]).toEqual({
+      question: 'What is ATP?',
+      answer: 'Energy currency',
+      distractors: ['Protein', 'Lipid'],
+    })
+  })
+
+  it('rejects a response without usable cards', () => {
+    expect(() => normalizeGeneratedDeck({ title: 'Empty', description: '', cards: [] })).toThrow(
+      'Generated deck has no valid cards',
+    )
+  })
+})

@@ -1,0 +1,15 @@
+import { describe, expect, it } from 'vitest'
+import { getLevelFromXp, getLevelProgress, getReviewXp } from './leaderboard.js'
+
+describe('leaderboard helpers', () => {
+  it('awards bounded quality-based XP', () => {
+    expect(getReviewXp(0)).toBe(2)
+    expect(getReviewXp(5)).toBe(12)
+    expect(() => getReviewXp(7)).toThrow(RangeError)
+  })
+
+  it('calculates levels and progress', () => {
+    expect(getLevelFromXp(250)).toBe(3)
+    expect(getLevelProgress(250)).toEqual({ level: 3, current: 50, required: 100 })
+  })
+})

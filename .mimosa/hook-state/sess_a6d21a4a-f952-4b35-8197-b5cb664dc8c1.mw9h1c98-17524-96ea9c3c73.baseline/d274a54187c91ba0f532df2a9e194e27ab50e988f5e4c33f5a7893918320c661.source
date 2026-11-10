@@ -1,0 +1,175 @@
+import { useCallback, useEffect, useState } from 'react'
+import { motion } from 'framer-motion'
+import { BrainCircuit } from 'lucide-react'
+import { getAllDecks, getDueCards } from './lib/db'
+import { useAuth } from './context/AuthContext'
+import ApiKeyModal from './components/ApiKeyModal'
+import Dashboard from './components/Dashboard'
+import Leaderboard from './components/Leaderboard'
+import MagicImport from './components/MagicImport'
+import Navbar from './components/Navbar'
+import SignInScreen from './components/SignInScreen'
+import StudySession from './components/StudySession'
+
+const API_KEY_STORAGE = 'user_gemini_api_key'
+const THEME_STORAGE = 'kognit_theme'
+
+const getInitialTheme = () => {
+  const saved = localStorage.getItem(THEME_STORAGE)
+  if (saved === 'light' || saved === 'dark') return saved
+  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+}
+
+function LoadingScreen() {
+  return (
+    <main className="grid min-h-screen place-items-center bg-base-100" aria-label="Loading Kognit">
+      <div className="text-center">
+        <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.8, repeat: Infinity, ease: 'linear' }} className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-primary text-primary-content">
+          <BrainCircuit size={28} aria-hidden="true" />
+        </motion.div>
+        <p className="mt-4 text-sm font-semibold text-base-content/60">Preparing your learning space…</p>
+      </div>
+    </main>
+  )
+}
+
+export default function App() {
+  const { user, loading: authLoading } = useAuth()
+  const [view, setView] = useState('dashboard')
+  const [decks, setDecks] = useState([])
+  const [dueCards, setDueCards] = useState([])
+  const [studyCards, setStudyCards] = useState([])
+  const [activeDeck, setActiveDeck] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [apiKey, setApiKey] = useState('')
+  const [apiKeyModalOpen, setApiKeyModalOpen] = useState(false)
+  const [theme, setTheme] = useState(getInitialTheme)
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    document.documentElement.style.colorScheme = theme
+    localStorage.setItem(THEME_STORAGE, theme)
+  }, [theme])
+
+  useEffect(() => {
+    if (!user) {
+      setApiKey('')
+      return
+    }
+
+    const storedKey = localStorage.getItem(API_KEY_STORAGE) || ''
+    setApiKey(storedKey)
+    setApiKeyModalOpen(!storedKey)
+  }, [user])
+
+  const loadLibrary = useCallback(async () => {
+    if (!user) return
+    setLoading(true)
+    setError('')
+
+    try {
+      const [storedDecks, storedDueCards] = await Promise.all([getAllDecks(), getDueCards()])
+      setDecks(Array.isArray(storedDecks) ? storedDecks : [])
+      setDueCards(Array.isArray(storedDueCards) ? storedDueCards : [])
+    } catch (dataError) {
+      setError(dataError?.message || 'Your study library could not be loaded.')
+    } finally {
+      setLoading(false)
+    }
+  }, [user])
+
+  useEffect(() => {
+    loadLibrary()
+  }, [loadLibrary])
+
+  const handleSaveApiKey = value => {
+    if (!user) return
+    localStorage.setItem(API_KEY_STORAGE, value)
+    setApiKey(value)
+    setApiKeyModalOpen(false)
+  }
+
+  const startStudy = async deck => {
+    setError('')
+
+    try {
+      const deckId = deck?.id ?? deck?.deckId
+      const cards = deck ? await getDueCards(deckId) : dueCards
+
+      setActiveDeck(deck)
+      setStudyCards(Array.isArray(cards) ? cards : [])
+      setView('study')
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } catch (studyError) {
+      setError(studyError?.message || 'This deck could not be opened for study.')
+      setView('dashboard')
+    }
+  }
+
+  const navigate = nextView => {
+    setView(nextView)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const finishStudy = async () => {
+    await loadLibrary()
+    navigate('dashboard')
+  }
+
+  if (authLoading) return <LoadingScreen />
+  if (!user) return <SignInScreen />
+
+  return (
+    <div className="min-h-screen bg-base-200/35 text-base-content">
+      {view !== 'study' && (
+        <Navbar
+          currentView={view}
+          onNavigate={navigate}
+          onOpenApiKey={() => setApiKeyModalOpen(true)}
+          theme={theme}
+          onToggleTheme={() => setTheme(previous => previous === 'dark' ? 'light' : 'dark')}
+        />
+      )}
+
+      {view === 'dashboard' && (
+        <Dashboard
+          decks={decks}
+          dueCards={dueCards}
+          loading={loading}
+          error={error}
+          onRetry={loadLibrary}
+          onStudy={startStudy}
+          onImport={() => navigate('import')}
+        />
+      )}
+      {view === 'import' && (
+        <MagicImport
+          apiKey={apiKey}
+          onOpenApiKey={() => setApiKeyModalOpen(true)}
+          onComplete={async () => {
+            await loadLibrary()
+            navigate('dashboard')
+          }}
+        />
+      )}
+      {view === 'leaderboard' && <Leaderboard />}
+      {view === 'study' && (
+        <StudySession
+          cards={studyCards}
+          deck={activeDeck}
+          onExit={() => navigate('dashboard')}
+          onFinished={finishStudy}
+        />
+      )}
+
+      <ApiKeyModal
+        open={apiKeyModalOpen}
+        currentKey={apiKey}
+        onSave={handleSaveApiKey}
+        onClose={() => setApiKeyModalOpen(false)}
+        canClose={Boolean(apiKey)}
+      />
+    </div>
+  )
+}

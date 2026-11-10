@@ -1,0 +1,155 @@
+import { openDB } from 'idb'
+
+const DB_NAME = 'FlashcardAppDB'
+const DB_VERSION = 1
+const DECKS_STORE = 'decks'
+const CARDS_STORE = 'cards'
+let currentUserId = ''
+
+export function setDatabaseUser(userId) {
+  currentUserId = typeof userId === 'string' ? userId : ''
+}
+
+function requireCurrentUser() {
+  if (!currentUserId) throw new Error('An authenticated user is required for local data')
+  return currentUserId
+}
+
+const dbPromise = openDB(DB_NAME, DB_VERSION, {
+  upgrade(db) {
+    if (!db.objectStoreNames.contains(DECKS_STORE)) {
+      const decks = db.createObjectStore(DECKS_STORE, { keyPath: 'id' })
+      decks.createIndex('createdAt', 'createdAt')
+    }
+
+    if (!db.objectStoreNames.contains(CARDS_STORE)) {
+      const cards = db.createObjectStore(CARDS_STORE, { keyPath: 'id' })
+      cards.createIndex('deckId', 'deckId')
+      cards.createIndex('nextReviewDate', 'nextReviewDate')
+    }
+  },
+})
+
+function assertRecord(value, label) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new TypeError(`${label} must be an object`)
+  }
+}
+
+function assertId(value, label) {
+  if (typeof value !== 'string' || !value.trim()) {
+    throw new TypeError(`${label} must be a non-empty string`)
+  }
+}
+
+function randomId(prefix) {
+  const random = globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2)
+  return `${prefix}_${random}`
+}
+
+export async function saveDeckWithCards(deckData, cardsData) {
+  assertRecord(deckData, 'deckData')
+  if (!Array.isArray(cardsData) || cardsData.length === 0) {
+    throw new TypeError('cardsData must be a non-empty array')
+  }
+
+  const ownerId = requireCurrentUser()
+  const createdAt = Number.isFinite(deckData.createdAt) ? deckData.createdAt : Date.now()
+  const deck = {
+    id: deckData.id || randomId('deck'),
+    ownerId,
+    title: String(deckData.title || 'Untitled deck').trim(),
+    description: String(deckData.description || '').trim(),
+    cardCount: cardsData.length,
+    createdAt,
+  }
+
+  const cards = cardsData.map((card) => {
+    assertRecord(card, 'card')
+    return {
+      id: card.id || randomId('card'),
+      deckId: deck.id,
+      ownerId,
+      question: String(card.question || '').trim(),
+      answer: String(card.answer || '').trim(),
+      distractors: Array.isArray(card.distractors) ? card.distractors : [],
+      interval: Number.isFinite(card.interval) ? card.interval : 0,
+      repetition: Number.isFinite(card.repetition) ? card.repetition : 0,
+      easinessFactor: Number.isFinite(card.easinessFactor) ? card.easinessFactor : 2.5,
+      nextReviewDate: Number.isFinite(card.nextReviewDate) ? card.nextReviewDate : createdAt,
+    }
+  })
+
+  const db = await dbPromise
+  const tx = db.transaction([DECKS_STORE, CARDS_STORE], 'readwrite')
+  await Promise.all([
+    tx.objectStore(DECKS_STORE).put(deck),
+    ...cards.map((card) => tx.objectStore(CARDS_STORE).put(card)),
+  ])
+  await tx.done
+
+  return { ...deck, cards }
+}
+
+export async function getAllDecks() {
+  const ownerId = requireCurrentUser()
+  const db = await dbPromise
+  const decks = await db.getAll(DECKS_STORE)
+  return decks
+    .filter((deck) => deck.ownerId === ownerId)
+    .sort((a, b) => (Number(b.createdAt) || 0) - (Number(a.createdAt) || 0))
+}
+
+export async function getDeck(id) {
+  assertId(id, 'id')
+  const ownerId = requireCurrentUser()
+  const db = await dbPromise
+  const deck = await db.get(DECKS_STORE, id)
+  return deck?.ownerId === ownerId ? deck : undefined
+}
+
+export async function getCardsByDeck(deckId) {
+  assertId(deckId, 'deckId')
+  const ownerId = requireCurrentUser()
+  const db = await dbPromise
+  const cards = await db.getAllFromIndex(CARDS_STORE, 'deckId', deckId)
+  return cards.filter((card) => card.ownerId === ownerId)
+}
+
+export async function getDueCards(deckId) {
+  if (deckId !== undefined) assertId(deckId, 'deckId')
+  const ownerId = requireCurrentUser()
+
+  const db = await dbPromise
+  const dueCards = await db.getAllFromIndex(
+    CARDS_STORE,
+    'nextReviewDate',
+    IDBKeyRange.upperBound(Date.now()),
+  )
+
+  return dueCards.filter(
+    (card) => card.ownerId === ownerId && (!deckId || card.deckId === deckId),
+  )
+}
+
+export async function updateCardProgress(card) {
+  assertRecord(card, 'card')
+  assertId(card.id, 'card.id')
+  assertId(card.deckId, 'card.deckId')
+
+  const ownerId = requireCurrentUser()
+  const db = await dbPromise
+  const tx = db.transaction(CARDS_STORE, 'readwrite')
+  const store = tx.objectStore(CARDS_STORE)
+  const existing = await store.get(card.id)
+
+  if (!existing || existing.ownerId !== ownerId) {
+    tx.abort()
+    throw new Error(`Card not found: ${card.id}`)
+  }
+
+  const updated = { ...existing, ...card }
+  await store.put(updated)
+  await tx.done
+  return updated
+}

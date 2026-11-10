@@ -1,0 +1,107 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.reconcilePlayerFollowEdge = exports.reconcileLeaderboardPlayerProfile = exports.reconcileOnlineDeckProjection = exports.reconcileAccountProjections = exports.reconcilePresenceProjection = exports.unblockPlayer = exports.blockPlayer = exports.unfollowPlayer = exports.followPlayer = exports.getPlayerProfile = void 0;
+const app_1 = require("firebase-admin/app");
+const database_1 = require("firebase-admin/database");
+const firebase_functions_1 = require("firebase-functions");
+const database_2 = require("firebase-functions/v2/database");
+const https_1 = require("firebase-functions/v2/https");
+const config_js_1 = require("./config.js");
+const projections_js_1 = require("./projections.js");
+const social_js_1 = require("./social.js");
+(0, app_1.initializeApp)();
+const DATABASE_REGION = 'asia-southeast1';
+const DATABASE_INSTANCE = 'kogni-ai-default-rtdb';
+const databaseTriggerOptions = { region: DATABASE_REGION, instance: DATABASE_INSTANCE };
+const callableOptions = { region: DATABASE_REGION };
+const socialHandlers = (0, social_js_1.createSocialCallableHandlers)((0, database_1.getDatabase)(), config_js_1.expectedPrivacyVersion);
+exports.getPlayerProfile = (0, https_1.onCall)(callableOptions, socialHandlers.getPlayerProfile);
+exports.followPlayer = (0, https_1.onCall)(callableOptions, socialHandlers.followPlayer);
+exports.unfollowPlayer = (0, https_1.onCall)(callableOptions, socialHandlers.unfollowPlayer);
+exports.blockPlayer = (0, https_1.onCall)(callableOptions, socialHandlers.blockPlayer);
+exports.unblockPlayer = (0, https_1.onCall)(callableOptions, socialHandlers.unblockPlayer);
+async function reconcileActivePlayer(uid) {
+    const database = (0, database_1.getDatabase)();
+    const [accountSnapshot, sessionsSnapshot] = await Promise.all([
+        database.ref(`accounts/${uid}`).get(),
+        database.ref(`presenceSessions/${uid}`).get(),
+    ]);
+    const projection = (0, projections_js_1.buildActivePlayerProjection)(accountSnapshot.val(), uid, sessionsSnapshot.val(), (0, config_js_1.expectedPrivacyVersion)());
+    await database.ref(`activePlayers/${uid}`).set(projection);
+}
+async function reconcileDeck(deckId, headValue) {
+    const database = (0, database_1.getDatabase)();
+    const head = headValue === undefined
+        ? (await database.ref(`onlineDecks/${deckId}/head`).get()).val()
+        : headValue;
+    const ownerId = (0, projections_js_1.isPlainRecord)(head) && typeof head.ownerId === 'string' ? head.ownerId : null;
+    const ownerAccount = ownerId ? (await database.ref(`accounts/${ownerId}`).get()).val() : null;
+    const projection = (0, projections_js_1.buildPublicOnlineDeckProjection)(head, deckId, ownerAccount, (0, config_js_1.expectedPrivacyVersion)());
+    const previousOwnerSnapshot = await database.ref(`publicOnlineDeckCatalog/${deckId}/ownerId`).get();
+    const previousOwnerId = typeof previousOwnerSnapshot.val() === 'string'
+        ? previousOwnerSnapshot.val()
+        : null;
+    const removal = (0, projections_js_1.buildOnlineDeckProjectionRemoval)(deckId, ownerId, previousOwnerId);
+    const updates = {
+        [`publicOnlineDeckCatalog/${removal.catalogDeckId}`]: projection,
+    };
+    for (const indexedOwnerId of removal.ownerDeckIds) {
+        updates[`onlineDecksByOwner/${indexedOwnerId}/${deckId}`] = indexedOwnerId === projection?.ownerId
+            ? projection
+            : null;
+    }
+    await database.ref().update(updates);
+    const affectedOwners = new Set();
+    if (ownerId)
+        affectedOwners.add(ownerId);
+    if (previousOwnerId)
+        affectedOwners.add(previousOwnerId);
+    await Promise.all([...affectedOwners].map((uid) => ((0, social_js_1.reconcilePublicPlayerProfile)(database, uid, (0, config_js_1.expectedPrivacyVersion)()))));
+}
+async function reconcileOwnerDecks(uid) {
+    const database = (0, database_1.getDatabase)();
+    const indexSnapshot = await database.ref(`onlineDecksByOwner/${uid}`).get();
+    const indexedDeckIds = (0, projections_js_1.isPlainRecord)(indexSnapshot.val()) ? Object.keys(indexSnapshot.val()) : [];
+    const ownedHeadsSnapshot = await database.ref('onlineDecks').orderByChild('head/ownerId').equalTo(uid).get();
+    const ownedDecks = (0, projections_js_1.isPlainRecord)(ownedHeadsSnapshot.val())
+        ? ownedHeadsSnapshot.val()
+        : {};
+    const deckIds = new Set([...indexedDeckIds, ...Object.keys(ownedDecks)]);
+    const accountValue = (await database.ref(`accounts/${uid}`).get()).val();
+    const updates = {};
+    for (const deckId of deckIds) {
+        const deckValue = ownedDecks[deckId];
+        const head = (0, projections_js_1.isPlainRecord)(deckValue) ? deckValue.head : null;
+        const projection = (0, projections_js_1.buildPublicOnlineDeckProjection)(head, deckId, accountValue, (0, config_js_1.expectedPrivacyVersion)());
+        updates[`publicOnlineDeckCatalog/${deckId}`] = projection;
+        updates[`onlineDecksByOwner/${uid}/${deckId}`] = projection;
+    }
+    if (Object.keys(updates).length > 0)
+        await database.ref().update(updates);
+}
+exports.reconcilePresenceProjection = (0, database_2.onValueWritten)({ ...databaseTriggerOptions, ref: '/presenceSessions/{uid}/{sessionId}' }, async (event) => {
+    await reconcileActivePlayer(event.params.uid);
+});
+exports.reconcileAccountProjections = (0, database_2.onValueWritten)({ ...databaseTriggerOptions, ref: '/accounts/{uid}', retry: true }, async (event) => {
+    const uid = event.params.uid;
+    const failures = await Promise.allSettled([
+        reconcileActivePlayer(uid),
+        reconcileOwnerDecks(uid),
+        (0, social_js_1.cleanupPrivatePlayer)((0, database_1.getDatabase)(), uid, (0, config_js_1.expectedPrivacyVersion)()),
+    ]);
+    const rejected = failures.filter((result) => result.status === 'rejected');
+    if (rejected.length > 0) {
+        rejected.forEach((result) => firebase_functions_1.logger.error('Account projection reconciliation failed', { uid, error: result.reason }));
+        throw new AggregateError(rejected.map((result) => result.reason), `Failed to reconcile account projections for ${uid}`);
+    }
+});
+exports.reconcileOnlineDeckProjection = (0, database_2.onValueWritten)({ ...databaseTriggerOptions, ref: '/onlineDecks/{deckId}/head', retry: true }, async (event) => {
+    await reconcileDeck(event.params.deckId, event.data.after.val());
+});
+exports.reconcileLeaderboardPlayerProfile = (0, database_2.onValueWritten)({ ...databaseTriggerOptions, ref: '/leaderboard/{uid}/xp', retry: true }, async (event) => {
+    await (0, social_js_1.reconcilePublicPlayerProfile)((0, database_1.getDatabase)(), event.params.uid, (0, config_js_1.expectedPrivacyVersion)());
+});
+exports.reconcilePlayerFollowEdge = (0, database_2.onValueWritten)({ ...databaseTriggerOptions, ref: '/playerFollowEdges/{edgeId}', retry: true }, async (event) => {
+    await (0, social_js_1.reconcileFollowProjection)((0, database_1.getDatabase)(), event.params.edgeId, event.data.before.val(), event.data.after.val(), (0, config_js_1.expectedPrivacyVersion)());
+});
+//# sourceMappingURL=index.js.map

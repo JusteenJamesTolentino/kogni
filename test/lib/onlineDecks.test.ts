@@ -1,0 +1,73 @@
+import { describe, expect, it } from 'vitest'
+import { selectOnlineDeckOfflineSnapshot } from '../../src/lib/onlineDecks'
+import type { OnlineDeckHead, OnlineDeckVersion } from '../../src/types/domain'
+
+const head: OnlineDeckHead = {
+  id: 'deck-one',
+  ownerId: 'owner',
+  visibility: 'public',
+  status: 'active',
+  latestVersion: 2,
+  title: 'Biology',
+  description: 'Cells',
+  cardCount: 30,
+  offlinePolicy: { allowed: true, maxQuestions: 30 },
+  createdAt: 100,
+  updatedAt: 200,
+}
+
+const version: OnlineDeckVersion = {
+  deckId: 'deck-one',
+  ownerId: 'owner',
+  version: 2,
+  baseVersion: 1,
+  title: 'Biology',
+  description: 'Cells',
+  cardCount: 3,
+  publishedAt: 200,
+  cardOrder: { '0': 'stable-b', '1': 'stable-a', '2': 'stable-c' },
+  cards: {
+    'stable-a': { id: 'stable-a', order: 1, contentRevision: 1, question: 'A', answer: 'a', distractors: [] },
+    'stable-b': { id: 'stable-b', order: 0, contentRevision: 2, question: 'B', answer: 'b', distractors: [] },
+    'stable-c': { id: 'stable-c', order: 2, contentRevision: 1, question: 'C', answer: 'c', distractors: [] },
+  },
+}
+
+describe('online deck offline snapshots', () => {
+  it('selects deterministic first N cards bounded by the creator and saver', () => {
+    const snapshot = selectOnlineDeckOfflineSnapshot(head, version, 'viewer', 3, 300)
+    expect(snapshot.cards.map((card) => card.id)).toEqual(['stable-b', 'stable-a', 'stable-c'])
+    expect(snapshot.provenance).toEqual({
+      source: 'online-deck',
+      deckId: 'deck-one',
+      ownerId: 'owner',
+      version: 2,
+      savedByUid: 'viewer',
+      savedAt: 300,
+      creatorMaxQuestions: 30,
+      saverQuestionLimit: 3,
+      selectedQuestionCount: 3,
+    })
+  })
+
+  it('honors a smaller saver choice and rejects creator-disabled offline use', () => {
+    expect(selectOnlineDeckOfflineSnapshot(head, version, 'viewer', 1, 300).cards).toHaveLength(1)
+    expect(() => selectOnlineDeckOfflineSnapshot(
+      { ...head, offlinePolicy: { allowed: false, maxQuestions: 0 } },
+      version,
+      'viewer',
+      1,
+    )).toThrow('does not allow')
+  })
+
+  it('includes optional series provenance', () => {
+    const snapshot = selectOnlineDeckOfflineSnapshot(
+      { ...head, seriesId: 'series-one', partNumber: 2 },
+      version,
+      'viewer',
+      30,
+      300,
+    )
+    expect(snapshot.provenance).toMatchObject({ seriesId: 'series-one', partNumber: 2 })
+  })
+})

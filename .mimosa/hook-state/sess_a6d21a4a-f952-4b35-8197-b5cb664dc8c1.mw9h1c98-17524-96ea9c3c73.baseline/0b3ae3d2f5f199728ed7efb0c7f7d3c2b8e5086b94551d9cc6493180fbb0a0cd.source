@@ -1,0 +1,100 @@
+import { useEffect, useRef, useState } from 'react'
+import { Eye, EyeOff, KeyRound, ShieldCheck, X } from 'lucide-react'
+
+export default function ApiKeyModal({ open, currentKey, onSave, onClose, canClose = true }) {
+  const [value, setValue] = useState(currentKey || '')
+  const [showKey, setShowKey] = useState(false)
+  const dialogRef = useRef(null)
+  const inputRef = useRef(null)
+
+  useEffect(() => {
+    setValue(currentKey || '')
+  }, [currentKey, open])
+
+  useEffect(() => {
+    const dialog = dialogRef.current
+    if (!dialog) return
+
+    if (open && !dialog.open) {
+      dialog.showModal()
+      window.setTimeout(() => inputRef.current?.focus(), 50)
+    }
+
+    if (!open && dialog.open) dialog.close()
+  }, [open])
+
+  const handleSubmit = event => {
+    event.preventDefault()
+    const trimmedValue = value.trim()
+    if (!trimmedValue) return
+    onSave(trimmedValue)
+  }
+
+  const handleCancel = event => {
+    if (!canClose) {
+      event.preventDefault()
+      return
+    }
+    onClose()
+  }
+
+  return (
+    <dialog ref={dialogRef} className="modal modal-bottom sm:modal-middle" onCancel={handleCancel} aria-labelledby="api-key-title">
+      <div className="modal-box overflow-visible border border-base-300">
+        {canClose && (
+          <button type="button" onClick={onClose} className="btn btn-circle btn-ghost btn-sm absolute right-3 top-3" aria-label="Close API key settings">
+            <X size={18} aria-hidden="true" />
+          </button>
+        )}
+
+        <div className="mb-5 flex items-start gap-4 pr-8">
+          <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-primary/10 text-primary">
+            <KeyRound size={24} aria-hidden="true" />
+          </div>
+          <div>
+            <h2 id="api-key-title" className="text-xl font-bold">Connect Gemini</h2>
+            <p className="mt-1 text-sm text-base-content/65">Add your Google AI Studio key to turn notes into smart study decks.</p>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          <label className="form-control w-full">
+            <span className="label-text mb-2 font-semibold">Gemini API key</span>
+            <div className="join w-full">
+              <input
+                ref={inputRef}
+                type={showKey ? 'text' : 'password'}
+                value={value}
+                onChange={event => setValue(event.target.value)}
+                className="input input-bordered join-item w-full focus:input-primary"
+                placeholder="AIza..."
+                autoComplete="off"
+                aria-describedby="api-key-privacy"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowKey(previous => !previous)}
+                className="btn btn-square join-item"
+                aria-label={showKey ? 'Hide API key' : 'Show API key'}
+              >
+                {showKey ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
+              </button>
+            </div>
+          </label>
+
+          <div id="api-key-privacy" className="mt-3 flex gap-2 rounded-xl bg-success/10 p-3 text-xs text-base-content/70">
+            <ShieldCheck size={17} className="shrink-0 text-success" aria-hidden="true" />
+            <span>Your key stays in this browser&apos;s local storage and is only sent to Gemini when you import a file.</span>
+          </div>
+
+          <div className="modal-action">
+            {canClose && <button type="button" onClick={onClose} className="btn btn-ghost">Cancel</button>}
+            <button type="submit" className="btn btn-primary" disabled={!value.trim()}>Save key</button>
+          </div>
+        </form>
+      </div>
+      {canClose && <form method="dialog" className="modal-backdrop"><button type="button" onClick={onClose}>Close</button></form>}
+    </dialog>
+  )
+}

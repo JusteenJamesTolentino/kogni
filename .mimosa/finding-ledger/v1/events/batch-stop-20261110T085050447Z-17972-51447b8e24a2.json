@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "mimosa-finding-ledger-batch/v1",
+  "batchId": "stop-20261110T085050447Z-17972-51447b8e24a2",
+  "runId": "20261110T085050447Z-17972-51447b8e24a2",
+  "runStatus": "completed",
+  "coverage": {
+    "status": "complete",
+    "reasons": []
+  },
+  "source": {
+    "component": "zcode-hook",
+    "operationId": "Stop"
+  },
+  "revision": null,
+  "diffHash": "5b56e3da4f3df151e1dbb754051b53b88f3b26984b12e8e52e0c3d5f48b977f7",
+  "rulesVersion": "unavailable",
+  "sessionHash": "c96ef80056d3d491d75c4eec7ed83e750ba7370810a8e6007ddd6e1500bf64d3",
+  "reportRef": ".mimosa/reports/task-review-sess_4df15913-0ba7-4972-8b21-ebc5d316082c-20261110T085050447Z-17972-51447b8e24a2.json",
+  "events": [],
+  "observedFindingIds": [
+    "mimosa-58f4b6e97e80494f4b90fb27",
+    "mimosa-5741d62948a25319b40fb863",
+    "mimosa-a7dd06030ed25fcdd2f0d25f",
+    "mimosa-3cdaf986e4d2c44fc7369ae5"
+  ],
+  "verifiedFiles": [
+    {
+      "file": "src/lib/studyGuideCoverage.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/lib/studyGuideCoverage.test.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/types/domain.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/lib/gemini.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/lib/gemini.test.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/lib/db.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/lib/community.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/lib/portal.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/lib/onlineDecks.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/components/DeckEditor.tsx",
+      "direct": "complete",
+      "projectContext": "partial"
+    }
+  ],
+  "recordedAt": "2026-11-10T08:50:51.158Z"
+}

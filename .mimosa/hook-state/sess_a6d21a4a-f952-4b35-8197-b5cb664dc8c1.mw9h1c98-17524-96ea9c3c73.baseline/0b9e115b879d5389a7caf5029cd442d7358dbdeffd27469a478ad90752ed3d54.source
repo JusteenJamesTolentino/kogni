@@ -1,0 +1,126 @@
+import { BrainCircuit, KeyRound, LogOut, Moon, Sparkles, Sun, Trophy } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
+
+const navItems = [
+  { id: 'dashboard', label: 'Dashboard', icon: BrainCircuit },
+  { id: 'import', label: 'Magic import', icon: Sparkles },
+  { id: 'leaderboard', label: 'Leaderboard', icon: Trophy }
+]
+
+export default function Navbar({ currentView, onNavigate, onOpenApiKey, theme, onToggleTheme }) {
+  const { user, signOutUser } = useAuth()
+
+  const handleSignOut = async () => {
+    try {
+      await signOutUser()
+    } catch {
+      // AuthContext displays a friendly error
+    }
+  }
+
+  return (
+    <header className="sticky top-0 z-40 border-b border-base-300/80 bg-base-100/90 backdrop-blur-xl">
+      <div className="navbar mx-auto max-w-7xl gap-2 px-4 sm:px-6 lg:px-8">
+        <div className="navbar-start w-auto flex-1 lg:w-1/4">
+          <button
+            type="button"
+            onClick={() => onNavigate('dashboard')}
+            className="btn btn-ghost gap-2 px-2 text-xl font-black tracking-tight"
+            aria-label="Go to dashboard"
+          >
+            <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-primary-content shadow-lg shadow-primary/20">
+              <BrainCircuit size={21} aria-hidden="true" />
+            </span>
+            <span>Kognit</span>
+          </button>
+        </div>
+
+        <nav className="navbar-center hidden lg:flex" aria-label="Primary navigation">
+          <div className="join bg-base-200/70 p-1">
+            {navItems.map(item => {
+              const Icon = item.icon
+              const active = currentView === item.id || (item.id === 'dashboard' && currentView === 'study')
+
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => onNavigate(item.id)}
+                  className={`btn btn-sm join-item gap-2 border-0 ${active ? 'btn-primary' : 'btn-ghost'}`}
+                  aria-current={active ? 'page' : undefined}
+                >
+                  <Icon size={16} aria-hidden="true" />
+                  {item.label}
+                </button>
+              )
+            })}
+          </div>
+        </nav>
+
+        <div className="navbar-end w-auto gap-1">
+          <button
+            type="button"
+            onClick={onOpenApiKey}
+            className="btn btn-ghost btn-circle"
+            aria-label="Configure Gemini API key"
+            title="Gemini API key"
+          >
+            <KeyRound size={19} aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            onClick={onToggleTheme}
+            className="btn btn-ghost btn-circle"
+            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+          >
+            {theme === 'dark' ? <Sun size={19} aria-hidden="true" /> : <Moon size={19} aria-hidden="true" />}
+          </button>
+          <div className="dropdown dropdown-end">
+            <button type="button" tabIndex={0} className="btn btn-ghost btn-circle avatar" aria-label="Open account menu">
+              <div className="w-9 rounded-full ring-2 ring-primary/20 ring-offset-2 ring-offset-base-100">
+                {user?.photoURL ? (
+                  <img src={user.photoURL} alt="" referrerPolicy="no-referrer" />
+                ) : (
+                  <div className="grid h-full place-items-center bg-primary text-sm font-bold text-primary-content">
+                    {(user?.displayName || user?.email || 'K').slice(0, 1).toUpperCase()}
+                  </div>
+                )}
+              </div>
+            </button>
+            <div tabIndex={0} className="dropdown-content z-50 mt-3 w-64 rounded-box border border-base-300 bg-base-100 p-2 shadow-xl">
+              <div className="px-3 py-2">
+                <p className="truncate font-semibold">{user?.displayName || 'Kognit learner'}</p>
+                <p className="truncate text-xs opacity-60">{user?.email}</p>
+              </div>
+              <div className="divider my-1" />
+              <button type="button" onClick={handleSignOut} className="btn btn-ghost btn-sm w-full justify-start gap-2 text-error">
+                <LogOut size={16} aria-hidden="true" />
+                Sign out
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <nav className="mx-auto flex max-w-xl justify-around border-t border-base-300/60 px-2 py-1 lg:hidden" aria-label="Mobile navigation">
+        {navItems.map(item => {
+          const Icon = item.icon
+          const active = currentView === item.id || (item.id === 'dashboard' && currentView === 'study')
+
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => onNavigate(item.id)}
+              className={`btn btn-ghost btn-sm h-auto min-h-0 flex-1 flex-col gap-0.5 py-1.5 text-[0.65rem] ${active ? 'text-primary' : ''}`}
+              aria-current={active ? 'page' : undefined}
+            >
+              <Icon size={18} aria-hidden="true" />
+              {item.label}
+            </button>
+          )
+        })}
+      </nav>
+    </header>
+  )
+}

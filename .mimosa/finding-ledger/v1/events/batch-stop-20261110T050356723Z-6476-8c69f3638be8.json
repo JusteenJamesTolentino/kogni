@@ -1,0 +1,111 @@
+{
+  "schemaVersion": "mimosa-finding-ledger-batch/v1",
+  "batchId": "stop-20261110T050356723Z-6476-8c69f3638be8",
+  "runId": "20261110T050356723Z-6476-8c69f3638be8",
+  "runStatus": "completed",
+  "coverage": {
+    "status": "complete",
+    "reasons": []
+  },
+  "source": {
+    "component": "zcode-hook",
+    "operationId": "Stop"
+  },
+  "revision": null,
+  "diffHash": "0eaad0a942275dc311e9f0f2868c8327a075a639b64122a21fe1064d7c35dc2e",
+  "rulesVersion": "unavailable",
+  "sessionHash": "c96ef80056d3d491d75c4eec7ed83e750ba7370810a8e6007ddd6e1500bf64d3",
+  "reportRef": ".mimosa/reports/task-review-sess_4df15913-0ba7-4972-8b21-ebc5d316082c-20261110T050356723Z-6476-8c69f3638be8.json",
+  "events": [
+    {
+      "eventId": "hook-4d812ad00461947a93a3642e73625dbf",
+      "findingId": "mimosa-665e0f97cd8dc774f288ea7d",
+      "type": "finding_blocked",
+      "at": "2026-11-10T04:37:49.787Z",
+      "identity": {
+        "projectRelativeFile": "src/lib/discovery.ts",
+        "ruleId": "security",
+        "codeEvidenceHash": "1827660c9557573ff97f819f513cd852348c39b765b50456ff5951355cdcbb8b",
+        "confidence": "stable"
+      },
+      "scope": "direct",
+      "line": 156,
+      "endLine": 156,
+      "reasonCode": "deny",
+      "reportedToAgent": true,
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "evidenceHash": "1827660c9557573ff97f819f513cd852348c39b765b50456ff5951355cdcbb8b"
+      },
+      "sequence": 0
+    }
+  ],
+  "observedFindingIds": [
+    "mimosa-665e0f97cd8dc774f288ea7d"
+  ],
+  "verifiedFiles": [
+    {
+      "file": "src/lib/account.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/routes/routeScreens.tsx",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/components/PrivacyNotice.tsx",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/lib/database.rules.test.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/lib/onlineDecks.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/lib/discovery.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/routes/AppShell.tsx",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/routes/OnlineDeckRoutes.tsx",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/App.tsx",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/router/paths.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/routes/OnlineSeriesRoutes.tsx",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/components/StudySession.tsx",
+      "direct": "complete",
+      "projectContext": "partial"
+    }
+  ],
+  "recordedAt": "2026-11-10T05:03:57.434Z"
+}

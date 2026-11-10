@@ -1,0 +1,33 @@
+import { describe, expect, it } from 'vitest'
+import { parseActivePlayer, parsePublicOnlineDeck } from './discovery'
+
+const player = { uid: 'player-1', nickname: 'Player_1', nicknameCanonical: 'player_1' }
+const deck = {
+  id: 'deck-1',
+  ownerId: 'player-1',
+  ownerNickname: 'Player_1',
+  ownerNicknameCanonical: 'player_1',
+  title: 'Biology',
+  titleCanonical: 'biology',
+  description: 'Cells',
+  cardCount: 10,
+  latestVersion: 2,
+  updatedAt: 100,
+}
+
+describe('trusted discovery projection parsers', () => {
+  it('accepts exact active-player metadata and rejects private or extra fields', () => {
+    expect(parseActivePlayer(player, 'player-1')).toEqual(player)
+    expect(parseActivePlayer({ ...player, email: 'private@example.test' }, 'player-1')).toBeNull()
+    expect(parseActivePlayer({ ...player, sessions: { browser: true } }, 'player-1')).toBeNull()
+    expect(parseActivePlayer(player, 'another-player')).toBeNull()
+  })
+
+  it('accepts exact catalog metadata and rejects content or scheduling fields', () => {
+    expect(parsePublicOnlineDeck(deck, 'deck-1')).toEqual(deck)
+    expect(parsePublicOnlineDeck({ ...deck, cards: { secret: true } }, 'deck-1')).toBeNull()
+    expect(parsePublicOnlineDeck({ ...deck, studyGuide: 'private guide' }, 'deck-1')).toBeNull()
+    expect(parsePublicOnlineDeck({ ...deck, schedule: { due: 123 } }, 'deck-1')).toBeNull()
+    expect(parsePublicOnlineDeck({ ...deck, titleCanonical: 'wrong' }, 'deck-1')).toBeNull()
+  })
+})

@@ -1,0 +1,165 @@
+import { GoogleGenAI, createPartFromBase64 } from '@google/genai'
+
+const MAX_FILE_SIZE = 15 * 1024 * 1024
+const MAX_CARDS = 50
+const MAX_TITLE_LENGTH = 120
+const MAX_DESCRIPTION_LENGTH = 500
+const MAX_QUESTION_LENGTH = 1000
+const MAX_ANSWER_LENGTH = 2000
+const MAX_DISTRACTOR_LENGTH = 500
+const MAX_DISTRACTORS = 4
+const ALLOWED_MIME_TYPES = new Set([
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+])
+
+const responseJsonSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['title', 'description', 'cards'],
+  properties: {
+    title: { type: 'string', maxLength: MAX_TITLE_LENGTH },
+    description: { type: 'string', maxLength: MAX_DESCRIPTION_LENGTH },
+    cards: {
+      type: 'array',
+      minItems: 1,
+      maxItems: MAX_CARDS,
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['question', 'answer', 'distractors'],
+        properties: {
+          question: { type: 'string', maxLength: MAX_QUESTION_LENGTH },
+          answer: { type: 'string', maxLength: MAX_ANSWER_LENGTH },
+          distractors: {
+            type: 'array',
+            minItems: 0,
+            maxItems: MAX_DISTRACTORS,
+            items: { type: 'string', maxLength: MAX_DISTRACTOR_LENGTH },
+          },
+        },
+      },
+    },
+  },
+}
+
+function stripControlCharacters(value) {
+  return Array.from(String(value ?? ''))
+    .filter((character) => {
+      const code = character.charCodeAt(0)
+      return code === 9 || code === 10 || code === 13 || code >= 32
+    })
+    .join('')
+}
+
+function cleanString(value, maxLength) {
+  return stripControlCharacters(value)
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, maxLength)
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onerror = () => reject(new Error('Could not read the selected file'))
+    reader.onload = () => resolve(reader.result)
+    reader.readAsDataURL(file)
+  })
+}
+
+function validateFile(file) {
+  if (typeof File === 'undefined' || !(file instanceof File)) {
+    throw new TypeError('file must be a browser File')
+  }
+  if (!ALLOWED_MIME_TYPES.has(file.type)) {
+    throw new TypeError('Only PDF, JPEG, PNG, WebP, and GIF files are supported')
+  }
+  if (file.size <= 0) throw new TypeError('The selected file is empty')
+  if (file.size > MAX_FILE_SIZE) throw new RangeError('The selected file exceeds 15 MB')
+}
+
+export function normalizeGeneratedDeck(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new TypeError('Generated deck must be an object')
+  }
+
+  const title = cleanString(value.title, MAX_TITLE_LENGTH)
+  const description = cleanString(value.description, MAX_DESCRIPTION_LENGTH)
+  const sourceCards = Array.isArray(value.cards) ? value.cards.slice(0, MAX_CARDS) : []
+
+  const cards = sourceCards
+    .filter((card) => card && typeof card === 'object' && !Array.isArray(card))
+    .map((card) => {
+      const question = cleanString(card.question, MAX_QUESTION_LENGTH)
+      const answer = cleanString(card.answer, MAX_ANSWER_LENGTH)
+      const seen = new Set()
+      const distractors = (Array.isArray(card.distractors) ? card.distractors : [])
+        .map((item) => cleanString(item, MAX_DISTRACTOR_LENGTH))
+        .filter((item) => {
+          const key = item.toLocaleLowerCase()
+          if (!item || key === answer.toLocaleLowerCase() || seen.has(key)) return false
+          seen.add(key)
+          return true
+        })
+        .slice(0, MAX_DISTRACTORS)
+
+      return { question, answer, distractors }
+    })
+    .filter((card) => card.question && card.answer)
+
+  if (!title) throw new Error('Generated deck has no valid title')
+  if (cards.length === 0) throw new Error('Generated deck has no valid cards')
+
+  return { title, description, cards }
+}
+
+export async function generateDeckFromFile(file, apiKey) {
+  validateFile(file)
+  const normalizedApiKey = typeof apiKey === 'string' ? apiKey.trim() : ''
+  if (!normalizedApiKey) throw new TypeError('A Gemini API key is required')
+
+  const dataUrl = await readFileAsDataUrl(file)
+  if (typeof dataUrl !== 'string') throw new Error('Could not encode the selected file')
+
+  const separator = dataUrl.indexOf(',')
+  if (separator < 0) throw new Error('The selected file has an invalid data URL')
+  const base64 = dataUrl.slice(separator + 1)
+
+  const ai = new GoogleGenAI({ apiKey: normalizedApiKey })
+  const response = await ai.models.generateContent({
+    model: 'gemini-2.5-flash',
+    contents: [
+      {
+        role: 'user',
+        parts: [
+          createPartFromBase64(base64, file.type),
+          {
+            text:
+              'Create a concise study deck from this source. Cover its most important facts and concepts. Every card must have one unambiguous question, one correct answer, and up to four plausible but incorrect distractors. Do not include facts that are not supported by the source.',
+          },
+        ],
+      },
+    ],
+    config: {
+      responseMimeType: 'application/json',
+      responseJsonSchema,
+    },
+  })
+
+  if (typeof response.text !== 'string' || !response.text.trim()) {
+    throw new Error('Gemini returned an empty response')
+  }
+
+  let parsed
+  try {
+    parsed = JSON.parse(response.text)
+  } catch {
+    throw new Error('Gemini returned invalid JSON')
+  }
+
+  return normalizeGeneratedDeck(parsed)
+}

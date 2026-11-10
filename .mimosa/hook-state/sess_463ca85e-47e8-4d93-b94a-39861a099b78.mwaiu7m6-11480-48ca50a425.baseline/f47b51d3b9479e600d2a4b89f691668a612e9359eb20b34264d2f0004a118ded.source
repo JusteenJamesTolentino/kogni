@@ -1,0 +1,45 @@
+import { describe, expect, it } from 'vitest'
+import { calculateSm2 } from './sm2'
+
+const card = {
+  id: 'card_test',
+  deckId: 'deck_test',
+  interval: 0,
+  repetition: 0,
+  easinessFactor: 2.5,
+  nextReviewDate: 0,
+}
+
+describe('calculateSm2', () => {
+  it('schedules a successful first review for one day later', () => {
+    const result = calculateSm2(card, 5, 1_000)
+
+    expect(result.repetition).toBe(1)
+    expect(result.interval).toBe(1)
+    expect(result.easinessFactor).toBeCloseTo(2.6)
+    expect(result.nextReviewDate).toBe(1_000 + 86_400_000)
+  })
+
+  it('multiplies later intervals by the current easiness factor', () => {
+    const result = calculateSm2({ ...card, repetition: 1, interval: 1 }, 4, 1_000)
+
+    expect(result.repetition).toBe(2)
+    expect(result.interval).toBe(2.5)
+  })
+
+  it('resets failed reviews and clamps easiness at 1.3', () => {
+    const result = calculateSm2(
+      { ...card, repetition: 5, interval: 20, easinessFactor: 1.3 },
+      0,
+      1_000,
+    )
+
+    expect(result.repetition).toBe(0)
+    expect(result.interval).toBe(1)
+    expect(result.easinessFactor).toBe(1.3)
+  })
+
+  it('rejects scores outside zero through five', () => {
+    expect(() => calculateSm2(card, 6)).toThrow(RangeError)
+  })
+})

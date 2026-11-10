@@ -1,0 +1,123 @@
+import { motion } from 'framer-motion'
+import { BookOpen, ChevronRight, Clock3, Layers3, Play, Plus } from 'lucide-react'
+import type { StudyCard, StudyDeck } from '../types/domain'
+
+type DeckListDeck = StudyDeck & { lineageId?: string }
+
+export interface DeckListProps {
+  decks: DeckListDeck[]
+  dueCards: StudyCard[]
+  loading: boolean
+  onOpenDeck: (deck: DeckListDeck) => void | Promise<void>
+  onReviewDue?: (deck: DeckListDeck, dueCards: StudyCard[]) => void | Promise<void>
+  /** Transitional alias for callers that still name the due-review callback onStudy. */
+  onStudy?: (deck: DeckListDeck) => void | Promise<void>
+  onImport: () => void
+  onBrowseShared: () => void
+}
+
+export default function DeckList({
+  decks,
+  dueCards,
+  loading,
+  onOpenDeck,
+  onReviewDue,
+  onStudy,
+  onImport,
+  onBrowseShared,
+}: DeckListProps) {
+  const reviewDue = onReviewDue ?? (onStudy
+    ? (deck: DeckListDeck) => onStudy(deck)
+    : undefined)
+
+  if (loading) {
+    return (
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" aria-label="Loading decks" aria-busy="true">
+        {[0, 1, 2].map((item) => <div key={item} className="skeleton h-48 rounded-2xl" />)}
+      </div>
+    )
+  }
+
+  if (!decks.length) {
+    return (
+      <div className="hero min-h-72 rounded-3xl border border-dashed border-base-300 bg-base-200/45">
+        <div className="hero-content text-center">
+          <div className="max-w-md">
+            <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-primary/10 text-primary">
+              <Layers3 size={28} aria-hidden="true" />
+            </div>
+            <h3 className="text-xl font-bold">Add your first deck</h3>
+            <p className="mt-2 text-sm text-base-content/60">Generate one from a PDF or image source file, or add a deck another learner shared with you.</p>
+            <div className="mt-5 flex flex-col justify-center gap-2 sm:flex-row">
+              <button type="button" onClick={onImport} className="btn btn-primary gap-2">
+                <Plus size={18} aria-hidden="true" />
+                Magic Import
+              </button>
+              <button type="button" onClick={onBrowseShared} className="btn btn-outline gap-2">
+                <BookOpen size={18} aria-hidden="true" />
+                Browse shared decks
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      {decks.map((deck, index) => {
+        const relatedDueCards = dueCards.filter((card) => card.deckId === deck.id)
+        const relatedDue = relatedDueCards.length
+
+        return (
+          <motion.article
+            key={deck.id}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: Math.min(index * 0.04, 0.2) }}
+            className="card group border border-base-300 bg-base-100 shadow-sm transition-all hover:-translate-y-1 hover:border-primary/40 hover:shadow-xl"
+          >
+            <div className="card-body p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary transition-transform group-hover:scale-105">
+                  <BookOpen size={22} aria-hidden="true" />
+                </div>
+                <div className="flex flex-wrap justify-end gap-1.5">
+                  {deck.lineageId && <span className="badge badge-secondary badge-outline badge-sm">Shared</span>}
+                  {relatedDue > 0 && <span className="badge badge-secondary badge-sm">{relatedDue} due</span>}
+                </div>
+              </div>
+              <div>
+                <h3 className="mt-3 line-clamp-2 text-lg font-bold">{deck.title || 'Untitled deck'}</h3>
+                <p className="mt-1 line-clamp-2 min-h-10 text-sm text-base-content/55">{deck.description || 'A focused collection ready for review.'}</p>
+              </div>
+              <div className="mt-2 flex items-center gap-4 text-xs text-base-content/55">
+                <span className="inline-flex items-center gap-1"><Layers3 size={14} aria-hidden="true" /> {deck.cardCount} cards</span>
+                {deck.createdAt > 0 && <span className="inline-flex items-center gap-1"><Clock3 size={14} aria-hidden="true" /> Ready to browse</span>}
+              </div>
+              <div className={`card-actions mt-2 grid ${reviewDue && relatedDue > 0 ? 'grid-cols-[1fr_auto]' : 'grid-cols-1'} gap-2`}>
+                <button type="button" onClick={() => void onOpenDeck(deck)} className="btn btn-primary btn-sm min-w-0 gap-2">
+                  Open deck
+                  <ChevronRight size={15} className="ml-auto" aria-hidden="true" />
+                </button>
+                {reviewDue && relatedDue > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => void reviewDue(deck, relatedDueCards)}
+                    className="btn btn-outline btn-sm gap-1.5"
+                    aria-label={`Review ${relatedDue} due ${relatedDue === 1 ? 'card' : 'cards'} in ${deck.title || 'this deck'}`}
+                  >
+                    <Play size={14} fill="currentColor" aria-hidden="true" />
+                    <span className="hidden min-[390px]:inline sm:hidden lg:inline">Review due</span>
+                    <span className="min-[390px]:hidden sm:inline lg:hidden">{relatedDue} due</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </motion.article>
+        )
+      })}
+    </div>
+  )
+}

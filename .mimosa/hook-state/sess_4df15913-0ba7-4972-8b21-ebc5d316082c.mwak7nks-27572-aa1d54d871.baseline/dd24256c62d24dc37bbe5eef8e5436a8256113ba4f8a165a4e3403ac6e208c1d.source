@@ -1,0 +1,185 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const strict_1 = __importDefault(require("node:assert/strict"));
+const node_test_1 = require("node:test");
+const app_1 = require("firebase-admin/app");
+const database_1 = require("firebase-admin/database");
+const https_1 = require("firebase-functions/v2/https");
+const social_js_1 = require("./social.js");
+const privacyVersion = 'privacy-current';
+function account(uid, discoverable = true) {
+    const nickname = uid === 'alice' ? 'Alice_1' : uid === 'bob' ? 'Bob_1' : 'Cara_1';
+    return {
+        uid,
+        status: 'ready',
+        nickname,
+        nicknameCanonical: nickname.toLowerCase(),
+        privacy: {
+            currentVersion: privacyVersion,
+            acknowledgements: { [privacyVersion]: 1 },
+        },
+        preferences: { discoverable, presence: true },
+    };
+}
+(0, node_test_1.describe)('social profile projection unit contract', () => {
+    (0, node_test_1.test)('uses only exact safe fields and labels existing leaderboard XP as client-reported', () => {
+        const profile = (0, social_js_1.buildPublicPlayerProfile)(account('alice'), 'alice', privacyVersion, {
+            leaderboardValue: { xp: 42, email: 'must-not-project@example.test' },
+            followerCount: 2,
+            followingCount: 3,
+            publishedDeckCount: 4,
+        });
+        strict_1.default.deepEqual(profile, {
+            uid: 'alice',
+            nickname: 'Alice_1',
+            nicknameCanonical: 'alice_1',
+            communityXp: 42,
+            xpTrust: 'client-reported',
+            followerCount: 2,
+            followingCount: 3,
+            publishedDeckCount: 4,
+        });
+        strict_1.default.equal((0, social_js_1.isPublicPlayerProfile)(profile), true);
+        strict_1.default.equal((0, social_js_1.isPublicPlayerProfile)({ ...profile, online: true }), false);
+        strict_1.default.equal((0, social_js_1.isPublicPlayerProfile)({ ...profile, email: 'private@example.test' }), false);
+    });
+    (0, node_test_1.test)('does not project stale privacy or private accounts and safely defaults invalid XP', () => {
+        strict_1.default.equal((0, social_js_1.buildPublicPlayerProfile)(account('alice', false), 'alice', privacyVersion, {
+            leaderboardValue: { xp: 9 }, followerCount: 0, followingCount: 0, publishedDeckCount: 0,
+        }), null);
+        strict_1.default.equal((0, social_js_1.buildPublicPlayerProfile)(account('alice'), 'alice', 'privacy-next', {
+            leaderboardValue: { xp: 9 }, followerCount: 0, followingCount: 0, publishedDeckCount: 0,
+        }), null);
+        const profile = (0, social_js_1.buildPublicPlayerProfile)(account('alice'), 'alice', privacyVersion, {
+            leaderboardValue: { xp: -1 }, followerCount: -1, followingCount: 1.5, publishedDeckCount: 0,
+        });
+        strict_1.default.equal(profile?.communityXp, 0);
+        strict_1.default.equal(profile?.followerCount, 0);
+        strict_1.default.equal(profile?.followingCount, 0);
+    });
+    (0, node_test_1.test)('canonical edge IDs are stable, directional, and safe Firebase keys', () => {
+        const first = (0, social_js_1.followEdgeId)('alice', 'bob');
+        strict_1.default.equal(first, (0, social_js_1.followEdgeId)('alice', 'bob'));
+        strict_1.default.notEqual(first, (0, social_js_1.followEdgeId)('bob', 'alice'));
+        strict_1.default.match(first, /^[a-f0-9]{64}$/);
+    });
+});
+const emulatorHost = process.env.FIREBASE_DATABASE_EMULATOR_HOST;
+const integration = emulatorHost ? node_test_1.describe : node_test_1.describe.skip;
+integration('social services with Realtime Database emulator', { concurrency: false }, () => {
+    let database;
+    let appName = '';
+    (0, node_test_1.before)(() => {
+        appName = `social-test-${Date.now()}`;
+        const app = (0, app_1.initializeApp)({
+            projectId: 'demo-kognit-rules',
+            databaseURL: 'http://127.0.0.1:9002?ns=demo-kognit-rules',
+        }, appName);
+        database = (0, database_1.getDatabase)(app);
+    });
+    (0, node_test_1.after)(async () => {
+        const app = (0, app_1.getApps)().find((candidate) => candidate.name === appName);
+        if (app)
+            await (0, app_1.deleteApp)(app);
+    });
+    (0, node_test_1.beforeEach)(async () => {
+        await database.ref().set(null);
+        await database.ref().update({
+            'accounts/alice': account('alice'),
+            'accounts/bob': account('bob'),
+            'accounts/cara': account('cara'),
+            'leaderboard/bob': { xp: 64 },
+            'onlineDecks/public/head': {
+                id: 'public', ownerId: 'bob', visibility: 'public', status: 'active', latestVersion: 1,
+                title: 'Public', description: '', cardCount: 1, updatedAt: 1,
+            },
+            'onlineDecks/private/head': {
+                id: 'private', ownerId: 'bob', visibility: 'private', status: 'active', latestVersion: 1,
+                title: 'Private', description: '', cardCount: 1, updatedAt: 1,
+            },
+        });
+    });
+    (0, node_test_1.test)('follow and unfollow are immediate and idempotent with derived edges and counts', async () => {
+        strict_1.default.deepEqual(await (0, social_js_1.followPlayerService)(database, 'alice', 'bob', privacyVersion, 100), {
+            targetUid: 'bob', following: true,
+        });
+        await (0, social_js_1.followPlayerService)(database, 'alice', 'bob', privacyVersion, 200);
+        const edgeId = (0, social_js_1.followEdgeId)('alice', 'bob');
+        const root = (await database.ref().get()).val();
+        strict_1.default.deepEqual(root.playerFollowEdges[edgeId], {
+            followerUid: 'alice', followedUid: 'bob', createdAt: 100,
+        });
+        strict_1.default.equal(root.playerFollowing.alice.bob.edgeId, edgeId);
+        strict_1.default.equal(root.playerFollowers.bob.alice.edgeId, edgeId);
+        strict_1.default.equal(root.publicPlayerProfiles.alice.followingCount, 1);
+        strict_1.default.equal(root.publicPlayerProfiles.bob.followerCount, 1);
+        strict_1.default.equal(root.publicPlayerProfiles.bob.publishedDeckCount, 1);
+        const read = await (0, social_js_1.getPlayerProfileService)(database, 'alice', 'bob', privacyVersion);
+        strict_1.default.deepEqual(read.social, { following: true, followedBy: false });
+        strict_1.default.equal(read.profile.communityXp, 64);
+        strict_1.default.equal(read.profile.xpTrust, 'client-reported');
+        await (0, social_js_1.unfollowPlayerService)(database, 'alice', 'bob', privacyVersion);
+        await (0, social_js_1.unfollowPlayerService)(database, 'alice', 'bob', privacyVersion);
+        strict_1.default.equal((await database.ref(`playerFollowEdges/${edgeId}`).get()).exists(), false);
+        strict_1.default.equal((await database.ref('publicPlayerProfiles/alice/followingCount').get()).val(), 0);
+        strict_1.default.equal((await database.ref('publicPlayerProfiles/bob/followerCount').get()).val(), 0);
+    });
+    (0, node_test_1.test)('rejects self, private targets, and either-direction blocks with generic unavailability', async () => {
+        await strict_1.default.rejects(() => (0, social_js_1.followPlayerService)(database, 'alice', 'alice', privacyVersion), (error) => error instanceof https_1.HttpsError && error.code === 'invalid-argument');
+        await database.ref('accounts/bob/preferences/discoverable').set(false);
+        await strict_1.default.rejects(() => (0, social_js_1.followPlayerService)(database, 'alice', 'bob', privacyVersion), (error) => error instanceof https_1.HttpsError && error.code === 'not-found' && error.message === 'Player is unavailable.');
+        await database.ref('accounts/bob/preferences/discoverable').set(true);
+        await database.ref('playerBlocks/bob/alice').set(1);
+        await strict_1.default.rejects(() => (0, social_js_1.getPlayerProfileService)(database, 'alice', 'bob', privacyVersion), (error) => error instanceof https_1.HttpsError && error.code === 'not-found' && error.message === 'Player is unavailable.');
+        await strict_1.default.rejects(() => (0, social_js_1.followPlayerService)(database, 'alice', 'bob', privacyVersion), (error) => error instanceof https_1.HttpsError && error.code === 'not-found' && error.message === 'Player is unavailable.');
+    });
+    (0, node_test_1.test)('block is private and idempotent, removes both directions, and unblock never restores', async () => {
+        await (0, social_js_1.followPlayerService)(database, 'alice', 'bob', privacyVersion, 10);
+        await (0, social_js_1.followPlayerService)(database, 'bob', 'alice', privacyVersion, 20);
+        await (0, social_js_1.blockPlayerService)(database, 'alice', 'bob', privacyVersion, 30);
+        await (0, social_js_1.blockPlayerService)(database, 'alice', 'bob', privacyVersion, 40);
+        strict_1.default.equal((await database.ref(`playerBlocks/alice/bob`).get()).val(), 30);
+        strict_1.default.equal((await database.ref(`playerFollowEdges/${(0, social_js_1.followEdgeId)('alice', 'bob')}`).get()).exists(), false);
+        strict_1.default.equal((await database.ref(`playerFollowEdges/${(0, social_js_1.followEdgeId)('bob', 'alice')}`).get()).exists(), false);
+        strict_1.default.equal((await database.ref('publicPlayerProfiles/alice/followerCount').get()).val(), 0);
+        strict_1.default.equal((await database.ref('publicPlayerProfiles/bob/followerCount').get()).val(), 0);
+        await (0, social_js_1.unblockPlayerService)(database, 'alice', 'bob', privacyVersion);
+        await (0, social_js_1.unblockPlayerService)(database, 'alice', 'bob', privacyVersion);
+        strict_1.default.equal((await database.ref('playerBlocks/alice/bob').get()).exists(), false);
+        strict_1.default.equal((await database.ref('playerFollowEdges').get()).exists(), false);
+    });
+    (0, node_test_1.test)('privacy cleanup removes profile, active/catalog data, all follows, and reconciles peers', async () => {
+        await (0, social_js_1.followPlayerService)(database, 'alice', 'bob', privacyVersion, 10);
+        await (0, social_js_1.followPlayerService)(database, 'bob', 'cara', privacyVersion, 20);
+        await database.ref().update({
+            'activePlayers/bob': { uid: 'bob', nickname: 'Bob_1', nicknameCanonical: 'bob_1' },
+            'publicAccounts/bob': { uid: 'bob' },
+            'publicProfiles/bob': { uid: 'bob' },
+            'publicOnlineDeckCatalog/public': { ownerId: 'bob', updatedAt: 1 },
+            'onlineDecksByOwner/bob/public': { ownerId: 'bob', updatedAt: 1 },
+            'accounts/bob/preferences/discoverable': false,
+        });
+        await (0, social_js_1.cleanupPrivatePlayer)(database, 'bob', privacyVersion);
+        for (const path of [
+            'publicPlayerProfiles/bob', 'activePlayers/bob', 'publicAccounts/bob', 'publicProfiles/bob',
+            'publicOnlineDeckCatalog/public', 'onlineDecksByOwner/bob',
+            `playerFollowEdges/${(0, social_js_1.followEdgeId)('alice', 'bob')}`,
+            `playerFollowEdges/${(0, social_js_1.followEdgeId)('bob', 'cara')}`,
+        ]) {
+            strict_1.default.equal((await database.ref(path).get()).exists(), false, path);
+        }
+        strict_1.default.equal((await database.ref('publicPlayerProfiles/alice/followingCount').get()).val(), 0);
+        strict_1.default.equal((await database.ref('publicPlayerProfiles/cara/followerCount').get()).val(), 0);
+    });
+    (0, node_test_1.test)('profile reconciliation derives counts from canonical edges rather than client projections', async () => {
+        await database.ref('playerFollowing/alice/bob').set({ forged: true });
+        await database.ref('playerFollowers/bob/alice').set({ forged: true });
+        const profile = await (0, social_js_1.reconcilePublicPlayerProfile)(database, 'bob', privacyVersion);
+        strict_1.default.equal(profile?.followerCount, 0);
+        strict_1.default.equal(profile?.followingCount, 0);
+    });
+});
+//# sourceMappingURL=social.test.js.map

@@ -1,0 +1,492 @@
+import type { FormEvent } from 'react'
+import OnlineDeckCatalog from './OnlineDeckCatalog'
+import type { OnlineDeckCatalogPagination, PublishedOnlineDeckSummary } from './OnlineDeckCatalog'
+import OnlinePlayers from './OnlinePlayers'
+import type { OnlinePlayerSummary } from './OnlinePlayers'
+import {
+  ArrowRight,
+  BookOpen,
+  Check,
+  Download,
+  Inbox,
+  KeyRound,
+  Mail,
+  RefreshCw,
+  Search,
+  ShieldCheck,
+  UserRound,
+  UserRoundSearch,
+  UsersRound,
+  X,
+} from 'lucide-react'
+
+export interface CommunityProfile {
+  displayName: string
+  isDiscoverable: boolean
+  photoURL?: string | null
+}
+
+export interface CommunitySearchResult {
+  id: string
+  displayName: string
+  photoURL?: string | null
+}
+
+export interface SharedDeckSummary {
+  id: string
+  deckId: string
+  deckTitle: string
+  senderId: string
+  senderDisplayName: string
+  senderPhotoURL?: string | null
+  description?: string
+  cardCount?: number
+  sharedAt?: number | string | Date
+  imported?: boolean
+}
+
+export interface CommunityProps {
+  profile: CommunityProfile | null
+  profileLoading?: boolean
+  profileError?: string
+  profileSaving?: boolean
+  onEditProfile: () => void
+  onDiscoverabilityChange: (isDiscoverable: boolean) => void | Promise<void>
+  searchQuery: string
+  searchResults: CommunitySearchResult[]
+  searchLoading?: boolean
+  searchError?: string
+  onSearchQueryChange: (query: string) => void
+  onSearchSubmit?: (query: string) => void | Promise<void>
+  onSelectSearchResult?: (result: CommunitySearchResult) => void
+  onOpenPlayer?: (player: { id: string; nickname: string }) => void | Promise<void>
+  sharedDecks: SharedDeckSummary[]
+  inboxLoading?: boolean
+  inboxError?: string
+  onRefreshInbox?: () => void | Promise<void>
+  onImportSharedDeck: (sharedDeck: SharedDeckSummary) => void | Promise<void>
+  onDismissSharedDeck?: (sharedDeck: SharedDeckSummary) => void | Promise<void>
+  portalCode?: string
+  portalRedeeming?: boolean
+  portalError?: string
+  onPortalCodeChange?: (code: string) => void
+  onRedeemPortalCode?: (code: string) => void | Promise<void>
+  onOpenPortal?: (code: string) => void | Promise<void>
+  onlinePlayers?: OnlinePlayerSummary[]
+  onlinePlayersLoading?: boolean
+  onlinePlayersError?: string
+  onRetryOnlinePlayers?: () => void | Promise<void>
+  publishedDecks?: PublishedOnlineDeckSummary[]
+  publishedDecksLoading?: boolean
+  publishedDecksError?: string
+  publishedDeckSearchQuery?: string
+  publishedDeckPagination?: OnlineDeckCatalogPagination
+  onPublishedDeckSearchQueryChange?: (query: string) => void
+  onPublishedDeckSearchSubmit?: (query: string) => void | Promise<void>
+  onOpenPublishedDeck?: (deck: PublishedOnlineDeckSummary) => void | Promise<void>
+  onOpenPublishedDeckCreator?: (creator: Pick<PublishedOnlineDeckSummary, 'creatorId' | 'creatorNickname' | 'creatorOnline'>) => void | Promise<void>
+  onRetryPublishedDecks?: () => void | Promise<void>
+  onPreviousPublishedDeckPage?: () => void | Promise<void>
+  onNextPublishedDeckPage?: () => void | Promise<void>
+}
+
+function InitialAvatar({ name, photoURL, size = 'md' }: { name: string; photoURL?: string | null; size?: 'sm' | 'md' | 'lg' }) {
+  const dimensions = size === 'lg' ? 'h-14 w-14 text-lg' : size === 'sm' ? 'h-9 w-9 text-sm' : 'h-11 w-11 text-base'
+
+  return (
+    <div className="avatar shrink-0">
+      <div className={`${dimensions} overflow-hidden rounded-full bg-primary/10 text-primary`}>
+        {photoURL ? (
+          <img src={photoURL} alt="" referrerPolicy="no-referrer" />
+        ) : (
+          <div className="grid h-full w-full place-items-center font-bold" aria-hidden="true">
+            {(name.trim().charAt(0) || '?').toUpperCase()}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function formatSharedAt(value?: number | string | Date): string {
+  if (value === undefined) return 'Shared recently'
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) return 'Shared recently'
+
+  return `Shared ${new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: date.getFullYear() === new Date().getFullYear() ? undefined : 'numeric',
+  }).format(date)}`
+}
+
+export default function Community({
+  profile,
+  profileLoading = false,
+  profileError = '',
+  profileSaving = false,
+  onEditProfile,
+  onDiscoverabilityChange,
+  searchQuery,
+  searchResults,
+  searchLoading = false,
+  searchError = '',
+  onSearchQueryChange,
+  onSearchSubmit,
+  onSelectSearchResult,
+  onOpenPlayer,
+  sharedDecks,
+  inboxLoading = false,
+  inboxError = '',
+  onRefreshInbox,
+  onImportSharedDeck,
+  onDismissSharedDeck,
+  portalCode = '',
+  portalRedeeming = false,
+  portalError = '',
+  onPortalCodeChange,
+  onRedeemPortalCode,
+  onOpenPortal,
+  onlinePlayers = [],
+  onlinePlayersLoading = false,
+  onlinePlayersError = '',
+  onRetryOnlinePlayers,
+  publishedDecks = [],
+  publishedDecksLoading = false,
+  publishedDecksError = '',
+  publishedDeckSearchQuery,
+  publishedDeckPagination,
+  onPublishedDeckSearchQueryChange,
+  onPublishedDeckSearchSubmit,
+  onOpenPublishedDeck,
+  onOpenPublishedDeckCreator,
+  onRetryPublishedDecks,
+  onPreviousPublishedDeckPage,
+  onNextPublishedDeckPage,
+}: CommunityProps) {
+  const trimmedQuery = searchQuery.trim()
+  const normalizedPortalCode = portalCode.trim().toUpperCase()
+
+  const handlePortalRedeem = (event: FormEvent<HTMLFormElement>): void => {
+    event.preventDefault()
+    if (!normalizedPortalCode || portalRedeeming) return
+    if (onOpenPortal) void onOpenPortal(normalizedPortalCode)
+    else void onRedeemPortalCode?.(normalizedPortalCode)
+  }
+
+  const handleSearch = (event: FormEvent<HTMLFormElement>): void => {
+    event.preventDefault()
+    if (trimmedQuery) void onSearchSubmit?.(trimmedQuery)
+  }
+
+  return (
+    <main className="mx-auto w-full max-w-7xl px-4 py-7 sm:px-6 sm:py-10 lg:px-8">
+      <section className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-primary">
+            <UsersRound size={17} aria-hidden="true" />
+            Learn with your community
+          </div>
+          <h1 className="text-3xl font-black tracking-tight sm:text-4xl">Community</h1>
+          <p className="mt-2 max-w-2xl text-base-content/60">Find other learners and collect decks they have shared with you.</p>
+        </div>
+        <a href="#shared-with-you" className="btn btn-outline btn-sm gap-2 self-start sm:self-auto">
+          <Inbox size={16} aria-hidden="true" />
+          Shared with you
+          {sharedDecks.some((deck) => !deck.imported) && <span className="badge badge-primary badge-sm">New</span>}
+        </a>
+      </section>
+
+      <div className="mt-7 grid gap-6 lg:grid-cols-[minmax(0,1.45fr)_minmax(19rem,0.75fr)] lg:items-start">
+        <div className="space-y-6">
+          <OnlineDeckCatalog
+            decks={publishedDecks}
+            loading={publishedDecksLoading}
+            error={publishedDecksError}
+            searchQuery={publishedDeckSearchQuery}
+            recentLimit={20}
+            pagination={publishedDeckPagination}
+            onSearchQueryChange={onPublishedDeckSearchQueryChange}
+            onSearchSubmit={onPublishedDeckSearchSubmit}
+            onOpenDeck={onOpenPublishedDeck ?? (() => undefined)}
+            onOpenCreator={onOpenPublishedDeckCreator ?? (onOpenPlayer
+              ? (creator) => onOpenPlayer({ id: creator.creatorId, nickname: creator.creatorNickname })
+              : undefined)}
+            onRetry={onRetryPublishedDecks}
+            onPreviousPage={onPreviousPublishedDeckPage}
+            onNextPage={onNextPublishedDeckPage}
+          />
+
+          {(onRedeemPortalCode || onOpenPortal) && (
+            <section className="overflow-hidden rounded-3xl border border-base-300 bg-base-100 shadow-sm" aria-labelledby="portal-code-title">
+              <div className="flex flex-col gap-5 p-5 sm:p-6 md:flex-row md:items-center md:justify-between">
+                <div className="flex min-w-0 items-start gap-3">
+                  <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-secondary/10 text-secondary">
+                    <KeyRound size={22} aria-hidden="true" />
+                  </div>
+                  <div>
+                    <h2 id="portal-code-title" className="text-xl font-bold">Open a deck portal</h2>
+                    <p className="mt-1 max-w-xl text-sm text-base-content/60">Enter a reusable code to preview a shared deck. Card questions and answers stay hidden until you add your own copy.</p>
+                  </div>
+                </div>
+
+                <form className="flex w-full flex-col gap-2 sm:flex-row md:max-w-md" onSubmit={handlePortalRedeem}>
+                  <label className="input input-bordered flex min-w-0 flex-1 items-center gap-2 focus-within:input-secondary">
+                    <KeyRound size={17} className="shrink-0 text-base-content/45" aria-hidden="true" />
+                    <span className="sr-only">Deck portal code</span>
+                    <input
+                      type="text"
+                      value={portalCode}
+                      onChange={(event) => onPortalCodeChange?.(event.target.value.toUpperCase())}
+                      className="min-w-0 grow font-mono uppercase tracking-widest"
+                      placeholder="ENTER CODE"
+                      autoComplete="off"
+                      autoCapitalize="characters"
+                      spellCheck={false}
+                      disabled={portalRedeeming}
+                      aria-invalid={Boolean(portalError)}
+                    />
+                  </label>
+                  <button type="submit" className="btn btn-secondary gap-2" disabled={!normalizedPortalCode || portalRedeeming}>
+                    {portalRedeeming ? <span className="loading loading-spinner loading-sm" aria-hidden="true" /> : <ArrowRight size={17} aria-hidden="true" />}
+                    Preview
+                  </button>
+                </form>
+              </div>
+              {portalError && <div role="alert" className="alert alert-error mx-5 mb-5 text-sm sm:mx-6 sm:mb-6"><span>{portalError}</span></div>}
+            </section>
+          )}
+
+          <section className="overflow-hidden rounded-3xl border border-base-300 bg-base-100 shadow-sm" aria-labelledby="find-learners-title">
+            <div className="border-b border-base-300 bg-base-200/50 p-5 sm:p-6">
+              <div className="flex items-start gap-3">
+                <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-primary/10 text-primary">
+                  <UserRoundSearch size={22} aria-hidden="true" />
+                </div>
+                <div>
+                  <h2 id="find-learners-title" className="text-xl font-bold">Find learners</h2>
+                  <p className="mt-1 text-sm text-base-content/60">Search public display names. Private profiles never appear here.</p>
+                </div>
+              </div>
+
+              <form className="mt-5 flex flex-col gap-2 sm:flex-row" role="search" onSubmit={handleSearch}>
+                <label className="input input-bordered flex min-w-0 flex-1 items-center gap-2 focus-within:input-primary">
+                  <Search size={18} className="shrink-0 text-base-content/45" aria-hidden="true" />
+                  <span className="sr-only">Search learners by display name</span>
+                  <input
+                    type="search"
+                    value={searchQuery}
+                    onChange={(event) => onSearchQueryChange(event.target.value)}
+                    className="min-w-0 grow"
+                    placeholder="Search display names"
+                    autoComplete="off"
+                    enterKeyHint="search"
+                    aria-controls="community-search-results"
+                  />
+                </label>
+                <button type="submit" className="btn btn-primary gap-2" disabled={!trimmedQuery || searchLoading}>
+                  {searchLoading ? <span className="loading loading-spinner loading-sm" aria-hidden="true" /> : <Search size={17} aria-hidden="true" />}
+                  Search
+                </button>
+              </form>
+            </div>
+
+            <div id="community-search-results" className="min-h-52" aria-live="polite" aria-busy={searchLoading}>
+              {searchError && <div role="alert" className="alert alert-error m-5"><span>{searchError}</span></div>}
+
+              {searchLoading ? (
+                <div className="space-y-3 p-5 sm:p-6" aria-label="Searching for learners">
+                  {[0, 1, 2].map((item) => <div key={item} className="skeleton h-16 w-full rounded-2xl" />)}
+                </div>
+              ) : !trimmedQuery ? (
+                <div className="grid min-h-52 place-items-center px-6 py-10 text-center">
+                  <div>
+                    <Search size={30} className="mx-auto text-base-content/25" aria-hidden="true" />
+                    <h3 className="mt-3 font-bold">Search the community</h3>
+                    <p className="mt-1 text-sm text-base-content/55">Enter a public display name to get started.</p>
+                  </div>
+                </div>
+              ) : !searchError && !searchResults.length ? (
+                <div className="grid min-h-52 place-items-center px-6 py-10 text-center">
+                  <div>
+                    <UserRoundSearch size={30} className="mx-auto text-base-content/25" aria-hidden="true" />
+                    <h3 className="mt-3 font-bold">No public learners found</h3>
+                    <p className="mt-1 text-sm text-base-content/55">Check the spelling or try a shorter name.</p>
+                  </div>
+                </div>
+              ) : (
+                <ul className="divide-y divide-base-300" aria-label="Learner search results">
+                  {searchResults.map((result) => (
+                    <li key={result.id} className="flex items-center gap-3 p-4 sm:px-6">
+                      <InitialAvatar name={result.displayName} photoURL={result.photoURL} />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-semibold">{result.displayName}</p>
+                        <p className="truncate text-xs text-base-content/50">Kognit learner</p>
+                      </div>
+                      {(onOpenPlayer || onSelectSearchResult) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (onOpenPlayer) void onOpenPlayer({ id: result.id, nickname: result.displayName })
+                            else onSelectSearchResult?.(result)
+                          }}
+                          className="btn btn-ghost btn-sm"
+                        >
+                          View
+                        </button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </section>
+
+          <section id="shared-with-you" className="scroll-mt-24 overflow-hidden rounded-3xl border border-base-300 bg-base-100 shadow-sm" aria-labelledby="shared-decks-title">
+            <div className="flex items-center justify-between gap-3 border-b border-base-300 bg-base-200/50 p-5 sm:px-6">
+              <div>
+                <h2 id="shared-decks-title" className="text-xl font-bold">Shared with you</h2>
+                <p className="mt-1 text-sm text-base-content/55">Decks sent directly to your inbox.</p>
+              </div>
+              {onRefreshInbox && (
+                <button type="button" onClick={() => void onRefreshInbox()} className="btn btn-circle btn-ghost btn-sm" aria-label="Refresh shared decks" disabled={inboxLoading}>
+                  <RefreshCw size={17} className={inboxLoading ? 'animate-spin' : ''} aria-hidden="true" />
+                </button>
+              )}
+            </div>
+
+            <div aria-live="polite" aria-busy={inboxLoading}>
+              {inboxError && <div role="alert" className="alert alert-error m-5"><span>{inboxError}</span></div>}
+
+              {inboxLoading ? (
+                <div className="grid gap-4 p-5 sm:grid-cols-2 sm:p-6" aria-label="Loading shared decks">
+                  {[0, 1].map((item) => <div key={item} className="skeleton h-44 rounded-2xl" />)}
+                </div>
+              ) : !inboxError && !sharedDecks.length ? (
+                <div className="grid min-h-56 place-items-center px-6 py-12 text-center">
+                  <div>
+                    <Mail size={32} className="mx-auto text-base-content/25" aria-hidden="true" />
+                    <h3 className="mt-3 font-bold">Your inbox is ready</h3>
+                    <p className="mt-1 text-sm text-base-content/55">Decks other learners share with you will appear here.</p>
+                  </div>
+                </div>
+              ) : (
+                <ul className="grid gap-4 p-4 sm:grid-cols-2 sm:p-6">
+                  {sharedDecks.map((sharedDeck) => (
+                    <li key={sharedDeck.id} className="card border border-base-300 bg-base-100 shadow-sm">
+                      <div className="card-body gap-3 p-5">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-secondary/10 text-secondary">
+                            <BookOpen size={20} aria-hidden="true" />
+                          </div>
+                          {sharedDeck.imported ? <span className="badge badge-success badge-outline gap-1"><Check size={12} aria-hidden="true" /> Added</span> : <span className="badge badge-primary">New</span>}
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="line-clamp-2 font-bold">{sharedDeck.deckTitle || 'Untitled deck'}</h3>
+                          <p className="mt-1 line-clamp-2 min-h-10 text-sm text-base-content/55">{sharedDeck.description || 'A study deck shared by a fellow learner.'}</p>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-base-content/55">
+                          <InitialAvatar name={sharedDeck.senderDisplayName} photoURL={sharedDeck.senderPhotoURL} size="sm" />
+                          <div className="min-w-0 flex-1">
+                            {onOpenPlayer ? (
+                              <button
+                                type="button"
+                                className="block max-w-full truncate rounded-sm text-left font-semibold text-base-content/75 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+                                onClick={() => void onOpenPlayer({ id: sharedDeck.senderId, nickname: sharedDeck.senderDisplayName })}
+                              >
+                                {sharedDeck.senderDisplayName || 'Kognit player'}
+                              </button>
+                            ) : (
+                              <p className="truncate font-semibold text-base-content/75">{sharedDeck.senderDisplayName || 'Kognit player'}</p>
+                            )}
+                            <p>{formatSharedAt(sharedDeck.sharedAt)}{sharedDeck.cardCount !== undefined ? ` · ${sharedDeck.cardCount} cards` : ''}</p>
+                          </div>
+                        </div>
+                        <div className="card-actions mt-1 grid grid-cols-[1fr_auto]">
+                          <button type="button" onClick={() => void onImportSharedDeck(sharedDeck)} className="btn btn-primary btn-sm gap-2" disabled={sharedDeck.imported}>
+                            {sharedDeck.imported ? <Check size={15} aria-hidden="true" /> : <Download size={15} aria-hidden="true" />}
+                            {sharedDeck.imported ? 'In library' : 'Add to library'}
+                          </button>
+                          {onDismissSharedDeck && (
+                            <button type="button" onClick={() => void onDismissSharedDeck(sharedDeck)} className="btn btn-square btn-ghost btn-sm" aria-label={`Dismiss ${sharedDeck.deckTitle}`}>
+                              <X size={16} aria-hidden="true" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </section>
+        </div>
+
+        <aside className="space-y-6 lg:sticky lg:top-24">
+          <OnlinePlayers
+            players={onlinePlayers}
+            loading={onlinePlayersLoading}
+            error={onlinePlayersError}
+            onRetry={onRetryOnlinePlayers}
+            onOpenPlayer={onOpenPlayer ? (player) => onOpenPlayer({ id: player.id, nickname: player.nickname }) : undefined}
+          />
+
+          <section className="rounded-3xl border border-base-300 bg-base-100 p-5 shadow-sm sm:p-6" aria-labelledby="community-profile-title">
+          <div className="flex items-center justify-between gap-3">
+            <h2 id="community-profile-title" className="text-xl font-bold">Your public profile</h2>
+            <ShieldCheck size={21} className="text-primary" aria-hidden="true" />
+          </div>
+
+          {profileError && <div role="alert" className="alert alert-error mt-4 text-sm"><span>{profileError}</span></div>}
+
+          {profileLoading ? (
+            <div className="mt-5 space-y-3" aria-label="Loading public profile">
+              <div className="skeleton h-16 w-full rounded-2xl" />
+              <div className="skeleton h-24 w-full rounded-2xl" />
+            </div>
+          ) : profile ? (
+            <>
+              <div className="mt-5 flex items-center gap-3">
+                <InitialAvatar name={profile.displayName || 'Learner'} photoURL={profile.photoURL} size="lg" />
+                <div className="min-w-0">
+                  <p className="truncate font-bold">{profile.displayName || 'Private learner'}</p>
+                  <p className={`mt-0.5 inline-flex items-center gap-1.5 text-xs font-semibold ${profile.isDiscoverable ? 'text-success' : 'text-base-content/50'}`}>
+                    <span className={`h-2 w-2 rounded-full ${profile.isDiscoverable ? 'bg-success' : 'bg-base-content/25'}`} aria-hidden="true" />
+                    {profile.isDiscoverable ? 'Discoverable' : 'Private'}
+                  </p>
+                </div>
+              </div>
+
+              <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-2xl border border-base-300 bg-base-200/40 p-4">
+                <input
+                  type="checkbox"
+                  className="toggle toggle-primary mt-0.5"
+                  checked={profile.isDiscoverable}
+                  onChange={(event) => void onDiscoverabilityChange(event.target.checked)}
+                  disabled={profileSaving}
+                />
+                <span>
+                  <span className="block text-sm font-semibold">Appear in learner search</span>
+                  <span className="mt-1 block text-xs leading-relaxed text-base-content/55">Only your chosen display name and profile image are shown. Your email stays private.</span>
+                </span>
+              </label>
+
+              <button type="button" onClick={onEditProfile} className="btn btn-outline mt-4 w-full gap-2" disabled={profileSaving}>
+                {profileSaving ? <span className="loading loading-spinner loading-sm" aria-hidden="true" /> : <UserRound size={17} aria-hidden="true" />}
+                Edit public profile
+              </button>
+            </>
+          ) : (
+            <div className="mt-5 rounded-2xl border border-dashed border-base-300 p-5 text-center">
+              <UserRound size={28} className="mx-auto text-base-content/30" aria-hidden="true" />
+              <h3 className="mt-3 font-bold">Create your public profile</h3>
+              <p className="mt-1 text-sm text-base-content/55">Choose a display name before appearing in search.</p>
+              <button type="button" onClick={onEditProfile} className="btn btn-primary btn-sm mt-4">Set up profile</button>
+            </div>
+          )}
+          </section>
+        </aside>
+      </div>
+    </main>
+  )
+}

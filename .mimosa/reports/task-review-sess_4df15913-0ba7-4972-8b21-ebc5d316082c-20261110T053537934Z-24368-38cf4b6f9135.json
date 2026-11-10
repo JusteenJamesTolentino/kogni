@@ -1,0 +1,235 @@
+{
+  "schema_version": "mimosa-task-review/v2",
+  "run_id": "20261110T053537934Z-24368-38cf4b6f9135",
+  "run_status": "completed",
+  "errors": [],
+  "coverage": {
+    "schema_version": "mimosa-hook-coverage/v1",
+    "status": "complete",
+    "scope": "hook_observed_diff",
+    "baseline": {
+      "complete": true,
+      "captured_files": 91,
+      "candidate_limit": 5000,
+      "truncated": false,
+      "enumeration_error_count": 0,
+      "snapshot_error_count": 0,
+      "compensated_target_count": 7
+    },
+    "change_tracking": {
+      "touched_observed": 7,
+      "touched_retained": 7,
+      "truncated": false,
+      "bash_mutation": false,
+      "bash_discovered": 0,
+      "bash_discovery_limit": 80,
+      "bash_discovery_truncated": false
+    },
+    "candidates": {
+      "eligible_files": 7,
+      "selected_files": 7,
+      "limit": 20,
+      "truncated": false
+    },
+    "scanning": {
+      "required_files": 7,
+      "scanned_files": 7,
+      "skipped_files": 0,
+      "failed_files": 0,
+      "project_checks_required": 0,
+      "project_checks_completed": 0
+    },
+    "notification": {
+      "eligible_findings": 0,
+      "detailed_findings": 0,
+      "detail_limit": 3,
+      "truncated": false
+    },
+    "reason_counts": {},
+    "reasons": [],
+    "reasons_truncated": false
+  },
+  "generated_at": "2026-11-10T05:35:37.934Z",
+  "session_id": "sess_4df15913-0ba7-4972-8b21-ebc5d316082c",
+  "target": ".",
+  "revision": null,
+  "rules_version": "unavailable",
+  "diff_hash": "42a93e4d162093c1fff8588e80dafd7c2c940c114f2209a62dbb11c79a25a1c0",
+  "diff": {
+    "algorithm": "sha256",
+    "changed_file_count": 7,
+    "changed_files": [
+      {
+        "file": "src/App.tsx",
+        "ranges": [
+          {
+            "start": 12,
+            "end": 12
+          },
+          {
+            "start": 79,
+            "end": 79
+          }
+        ],
+        "before_hash": "83e583d0c176c0571d6e1e73ea481b026bfe910c7214a0f74928d407ed7a38b1",
+        "after_hash": "c535de9e8a74b00806c2596a95e79181619dec5405bd87cd13770750f5533ce7"
+      },
+      {
+        "file": "src/components/PrivacyNotice.tsx",
+        "ranges": [
+          {
+            "start": 26,
+            "end": 26
+          }
+        ],
+        "before_hash": "0d737eced04897d48088648a2f43375d1b016a44cdbb5171f550b6c7ee4c8da5",
+        "after_hash": "ce600b504c4530320fbde8eef8452f880df52f8a89ea51e25b2df50e5bc72143"
+      },
+      {
+        "file": "src/components/ShareDeckModal.tsx",
+        "ranges": [
+          {
+            "start": 285,
+            "end": 285
+          }
+        ],
+        "before_hash": "673349bc5b3ad9a8104db4b2e6b8f01d9013cfc45bbe061dd496e7075a70c0e9",
+        "after_hash": "58faf815b893847383e367f0a4df49a220cdbd4ed8e26015c43ab7d2906a98fb"
+      },
+      {
+        "file": "src/router/paths.ts",
+        "ranges": [
+          {
+            "start": 14,
+            "end": 17
+          }
+        ],
+        "before_hash": "d43607a7071b7a64588cc072cbacbaea85fafcde417f3951f3d09156afe82575",
+        "after_hash": "710baa2c41c813a174c3e3ad85fa36b3607fc56274df9bc37d3378415b8ae7f7"
+      },
+      {
+        "file": "src/routes/OnlineDeckRoutes.tsx",
+        "ranges": [
+          {
+            "start": 22,
+            "end": 22
+          },
+          {
+            "start": 62,
+            "end": 62
+          },
+          {
+            "start": 77,
+            "end": 77
+          }
+        ],
+        "before_hash": "2e7e52daf23112cb3a07e22d6e78e4889878a97791b5f9d12768d926e520214a",
+        "after_hash": "cbe54fd71d2423315ce3936b2cacf14811ac155d8367bc558cce039bc7b0e9d4"
+      },
+      {
+        "file": "src/routes/PublicPlayerRoute.tsx",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 96
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "1bb052a7635d12c9e0c9bc1992fae18285942788cb8d85bf555ba6746555b8a7"
+      },
+      {
+        "file": "src/routes/routeScreens.tsx",
+        "ranges": [
+          {
+            "start": 20,
+            "end": 20
+          },
+          {
+            "start": 91,
+            "end": 91
+          },
+          {
+            "start": 130,
+            "end": 130
+          },
+          {
+            "start": 140,
+            "end": 141
+          },
+          {
+            "start": 196,
+            "end": 198
+          },
+          {
+            "start": 239,
+            "end": 239
+          },
+          {
+            "start": 261,
+            "end": 261
+          },
+          {
+            "start": 269,
+            "end": 270
+          },
+          {
+            "start": 276,
+            "end": 280
+          }
+        ],
+        "before_hash": "9df5a647d4fe5e3eac1c3e0d63b605afe30feb5c1f0fbfcadcc78ef482669528",
+        "after_hash": "700348777480c7f38d1e62bf8d48d46ef622da3d8a351b4bc4d7dcddbeaf1c23"
+      }
+    ]
+  },
+  "timing": {
+    "started_at": "2026-11-10T05:35:35.791Z",
+    "completed_at": "2026-11-10T05:35:37.934Z",
+    "duration_ms": 2143,
+    "measurement": "hook_wall_clock"
+  },
+  "tokens": {
+    "input": 0,
+    "output": 0,
+    "total": 0,
+    "model_calls": 0,
+    "measurement": "known-zero"
+  },
+  "telemetry": {
+    "schemaVersion": "mimosa-gate-telemetry/v1",
+    "profile": "gate",
+    "operation": "Stop",
+    "outcome": "complete",
+    "latencyMs": 2143,
+    "peakMemoryBytes": 159633408,
+    "memoryMeasurement": "max-observed-process-rss",
+    "scannedFiles": 7,
+    "cache": {
+      "hits": 0,
+      "misses": 0,
+      "measurement": "not-applicable"
+    },
+    "denyCount": 0,
+    "tokens": {
+      "input": 0,
+      "output": 0,
+      "total": 0,
+      "modelCalls": 0,
+      "measurement": "known-zero"
+    }
+  },
+  "finding_count": 0,
+  "rewake_finding_count": 0,
+  "evidence_boundary": {
+    "scan": "candidate",
+    "static_fix_verification": "observed_static_only",
+    "runtime_verification": "not_performed"
+  },
+  "finding_events": [],
+  "findings": [],
+  "artifacts": {
+    "immutable_report": ".mimosa/reports/task-review-sess_4df15913-0ba7-4972-8b21-ebc5d316082c-20261110T053537934Z-24368-38cf4b6f9135.json",
+    "latest_report": ".mimosa/reports/task-review-sess_4df15913-0ba7-4972-8b21-ebc5d316082c.json",
+    "history_summary": ".mimosa/history/run-20261110T053537934Z-24368-38cf4b6f9135.json"
+  }
+}

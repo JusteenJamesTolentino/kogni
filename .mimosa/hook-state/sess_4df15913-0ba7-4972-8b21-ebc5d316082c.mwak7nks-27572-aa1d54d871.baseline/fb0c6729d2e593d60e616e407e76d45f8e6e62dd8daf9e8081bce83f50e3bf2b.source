@@ -1,0 +1,12 @@
+import { describe, expect, it } from 'vitest'
+import { normalizeDisplayName } from './community'
+
+describe('community normalization', () => {
+  it('normalizes case, compatibility characters, whitespace, and controls', () => {
+    expect(normalizeDisplayName('  ＡLi\u0000CE  ')).toBe('alice')
+  })
+
+  it('caps searchable display names', () => {
+    expect(normalizeDisplayName('A'.repeat(100))).toHaveLength(80)
+  })
+})

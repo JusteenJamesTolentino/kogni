@@ -1,0 +1,32 @@
+import { describe, expect, it } from 'vitest'
+import { isPublicPlayerProfile } from './social'
+import { PLAYER_XP_TRUST } from '../types/social'
+
+const profile = {
+  uid: 'player-1',
+  nickname: 'Player_One',
+  nicknameCanonical: 'player_one',
+  communityXp: 120,
+  xpTrust: PLAYER_XP_TRUST,
+  followerCount: 2,
+  followingCount: 3,
+  publishedDeckCount: 4,
+}
+
+describe('trusted public player profile contract', () => {
+  it('accepts the exact safe field set and client-reported XP label', () => {
+    expect(isPublicPlayerProfile(profile)).toBe(true)
+  })
+
+  it('rejects extra identity or presence fields', () => {
+    expect(isPublicPlayerProfile({ ...profile, email: 'private@example.test' })).toBe(false)
+    expect(isPublicPlayerProfile({ ...profile, online: true })).toBe(false)
+  })
+
+  it('rejects malformed or overclaimed data', () => {
+    expect(isPublicPlayerProfile({ ...profile, xpTrust: 'trusted' })).toBe(false)
+    expect(isPublicPlayerProfile({ ...profile, followerCount: -1 })).toBe(false)
+    expect(isPublicPlayerProfile({ ...profile, communityXp: 1.5 })).toBe(false)
+    expect(isPublicPlayerProfile({ ...profile, nicknameCanonical: 'PLAYER_ONE' })).toBe(false)
+  })
+})
