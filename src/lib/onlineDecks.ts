@@ -144,10 +144,14 @@ export interface PublishOnlineDeckInput extends OnlineDeckContentInput {
 }
 
 function sameContent(left: OnlineDeckCard, right: Omit<OnlineDeckCard, 'contentRevision'>): boolean {
+  // Stored cards may omit `distractors` entirely: RTDB drops empty arrays, so
+  // cards without distractors are persisted without the key.
+  const leftDistractors = Array.isArray(left.distractors) ? left.distractors : []
+  const rightDistractors = Array.isArray(right.distractors) ? right.distractors : []
   return left.question === right.question &&
     left.answer === right.answer &&
-    left.distractors.length === right.distractors.length &&
-    left.distractors.every((item, index) => item === right.distractors[index])
+    leftDistractors.length === rightDistractors.length &&
+    leftDistractors.every((item, index) => item === rightDistractors[index])
 }
 
 function orderedCards(version: OnlineDeckVersion | undefined): OnlineDeckCard[] {
@@ -264,8 +268,9 @@ export function isValidOnlineDeckVersion(value: unknown): value is OnlineDeckVer
       card.contentRevision < 1 ||
       typeof card.question !== 'string' ||
       typeof card.answer !== 'string' ||
-      !Array.isArray(card.distractors) ||
-      !card.distractors.every((item) => typeof item === 'string')
+      // `distractors` may be absent: RTDB prunes empty arrays, so cards without
+      // distractors are stored without the key.
+      (card.distractors !== undefined && (!Array.isArray(card.distractors) || !card.distractors.every((item) => typeof item === 'string')))
     ) {
       return false
     }

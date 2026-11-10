@@ -51,7 +51,7 @@ export function OnlineDeckStudyRoute() {
   if (!head || !version || error) return <main className="grid min-h-[70vh] place-items-center"><p role="alert">{error || 'Online study unavailable'}</p></main>
 
   const ordered = Object.values(version.cards).sort((a, b) => a.order - b.order)
-  const cards: StudyCard[] = ordered.map((card) => ({ ...card, deckId, ownerId: user?.uid || '', interval: 0, repetition: 0, easinessFactor: 2.5, nextReviewDate: version.publishedAt }))
+  const cards: StudyCard[] = ordered.map((card) => ({ ...card, distractors: card.distractors ?? [], deckId, ownerId: user?.uid || '', interval: 0, repetition: 0, easinessFactor: 2.5, nextReviewDate: version.publishedAt }))
   const deck: StudyDeck = { id: deckId, ownerId: head.ownerId, title: version.title, description: version.description, studyGuide: version.studyGuide, cardCount: cards.length, createdAt: version.publishedAt }
   const nextPart = series && head.partNumber ? series.parts[String(head.partNumber + 1)] : undefined
 

@@ -213,7 +213,7 @@ beforeAll(async () => {
     database: {
       rules: readFileSync('database.rules.json', 'utf8'),
       host: '127.0.0.1',
-      port: 9002,
+      port: 9012,
     },
   })
 })

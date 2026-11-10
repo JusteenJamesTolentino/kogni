@@ -615,7 +615,7 @@
             },
             "cards": {
               "$cardId": {
-                ".validate": "newData.hasChildren(['id', 'order', 'contentRevision', 'question', 'answer', 'distractors']) && newData.child('id').val() === $cardId && newData.child('order').isNumber() && newData.child('order').val() >= 0 && newData.child('order').val() < newData.parent().parent().child('cardCount').val() && newData.child('order').val() % 1 === 0 && newData.child('contentRevision').isNumber() && newData.child('contentRevision').val() >= 1 && newData.child('contentRevision').val() % 1 === 0 && newData.child('question').isString() && newData.child('question').val().length <= 10000 && newData.child('answer').isString() && newData.child('answer').val().length <= 10000",
+                ".validate": "newData.hasChildren(['id', 'order', 'contentRevision', 'question', 'answer']) && newData.child('id').val() === $cardId && newData.child('order').isNumber() && newData.child('order').val() >= 0 && newData.child('order').val() < newData.parent().parent().child('cardCount').val() && newData.child('order').val() % 1 === 0 && newData.child('contentRevision').isNumber() && newData.child('contentRevision').val() >= 1 && newData.child('contentRevision').val() % 1 === 0 && newData.child('question').isString() && newData.child('question').val().length <= 10000 && newData.child('answer').isString() && newData.child('answer').val().length <= 10000",
                 "id": {
                   ".validate": "newData.isString() && newData.val() === $cardId"
                 },

@@ -258,9 +258,14 @@ export interface OnlineDeckHead {
   deletedAt?: number
 }
 
-export interface OnlineDeckCard extends GeneratedCard {
+export interface OnlineDeckCard extends Omit<GeneratedCard, 'distractors'> {
   id: string
   order: number
+  /**
+   * Omitted when the card has no distractors: RTDB prunes empty arrays, so
+   * cards without distractors are persisted without this key.
+   */
+  distractors?: string[]
   /** Increments only when this stable card ID's learning content changes. */
   contentRevision: number
 }
