@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "mimosa-finding-history/v1",
+  "runId": "20261110T222043951Z-6568-7f8fd47823ae",
+  "runStatus": "inconclusive",
+  "errors": [
+    "candidate-select:src/components/UiPreview.tsx: changed_file_unreadable: observed changed file no longer exists or cannot be read"
+  ],
+  "target": ".",
+  "revision": "ae21920b1e88ad533c14169deeeda44bee2a8344",
+  "diffHash": "45ab0dd3f7cefa43399fef9c4bb724423359b92273967e66de0c796a81e536ef",
+  "rulesVersion": "unavailable",
+  "recordedAt": "2026-11-10T22:20:43.951Z",
+  "timing": {
+    "startedAt": "2026-11-10T22:20:42.208Z",
+    "completedAt": "2026-11-10T22:20:43.951Z",
+    "durationMs": 1743
+  },
+  "tokens": {
+    "input": 0,
+    "output": 0,
+    "total": 0,
+    "modelCalls": 0,
+    "measurement": "known-zero"
+  },
+  "findings": {
+    "total": 0,
+    "bySeverity": {},
+    "byStatus": {}
+  },
+  "coverage": {
+    "status": "partial",
+    "reasonCounts": {
+      "changed_file_unreadable": 1,
+      "project_check_failed": 1
+    }
+  },
+  "evidenceBoundary": "static_only",
+  "immutableReport": ".mimosa/reports/task-review-sess_37bc48ff-4fdf-484b-affe-3297f19ae1a1-20261110T222043951Z-6568-7f8fd47823ae.json"
+}

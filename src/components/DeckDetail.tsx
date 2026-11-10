@@ -14,6 +14,7 @@ import {
   RefreshCw,
   Share2,
   Trash2,
+  UploadCloud,
 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import type { StudyCard, StudyDeck } from '../types/domain'
@@ -39,6 +40,8 @@ export interface DeckDetailProps {
   onEdit?: (deck: DeckDetailDeck, cards: StudyCard[]) => void | Promise<void>
   onRegenerate?: (deck: DeckDetailDeck) => void | Promise<void>
   onDelete?: (deck: DeckDetailDeck) => void | Promise<void>
+  /** Opens the publish flow that mirrors this local deck into the public online catalog. */
+  onPublishOnline?: (deck: DeckDetailDeck) => void | Promise<void>
   storageBadge?: DeckStorageBadge
   actionsDisabled?: boolean
   leaderboardSlot?: ReactNode
@@ -55,6 +58,7 @@ export default function DeckDetail({
   onEdit,
   onRegenerate,
   onDelete,
+  onPublishOnline,
   storageBadge,
   actionsDisabled = false,
   leaderboardSlot,
@@ -160,6 +164,17 @@ export default function DeckDetail({
                 {sharing ? <span className="loading loading-spinner loading-sm" /> : <Share2 size={18} aria-hidden="true" />}
                 {sharing ? 'Sharing…' : 'Share deck'}
               </button>
+              {onPublishOnline && (
+                <button
+                  type="button"
+                  onClick={() => void onPublishOnline(deck)}
+                  disabled={cardCount === 0 || actionsDisabled}
+                  className="btn btn-outline justify-start gap-2"
+                >
+                  <UploadCloud size={18} aria-hidden="true" />
+                  Publish online
+                </button>
+              )}
             </div>
           </div>
           {dueCount === 0 && cardCount > 0 && (

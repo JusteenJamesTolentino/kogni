@@ -11,7 +11,6 @@ import Profile from '../components/Profile'
 import StudySession from '../components/StudySession'
 import { getSocialSummary } from '../lib/social'
 import type { SocialSummary } from '../lib/social'
-import { PRIVACY_VERSION } from '../lib/account'
 import { getCardsByDeck, getDeck, getDueCards, saveDeckWithCards } from '../lib/db'
 import { getErrorMessage } from '../lib/errors'
 import type { StudyCard, StudyDeck } from '../types/domain'
@@ -22,6 +21,7 @@ import {
   deckPath,
   deckRegeneratePath,
   deckStudyPath,
+  onlineDeckEditPath,
   onlineDeckPath,
   playerProfilePath,
   paths,
@@ -211,15 +211,7 @@ export function CommunityRoute() {
 }
 
 export function ProfileRoute() {
-  const {
-    user,
-    account,
-    decks,
-    dueCards,
-    openProfileModal,
-    setDiscoverability,
-    setPresenceVisibility,
-  } = useAppShell()
+  const { user, account, decks, dueCards } = useAppShell()
   const [socialSummary, setSocialSummary] = useState<SocialSummary | null>(null)
   const [socialLoading, setSocialLoading] = useState(true)
   const [socialError, setSocialError] = useState('')
@@ -249,8 +241,6 @@ export function ProfileRoute() {
   return <Profile
     nickname={account.nickname}
     avatarUrl={user.photoURL}
-    privacyAcknowledged={account.privacy.currentVersion === PRIVACY_VERSION}
-    isDiscoverable={account.preferences.discoverable}
     publicPresence={account.preferences.presence ? 'online' : 'hidden'}
     stats={[
       { id: 'followers', label: 'Followers', value: socialValue(socialSummary?.followerCount), helpText: socialLoading ? 'Loading social count' : undefined },
@@ -262,11 +252,6 @@ export function ProfileRoute() {
     ]}
     socialError={socialError}
     onRetrySocial={() => setSocialRequest((request) => request + 1)}
-    privacyHref={paths.privacy}
-    onEditProfile={openProfileModal}
-    onDiscoverabilityChange={setDiscoverability}
-    onPresenceChange={setPresenceVisibility}
-    onPrivacyAcknowledgementChange={async () => undefined}
     onEditAvatar={undefined}
   />
 }
@@ -332,6 +317,7 @@ export function DeckRoute() {
       onPracticeAll={(deck) => navigate(deckStudyPath(deck.id, 'practice'))}
       onShare={openShareModal}
       onEdit={(deck) => navigate(deckEditPath(deck.id))}
+      onPublishOnline={(deck) => navigate(onlineDeckEditPath(deck.id))}
       onRegenerate={(deck) => navigate(deckRegeneratePath(deck.id))}
       storageBadge={{
         kind: data.deck.lineageId ? 'shared-copy' : 'local',

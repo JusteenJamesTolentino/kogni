@@ -205,7 +205,7 @@ export function OnlineDeckEditRoute() {
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
       <section className="rounded-3xl border border-base-300 bg-base-100 p-6 shadow-xl sm:p-9">
-        <div className="flex items-center gap-3"><RefreshCw className="text-primary" /><div><h1 className="text-3xl font-black">Publish online deck version</h1><p className="mt-1 text-base-content/55">Publishes the current local deck content as an immutable successor version.</p></div></div>
+        <div className="flex items-center gap-3"><RefreshCw className="text-primary" /><div><h1 className="text-3xl font-black">Publish online deck version</h1><p className="mt-1 text-base-content/55">Publishes the current local deck content as an immutable successor version. Public decks appear for every learner in the deck recommendations on the home page.</p></div></div>
         {error && <div className="alert alert-error mt-5"><span>{error}</span></div>}
         <button className="btn btn-primary mt-7 w-full" disabled={saving} onClick={async () => {
           if (!user) return

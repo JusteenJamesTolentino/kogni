@@ -1,4 +1,3 @@
-import { Check, Edit3, Eye, EyeOff, ShieldCheck, Trophy, UserRound } from 'lucide-react'
 import type { ReactNode } from 'react'
 import ProfileCard3D from './ProfileCard3D'
 import useOnlineStatus from '../hooks/useOnlineStatus'
@@ -17,20 +16,12 @@ export interface ProfileProps {
   nickname: string
   avatarUrl?: string | null
   avatarAlt?: string
-  /** Explicit acknowledgement state for the product's privacy notice. */
-  privacyAcknowledged: boolean
-  isDiscoverable: boolean
   /** Publicly shared presence. This is separate from device connectivity. */
   publicPresence: PublicPresenceStatus
   stats: ProfileStat[]
   socialError?: string
   onRetrySocial?: () => void
-  privacyHref: string
-  onEditProfile: () => void
   onEditAvatar?: () => void
-  onDiscoverabilityChange: (isDiscoverable: boolean) => void | Promise<void>
-  onPresenceChange: (visible: boolean) => void | Promise<void>
-  onPrivacyAcknowledgementChange: (acknowledged: boolean) => void | Promise<void>
   editing?: boolean
   error?: string
 }
@@ -46,18 +37,11 @@ export default function Profile({
   nickname,
   avatarUrl,
   avatarAlt = '',
-  privacyAcknowledged,
-  isDiscoverable,
   publicPresence,
   stats,
   socialError = '',
   onRetrySocial,
-  privacyHref,
-  onEditProfile,
   onEditAvatar,
-  onDiscoverabilityChange,
-  onPresenceChange,
-  onPrivacyAcknowledgementChange,
   editing = false,
   error = '',
 }: ProfileProps) {
@@ -67,25 +51,9 @@ export default function Profile({
 
   return (
     <main className="mx-auto w-full max-w-[100rem] px-4 py-7 pb-28 sm:px-6 sm:py-10 sm:pb-10 lg:px-8">
-      <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-primary">
-            <UserRound size={17} aria-hidden="true" />
-            Your learner identity
-          </div>
-          <h1 className="text-3xl font-black tracking-tight sm:text-4xl">Profile</h1>
-          <p className="mt-2 max-w-2xl text-base-content/60">Manage what other learners can see and review your learning progress.</p>
-        </div>
-        <button type="button" onClick={onEditProfile} className="btn btn-primary gap-2 self-start sm:self-auto" disabled={editing}>
-          {editing ? <span className="loading loading-spinner loading-sm" aria-hidden="true" /> : <Edit3 size={17} aria-hidden="true" />}
-          Edit profile
-        </button>
-      </div>
-
       {error && <div role="alert" className="alert alert-error mb-6"><span>{error}</span></div>}
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(19rem,0.9fr)] lg:items-start">
-        <ProfileCard3D className="card overflow-hidden border border-base-300 bg-base-100 shadow-xl">
+      <ProfileCard3D className="card overflow-hidden border border-base-300 bg-base-100 shadow-xl">
           <div className="h-28 bg-gradient-to-br from-primary/25 via-secondary/15 to-accent/15 sm:h-36" aria-hidden="true" />
           <div className="card-body px-5 pb-6 pt-0 sm:px-8 sm:pb-8">
             <div className="-mt-12 flex flex-col gap-4 sm:-mt-14 sm:flex-row sm:items-end">
@@ -139,77 +107,7 @@ export default function Profile({
               ))}
             </dl>
           </div>
-        </ProfileCard3D>
-
-        <section className="rounded-3xl border border-base-300 bg-base-100 p-5 shadow-sm sm:p-6" aria-labelledby="profile-privacy-title">
-          <div className="flex items-start gap-3">
-            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-primary/10 text-primary">
-              <ShieldCheck size={22} aria-hidden="true" />
-            </div>
-            <div>
-              <h2 id="profile-privacy-title" className="text-xl font-bold">Privacy controls</h2>
-              <p className="mt-1 text-sm text-base-content/60">Choose whether your public profile can be found.</p>
-            </div>
-          </div>
-
-          <label className="mt-5 flex min-h-14 cursor-pointer items-start gap-3 rounded-2xl border border-base-300 bg-base-200/45 p-4">
-            <input
-              type="checkbox"
-              className="toggle toggle-primary mt-0.5"
-              checked={isDiscoverable}
-              onChange={(event) => void onDiscoverabilityChange(event.target.checked)}
-              disabled={editing}
-            />
-            <span>
-              <span className="flex items-center gap-2 text-sm font-semibold">
-                {isDiscoverable ? <Eye size={16} aria-hidden="true" /> : <EyeOff size={16} aria-hidden="true" />}
-                Appear in learner search
-              </span>
-              <span className="mt-1 block text-xs leading-relaxed text-base-content/55">Your nickname and profile image may appear to signed-in learners. Your email stays private.</span>
-            </span>
-          </label>
-
-          <label className="mt-3 flex min-h-14 cursor-pointer items-start gap-3 rounded-2xl border border-base-300 bg-base-200/45 p-4">
-            <input
-              type="checkbox"
-              className="toggle toggle-primary mt-0.5"
-              checked={publicPresence !== 'hidden'}
-              onChange={(event) => void onPresenceChange(event.target.checked)}
-              disabled={editing}
-            />
-            <span>
-              <span className="text-sm font-semibold">Show Online or Offline status</span>
-              <span className="mt-1 block text-xs leading-relaxed text-base-content/55">Shares only a coarse status with eligible signed-in learners. Exact last-seen time and device details remain private.</span>
-            </span>
-          </label>
-
-          <label className="mt-3 flex min-h-14 cursor-pointer items-start gap-3 rounded-2xl border border-base-300 bg-base-200/45 p-4">
-            <input
-              type="checkbox"
-              className="checkbox checkbox-primary mt-0.5"
-              checked={privacyAcknowledged}
-              onChange={(event) => void onPrivacyAcknowledgementChange(event.target.checked)}
-              disabled={editing}
-            />
-            <span>
-              <span className="flex items-center gap-2 text-sm font-semibold">
-                {privacyAcknowledged && <Check size={16} className="text-success" aria-hidden="true" />}
-                Privacy notice acknowledged
-              </span>
-              <span className="mt-1 block text-xs leading-relaxed text-base-content/55">I understand which profile details can be shared publicly.</span>
-            </span>
-          </label>
-
-          <a href={privacyHref} className="link link-primary mt-5 inline-flex min-h-11 items-center text-sm font-semibold">
-            Read the privacy notice
-          </a>
-
-          <div className="mt-5 flex items-center gap-3 rounded-2xl bg-base-200/60 p-4">
-            <Trophy size={20} className="shrink-0 text-warning" aria-hidden="true" />
-            <p className="text-xs leading-relaxed text-base-content/60">Leaderboard participation and profile discoverability are separate controls. Integrators should not infer one from the other.</p>
-          </div>
-        </section>
-      </div>
+      </ProfileCard3D>
     </main>
   )
 }

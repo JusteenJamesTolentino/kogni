@@ -1,4 +1,4 @@
-import { BrainCircuit, KeyRound, LogOut, Menu, Moon, Sun, UserRound } from 'lucide-react'
+import { BrainCircuit, KeyRound, LogOut, Menu, Moon, Settings, Sun, UserRound } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import type { CommunitySearchResult } from './Community'
 import { useAuth } from '../context/AuthContext'
@@ -16,6 +16,8 @@ export interface NavbarProps {
   onSearch: (query: string) => void | Promise<void>
   /** Opens the mobile navigation drawer; rendered as a hamburger below lg. */
   onOpenSidebar?: () => void
+  /** Opens the account settings dialog (public identity + privacy controls). */
+  onOpenAccountSettings?: () => void
 }
 
 interface SearchFieldProps {
@@ -56,7 +58,7 @@ function SearchField({ searchQuery, searchResults, searchLoading, onSearch, navi
   )
 }
 
-export default function Navbar({ onOpenApiKey, theme, onToggleTheme, searchQuery, searchResults, searchLoading, onSearch, onOpenSidebar }: NavbarProps) {
+export default function Navbar({ onOpenApiKey, theme, onToggleTheme, searchQuery, searchResults, searchLoading, onSearch, onOpenSidebar, onOpenAccountSettings }: NavbarProps) {
   const { user, signOutUser } = useAuth()
   const navigate = useNavigate()
 
@@ -124,6 +126,12 @@ export default function Navbar({ onOpenApiKey, theme, onToggleTheme, searchQuery
                   <p className="truncate text-xs opacity-60">{user?.email}</p>
                 </div>
                 <div className="divider my-1" />
+                {onOpenAccountSettings && (
+                  <button type="button" onClick={onOpenAccountSettings} className="btn btn-ghost btn-sm w-full justify-start gap-2">
+                    <Settings size={16} aria-hidden="true" />
+                    Account settings
+                  </button>
+                )}
                 <Link to="/profile" className="btn btn-ghost btn-sm w-full justify-start gap-2 lg:hidden">
                   <UserRound size={16} aria-hidden="true" />
                   Profile

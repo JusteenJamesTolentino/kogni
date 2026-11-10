@@ -39,7 +39,7 @@ export default function SideNav({ collapsed, onToggle }: SideNavProps) {
       className={`fixed inset-y-0 left-0 z-50 hidden flex-col border-r border-base-300 bg-base-100/95 backdrop-blur-xl transition-[width] duration-200 lg:flex ${collapsed ? 'w-16' : 'w-60'}`}
       aria-label="Primary navigation"
     >
-      <div className="flex h-16 shrink-0 items-center justify-center border-b border-base-300/70">
+      <div className={`flex h-16 shrink-0 items-center border-b border-base-300/70 ${collapsed ? 'justify-center' : 'justify-end pr-2'}`}>
         <button
           type="button"
           onClick={onToggle}

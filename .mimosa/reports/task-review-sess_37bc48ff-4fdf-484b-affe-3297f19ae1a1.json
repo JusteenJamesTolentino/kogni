@@ -1,6 +1,6 @@
 {
   "schema_version": "mimosa-task-review/v2",
-  "run_id": "20261110T215342738Z-16080-e35994eeefd6",
+  "run_id": "20261110T222043951Z-6568-7f8fd47823ae",
   "run_status": "inconclusive",
   "errors": [
     {
@@ -20,11 +20,11 @@
       "truncated": false,
       "enumeration_error_count": 0,
       "snapshot_error_count": 0,
-      "compensated_target_count": 11
+      "compensated_target_count": 4
     },
     "change_tracking": {
-      "touched_observed": 12,
-      "touched_retained": 12,
+      "touched_observed": 5,
+      "touched_retained": 5,
       "truncated": false,
       "bash_mutation": false,
       "bash_discovered": 0,
@@ -32,14 +32,14 @@
       "bash_discovery_truncated": false
     },
     "candidates": {
-      "eligible_files": 11,
-      "selected_files": 11,
+      "eligible_files": 4,
+      "selected_files": 4,
       "limit": 20,
       "truncated": false
     },
     "scanning": {
-      "required_files": 10,
-      "scanned_files": 10,
+      "required_files": 3,
+      "scanned_files": 3,
       "skipped_files": 0,
       "failed_files": 0,
       "project_checks_required": 0,
@@ -73,140 +73,71 @@
     ],
     "reasons_truncated": false
   },
-  "generated_at": "2026-11-10T21:53:42.738Z",
+  "generated_at": "2026-11-10T22:20:43.951Z",
   "session_id": "sess_37bc48ff-4fdf-484b-affe-3297f19ae1a1",
   "target": ".",
-  "revision": "e817cd4b1923bdf8f659400e559f299eaed09b13",
+  "revision": "ae21920b1e88ad533c14169deeeda44bee2a8344",
   "rules_version": "unavailable",
-  "diff_hash": "c80fe4b2ae0cc23d59d75380f537db37bcb643da689aed72f41ac087d7b99377",
+  "diff_hash": "45ab0dd3f7cefa43399fef9c4bb724423359b92273967e66de0c796a81e536ef",
   "diff": {
     "algorithm": "sha256",
-    "changed_file_count": 10,
+    "changed_file_count": 3,
     "changed_files": [
-      {
-        "file": "src/components/Community.tsx",
-        "ranges": [
-          {
-            "start": 161,
-            "end": 161
-          }
-        ],
-        "before_hash": "4a2f4c17f4a0735a22787671d25b0e3cf19d91b3e2ab0c154b8dc7bce0c2feb6",
-        "after_hash": "91d6f2aa8640d3c194e03fc966c6de9fd3d684558b2f08ccc861549fd5155a2a"
-      },
-      {
-        "file": "src/components/Dashboard.tsx",
-        "ranges": [
-          {
-            "start": 52,
-            "end": 52
-          }
-        ],
-        "before_hash": "3c0c2f3a1b3d422f2bbc2647abf9ce30ea6f2edba11acc41aa2b190496a10ed5",
-        "after_hash": "dcb0c0b28206731c66075d616e4942a4858f33e771c253a5362a8171f89fc58a"
-      },
       {
         "file": "src/components/DeckDetail.tsx",
         "ranges": [
           {
-            "start": 94,
-            "end": 94
-          }
-        ],
-        "before_hash": "a717b112277f2491ecee34e662d9653bf74e0ad3795fce6d026888c63f25a167",
-        "after_hash": "1a3fd92016beea34c2ee5b8cbefc835e4b2f832bd9e471207796dec7230332c5"
-      },
-      {
-        "file": "src/components/DeckEditor.tsx",
-        "ranges": [
-          {
-            "start": 319,
-            "end": 319
+            "start": 17,
+            "end": 17
           },
           {
-            "start": 443,
-            "end": 443
+            "start": 43,
+            "end": 44
           },
           {
-            "start": 448,
-            "end": 448
-          }
-        ],
-        "before_hash": "6aba5c0110abf03d472f44e215ede76458a90e290683fa7807112fd3041fbea2",
-        "after_hash": "ce343feb09060d5aee778b09cfbe4a857bdaecbb6277d251876e57c5d19942ab"
-      },
-      {
-        "file": "src/components/Navbar.tsx",
-        "ranges": [
+            "start": 61,
+            "end": 61
+          },
           {
-            "start": 74,
-            "end": 74
+            "start": 167,
+            "end": 177
           }
         ],
-        "before_hash": "088c489e08a7b802bfe8c7a636eb89b30d8bbf8597f7956ae5b3da2677b6fa7b",
-        "after_hash": "f7377f458a6e2cc44f01185766e72e4e0530d0337e6106b5b26d73f476720c30"
-      },
-      {
-        "file": "src/components/Profile.tsx",
-        "ranges": [
-          {
-            "start": 69,
-            "end": 69
-          }
-        ],
-        "before_hash": "c51bacc0d8d57252029c315f9b08e292db505e9e7e259a3d9fac8412e288fc20",
-        "after_hash": "68b91fc490bd334af1274ba5d367aef510d8e1c4424418e808a0cd3842ade744"
-      },
-      {
-        "file": "src/components/PublicPlayerProfile.tsx",
-        "ranges": [
-          {
-            "start": 143,
-            "end": 143
-          }
-        ],
-        "before_hash": "9a67ba0e030f280f78ac96c0c5c8cae97d3fec0f0216093d59aca06e592af2cc",
-        "after_hash": "a73e524d23a98b2f3bc9cb7b9bde7beb33070113f592f7b65793c96eb84bbfb0"
-      },
-      {
-        "file": "src/routes/LocalDeckManagementRoutes.tsx",
-        "ranges": [
-          {
-            "start": 95,
-            "end": 95
-          }
-        ],
-        "before_hash": "9aa39701e6050b4e042b194e58acfa99da07d2a15c0571afe8d4c143ae3ea9e5",
-        "after_hash": "0f66eb5379e3445eac12ac743e261889d43fed3bba2a1a5f0d819f594a905b3d"
+        "before_hash": "1a3fd92016beea34c2ee5b8cbefc835e4b2f832bd9e471207796dec7230332c5",
+        "after_hash": "10bf27d04220d76b6fbf0a60267efdf9bfaeb1ff05035bfca0a17f17706a8b0c"
       },
       {
         "file": "src/routes/OnlineDeckRoutes.tsx",
         "ranges": [
           {
-            "start": 33,
-            "end": 33
+            "start": 208,
+            "end": 208
           }
         ],
-        "before_hash": "cbe54fd71d2423315ce3936b2cacf14811ac155d8367bc558cce039bc7b0e9d4",
-        "after_hash": "416e428d83ca17d7f25ca4584204f7641efae50791e82316979ed96eae2b27fa"
+        "before_hash": "416e428d83ca17d7f25ca4584204f7641efae50791e82316979ed96eae2b27fa",
+        "after_hash": "2eb675027127bce9092a2c15a1bee7f986f108b51a74375fb937fdaf5cecc29e"
       },
       {
         "file": "src/routes/routeScreens.tsx",
         "ranges": [
           {
-            "start": 87,
-            "end": 87
+            "start": 24,
+            "end": 24
+          },
+          {
+            "start": 320,
+            "end": 320
           }
         ],
-        "before_hash": "9a1409b2f33206168ec64ee2dee7c0a5123f691211f7e9b0ad0a0772ae2a7e10",
-        "after_hash": "cd25a9ff306b34c9a11b3d1dae12b091cff86f465c5eeef6e4bc464383060921"
+        "before_hash": "7177bf9764e008c42725f9f6f8533832d40372b2c3360236db331753b92cee5a",
+        "after_hash": "9b063c7d46c0f0959d381be9e5b01b252aa6668afc026990e40ee0f9fc8d07f1"
       }
     ]
   },
   "timing": {
-    "started_at": "2026-11-10T21:53:40.399Z",
-    "completed_at": "2026-11-10T21:53:42.738Z",
-    "duration_ms": 2339,
+    "started_at": "2026-11-10T22:20:42.208Z",
+    "completed_at": "2026-11-10T22:20:43.951Z",
+    "duration_ms": 1743,
     "measurement": "hook_wall_clock"
   },
   "tokens": {
@@ -221,10 +152,10 @@
     "profile": "gate",
     "operation": "Stop",
     "outcome": "partial/INCONCLUSIVE",
-    "latencyMs": 2339,
-    "peakMemoryBytes": 151560192,
+    "latencyMs": 1743,
+    "peakMemoryBytes": 151556096,
     "memoryMeasurement": "max-observed-process-rss",
-    "scannedFiles": 10,
+    "scannedFiles": 3,
     "cache": {
       "hits": 0,
       "misses": 0,
@@ -249,8 +180,8 @@
   "finding_events": [],
   "findings": [],
   "artifacts": {
-    "immutable_report": ".mimosa/reports/task-review-sess_37bc48ff-4fdf-484b-affe-3297f19ae1a1-20261110T215342738Z-16080-e35994eeefd6.json",
+    "immutable_report": ".mimosa/reports/task-review-sess_37bc48ff-4fdf-484b-affe-3297f19ae1a1-20261110T222043951Z-6568-7f8fd47823ae.json",
     "latest_report": ".mimosa/reports/task-review-sess_37bc48ff-4fdf-484b-affe-3297f19ae1a1.json",
-    "history_summary": ".mimosa/history/run-20261110T215342738Z-16080-e35994eeefd6.json"
+    "history_summary": ".mimosa/history/run-20261110T222043951Z-6568-7f8fd47823ae.json"
   }
 }

@@ -17,6 +17,7 @@ import {
   getSharedDeckInbox,
   shareDeckCopy,
 } from '../lib/community'
+import { PRIVACY_VERSION } from '../lib/account'
 import { renameAccount, updateAccountPreferences } from '../lib/account'
 import { useAuth } from '../context/AuthContext'
 import { getAllDecks, getCardsByDeck, getDueCards, saveDeckCopy } from '../lib/db'
@@ -47,12 +48,9 @@ function getInitialTheme(): Theme {
   return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
 
-/** Expanded by default on desktop, collapsed to the icon rail on small screens. */
+/** Expanded by default; only a saved user preference collapses the rail. */
 function getInitialSidebarCollapsed(): boolean {
-  const saved = localStorage.getItem(SIDEBAR_STORAGE)
-  if (saved === 'collapsed') return true
-  if (saved === 'expanded') return false
-  return !(window.matchMedia?.('(min-width: 1024px)').matches ?? false)
+  return localStorage.getItem(SIDEBAR_STORAGE) === 'collapsed'
 }
 
 function toSearchResult(profile: PublicProfile): CommunitySearchResult {
@@ -449,6 +447,7 @@ export default function AppShell({ user }: AppShellProps) {
             searchLoading={searchLoading}
             onSearch={runSearch}
             onOpenSidebar={() => setMobileNavOpen(true)}
+            onOpenAccountSettings={() => setProfileModalOpen(true)}
           />
         </>
       )}
@@ -461,7 +460,12 @@ export default function AppShell({ user }: AppShellProps) {
         isDiscoverable={account.preferences.discoverable}
         saving={profileSaving}
         error={profileError}
+        presenceVisible={account.preferences.presence}
+        privacyAcknowledged={account.privacy.currentVersion === PRIVACY_VERSION}
+        privacyHref={paths.privacy}
         onSave={saveProfile}
+        onPresenceChange={setPresenceVisibility}
+        onPrivacyAcknowledgementChange={async () => undefined}
         onClose={() => setProfileModalOpen(false)}
       />
       <ShareDeckModal

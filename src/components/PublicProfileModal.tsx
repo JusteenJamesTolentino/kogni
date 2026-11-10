@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import type { FormEvent, SyntheticEvent } from 'react'
-import { Eye, EyeOff, ShieldCheck, UserRound, X } from 'lucide-react'
+import { Check, Eye, EyeOff, ShieldCheck, UserRound, X } from 'lucide-react'
 
 export interface PublicProfileDraft {
   displayName: string
@@ -13,7 +13,13 @@ export interface PublicProfileModalProps {
   isDiscoverable?: boolean
   saving?: boolean
   error?: string
+  /** Publicly shared presence; separate from device connectivity. */
+  presenceVisible?: boolean
+  privacyAcknowledged?: boolean
+  privacyHref?: string
   onSave: (profile: PublicProfileDraft) => void | Promise<void>
+  onPresenceChange: (visible: boolean) => void | Promise<void>
+  onPrivacyAcknowledgementChange: (acknowledged: boolean) => void | Promise<void>
   onClose: () => void
 }
 
@@ -29,7 +35,12 @@ function PublicProfileForm({
   isDiscoverable = false,
   saving = false,
   error = '',
+  presenceVisible = false,
+  privacyAcknowledged = false,
+  privacyHref,
   onSave,
+  onPresenceChange,
+  onPrivacyAcknowledgementChange,
   onClose,
   titleId,
   descriptionId,
@@ -68,8 +79,8 @@ function PublicProfileForm({
             <UserRound size={24} aria-hidden="true" />
           </div>
           <div>
-            <h2 id={titleId} className="text-xl font-bold">Public profile</h2>
-            <p id={descriptionId} className="mt-1 text-sm text-base-content/60">Control the name other learners can find and whether you appear in search.</p>
+            <h2 id={titleId} className="text-xl font-bold">Account settings</h2>
+            <p id={descriptionId} className="mt-1 text-sm text-base-content/60">Manage your public identity, learner search visibility, and privacy controls.</p>
           </div>
         </div>
       </div>
@@ -115,6 +126,48 @@ function PublicProfileForm({
             <span className="mt-1 block text-xs leading-relaxed text-base-content/55">Turn this off at any time to hide your profile from new searches.</span>
           </span>
         </label>
+
+        <h3 className="mt-6 flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-base-content/55">
+          <ShieldCheck size={15} aria-hidden="true" />
+          Privacy controls
+        </h3>
+
+        <label className="mt-3 flex cursor-pointer items-start gap-3 rounded-2xl border border-base-300 bg-base-200/50 p-4">
+          <input
+            type="checkbox"
+            className="toggle toggle-primary mt-0.5"
+            checked={presenceVisible}
+            onChange={(event) => void onPresenceChange(event.target.checked)}
+            disabled={saving}
+          />
+          <span>
+            <span className="text-sm font-semibold">Show Online or Offline status</span>
+            <span className="mt-1 block text-xs leading-relaxed text-base-content/55">Shares only a coarse status with eligible signed-in learners. Exact last-seen time and device details remain private.</span>
+          </span>
+        </label>
+
+        <label className="mt-3 flex cursor-pointer items-start gap-3 rounded-2xl border border-base-300 bg-base-200/50 p-4">
+          <input
+            type="checkbox"
+            className="checkbox checkbox-primary mt-0.5"
+            checked={privacyAcknowledged}
+            onChange={(event) => void onPrivacyAcknowledgementChange(event.target.checked)}
+            disabled={saving}
+          />
+          <span>
+            <span className="flex items-center gap-2 text-sm font-semibold">
+              {privacyAcknowledged && <Check size={16} className="text-success" aria-hidden="true" />}
+              Privacy notice acknowledged
+            </span>
+            <span className="mt-1 block text-xs leading-relaxed text-base-content/55">I understand which profile details can be shared publicly.</span>
+          </span>
+        </label>
+
+        {privacyHref && (
+          <a href={privacyHref} className="link link-primary mt-4 inline-flex min-h-11 items-center text-sm font-semibold">
+            Read the privacy notice
+          </a>
+        )}
 
         <div className="mt-4 flex gap-2 rounded-xl bg-success/10 p-3 text-xs leading-relaxed text-base-content/70">
           <ShieldCheck size={17} className="shrink-0 text-success" aria-hidden="true" />
