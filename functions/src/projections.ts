@@ -122,7 +122,7 @@ function readDeckHead(value: unknown, deckId: string): OnlineDeckHeadSource | nu
     (value.cardCount as number) < 1 ||
     (value.cardCount as number) > 500 ||
     typeof value.updatedAt !== 'number' ||
-    !Number.isFinite(value.updatedAt) ||
+    !Number.isSafeInteger(value.updatedAt) ||
     value.updatedAt < 0
   ) return null
   return value as unknown as OnlineDeckHeadSource

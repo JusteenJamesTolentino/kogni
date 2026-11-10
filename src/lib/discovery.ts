@@ -1,13 +1,13 @@
 import {
   get,
-  limitToFirst,
   limitToLast,
   orderByChild,
-  orderByKey,
   query,
   ref,
 } from 'firebase/database'
 import { database } from './firebase'
+import { authenticatedRequest } from './vercel-api'
+import type { ApiRequestOptions } from './vercel-api'
 import type {
   ActivePlayerProjection,
   DiscoveryPage,
@@ -88,7 +88,7 @@ export function parsePublicOnlineDeck(value: unknown, key?: string): PublicOnlin
     typeof value.description !== 'string' || value.description.length > 2000 ||
     !isSafeIntegerBetween(value.cardCount, 1, 500) ||
     !isSafeIntegerBetween(value.latestVersion, 1, Number.MAX_SAFE_INTEGER) ||
-    typeof value.updatedAt !== 'number' || !Number.isFinite(value.updatedAt) || value.updatedAt < 0
+    typeof value.updatedAt !== 'number' || !Number.isSafeInteger(value.updatedAt) || value.updatedAt < 0
   ) return null
   return value as unknown as PublicOnlineDeckProjection
 }
@@ -111,14 +111,23 @@ function parsePage<T>(
   }
 }
 
-/** Lists at most 20 online discoverable players; the 21st row is only a hasMore sentinel. */
-export async function listActivePlayers(): Promise<DiscoveryPage<ActivePlayerProjection>> {
-  const snapshot = await get(query(
-    ref(database, 'activePlayers'),
-    orderByKey(),
-    limitToFirst(DISCOVERY_QUERY_LIMIT),
-  ))
-  return parsePage(snapshot.val(), parseActivePlayer, (left, right) => left.uid.localeCompare(right.uid))
+export function isActivePlayersPage(value: unknown): value is DiscoveryPage<ActivePlayerProjection> {
+  if (!isRecord(value) || !hasExactKeys(value, ['hasMore', 'items'])) return false
+  if (typeof value.hasMore !== 'boolean' || !Array.isArray(value.items) || value.items.length > DISCOVERY_PAGE_SIZE) return false
+  const seen = new Set<string>()
+  return value.items.every((candidate: unknown) => {
+    const player = parseActivePlayer(candidate)
+    if (!player || seen.has(player.uid)) return false
+    seen.add(player.uid)
+    return true
+  })
+}
+
+/** Lists bounded online-player metadata through the authenticated server projection. */
+export async function listActivePlayers(
+  options?: ApiRequestOptions,
+): Promise<DiscoveryPage<ActivePlayerProjection>> {
+  return authenticatedRequest('/api/players/online', isActivePlayersPage, options)
 }
 
 /** Lists newest catalog metadata without loading deck versions, cards, guides, or schedules. */

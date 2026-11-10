@@ -1,6 +1,8 @@
-import { get, ref, update } from 'firebase/database'
-import { auth, database } from './firebase'
 import { isRecord } from './errors'
+import { parsePublicOnlineDeck } from './discovery'
+import { authenticatedRequest } from './vercel-api'
+import type { ApiRequestOptions } from './vercel-api'
+import type { PublicOnlineDeckProjection } from '../types/projections'
 import type {
   BlockPlayerResult,
   FollowPlayerResult,
@@ -10,6 +12,23 @@ import type {
 import { PLAYER_XP_TRUST } from '../types/social'
 
 const UID_PATTERN = /^[^.#$[\]/]{1,128}$/
+const DECK_PAGE_SIZE = 20
+const CURSOR_PATTERN = /^[0-9]+:[A-Za-z0-9_-]+$/
+const SUMMARY_FIELDS = ['followerCount', 'followingCount'] as const
+const DECK_PAGE_FIELDS = ['hasMore', 'items'] as const
+const DECK_PAGE_WITH_CURSOR_FIELDS = ['hasMore', 'items', 'nextCursor'] as const
+
+export interface SocialSummary {
+  followerCount: number
+  followingCount: number
+}
+
+export interface PlayerDeckPage {
+  items: PublicOnlineDeckProjection[]
+  hasMore: boolean
+  nextCursor?: string
+}
+
 const PROFILE_FIELDS = [
   'uid',
   'nickname',
@@ -32,9 +51,13 @@ function isCount(value: unknown): value is number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0
 }
 
+function hasExactFields(value: unknown, fields: readonly string[]): value is Record<string, unknown> {
+  return isRecord(value) && Object.keys(value).length === fields.length &&
+    fields.every((field) => Object.hasOwn(value, field))
+}
+
 export function isPublicPlayerProfile(value: unknown): value is PublicPlayerProfile {
-  if (!isRecord(value) || Object.keys(value).length !== PROFILE_FIELDS.length) return false
-  if (!PROFILE_FIELDS.every((field) => Object.hasOwn(value, field))) return false
+  if (!hasExactFields(value, PROFILE_FIELDS)) return false
   return typeof value.uid === 'string' && UID_PATTERN.test(value.uid) &&
     typeof value.nickname === 'string' && /^[A-Za-z0-9_]{3,24}$/.test(value.nickname) &&
     value.nicknameCanonical === value.nickname.toLowerCase() &&
@@ -45,58 +68,90 @@ export function isPublicPlayerProfile(value: unknown): value is PublicPlayerProf
     isCount(value.publishedDeckCount)
 }
 
-function requireCurrentUser(): string {
-  const uid = auth.currentUser?.uid
-  if (!uid) throw new Error('You must be signed in to manage follows.')
-  return uid
+export function isGetPlayerProfileResult(value: unknown): value is GetPlayerProfileResult {
+  return hasExactFields(value, ['profile', 'social']) &&
+    isPublicPlayerProfile(value.profile) &&
+    hasExactFields(value.social, ['following', 'followedBy']) &&
+    typeof value.social.following === 'boolean' && typeof value.social.followedBy === 'boolean'
+}
+
+export function isFollowPlayerResult(value: unknown): value is FollowPlayerResult {
+  return hasExactFields(value, ['targetUid', 'following']) &&
+    typeof value.targetUid === 'string' && UID_PATTERN.test(value.targetUid) &&
+    typeof value.following === 'boolean'
+}
+
+export function isSocialSummary(value: unknown): value is SocialSummary {
+  return hasExactFields(value, SUMMARY_FIELDS) && isCount(value.followerCount) && isCount(value.followingCount)
+}
+
+export function isPlayerDeckPage(value: unknown): value is PlayerDeckPage {
+  if (!isRecord(value) || typeof value.hasMore !== 'boolean' || !Array.isArray(value.items) || value.items.length > DECK_PAGE_SIZE) return false
+  const expectedFields = value.hasMore ? DECK_PAGE_WITH_CURSOR_FIELDS : DECK_PAGE_FIELDS
+  if (!hasExactFields(value, expectedFields)) return false
+  if (value.hasMore && (typeof value.nextCursor !== 'string' || !CURSOR_PATTERN.test(value.nextCursor))) return false
+  const seen = new Set<string>()
+  let previous: PublicOnlineDeckProjection | undefined
+  for (const candidate of value.items) {
+    const deck = parsePublicOnlineDeck(candidate)
+    if (!deck || seen.has(deck.id)) return false
+    if (previous && (deck.updatedAt > previous.updatedAt || (deck.updatedAt === previous.updatedAt && deck.id.localeCompare(previous.id) <= 0))) return false
+    seen.add(deck.id)
+    previous = deck
+  }
+  return !value.hasMore || value.items.length === DECK_PAGE_SIZE
+}
+
+export async function getSocialSummary(options?: ApiRequestOptions): Promise<SocialSummary> {
+  return authenticatedRequest('/api/players/me/social-summary', isSocialSummary, options)
+}
+
+export async function listPlayerDecks(
+  uid: unknown,
+  cursor?: unknown,
+  options?: ApiRequestOptions,
+): Promise<PlayerDeckPage> {
+  const targetUid = requireUid(uid)
+  if (cursor !== undefined && (typeof cursor !== 'string' || !CURSOR_PATTERN.test(cursor))) {
+    throw new TypeError('cursor must be a valid player deck cursor')
+  }
+  const path = `/api/players/${encodeURIComponent(targetUid)}/decks${cursor === undefined ? '' : `?cursor=${encodeURIComponent(cursor)}`}`
+  return authenticatedRequest(path, isPlayerDeckPage, options)
 }
 
 /** Exact lookup only; this API never lists or searches player identities. */
-export async function getPlayerProfile(uid: unknown): Promise<GetPlayerProfileResult> {
+export async function getPlayerProfile(
+  uid: unknown,
+  options?: ApiRequestOptions,
+): Promise<GetPlayerProfileResult> {
   const targetUid = requireUid(uid)
-  const accountSnapshot = await get(ref(database, `publicAccounts/${targetUid}`))
-  const account = accountSnapshot.val()
-  if (!isRecord(account) || account.uid !== targetUid || typeof account.nickname !== 'string' || typeof account.nicknameCanonical !== 'string') {
-    throw new Error('Player profile unavailable')
-  }
-  const followerSnapshot = await get(ref(database, `playerFollowing/${requireCurrentUser()}/${targetUid}`))
-  return {
-    profile: {
-      uid: targetUid,
-      nickname: account.nickname,
-      nicknameCanonical: account.nicknameCanonical,
-      communityXp: 0,
-      xpTrust: PLAYER_XP_TRUST,
-      followerCount: 0,
-      followingCount: 0,
-      publishedDeckCount: 0,
-    },
-    social: { following: followerSnapshot.exists(), followedBy: false },
-  }
+  return authenticatedRequest(
+    `/api/players/${encodeURIComponent(targetUid)}`,
+    (value): value is GetPlayerProfileResult => isGetPlayerProfileResult(value) && value.profile.uid === targetUid,
+    options,
+  )
 }
 
-export async function followPlayer(uid: unknown): Promise<FollowPlayerResult> {
+async function changeFollow(
+  uid: unknown,
+  following: boolean,
+  options?: ApiRequestOptions,
+): Promise<FollowPlayerResult> {
   const targetUid = requireUid(uid)
-  const followerUid = requireCurrentUser()
-  if (followerUid === targetUid) throw new Error('You cannot follow yourself.')
-  const targetSnapshot = await get(ref(database, `publicAccounts/${targetUid}`))
-  if (!targetSnapshot.exists()) throw new Error('This player is not available for following.')
-  const marker = { createdAt: Date.now() }
-  await update(ref(database), {
-    [`playerFollowing/${followerUid}/${targetUid}`]: marker,
-    [`playerFollowers/${targetUid}/${followerUid}`]: marker,
-  })
-  return { targetUid, following: true }
+  return authenticatedRequest(
+    `/api/social/${following ? 'follow' : 'unfollow'}`,
+    (value): value is FollowPlayerResult => isFollowPlayerResult(value) &&
+      value.targetUid === targetUid && value.following === following,
+    { ...options, method: 'POST', body: { uid: targetUid } },
+  )
 }
 
-export async function unfollowPlayer(uid: unknown): Promise<FollowPlayerResult> {
-  const targetUid = requireUid(uid)
-  const followerUid = requireCurrentUser()
-  await update(ref(database), {
-    [`playerFollowing/${followerUid}/${targetUid}`]: null,
-    [`playerFollowers/${targetUid}/${followerUid}`]: null,
-  })
-  return { targetUid, following: false }
+export async function followPlayer(uid: unknown, options?: ApiRequestOptions): Promise<FollowPlayerResult> {
+  return changeFollow(uid, true, options)
+}
+
+export async function unfollowPlayer(uid: unknown, options?: ApiRequestOptions): Promise<FollowPlayerResult> {
+  return changeFollow(uid, false, options)
 }
 
 export async function blockPlayer(uid: unknown): Promise<BlockPlayerResult> {

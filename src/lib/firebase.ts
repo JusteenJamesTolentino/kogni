@@ -4,19 +4,17 @@ import { getAuth, GoogleAuthProvider } from 'firebase/auth'
 import { getDatabase } from 'firebase/database'
 import { getAnalytics, isSupported } from 'firebase/analytics'
 
-const env = import.meta.env
-
 const firebaseConfig: FirebaseOptions = {
-  apiKey: env.VITE_FIREBASE_API_KEY || 'AIzaSyB9kGCuOYsAYLuZgmQZ2EPu5VxGY6I-dKA',
-  authDomain: env.VITE_FIREBASE_AUTH_DOMAIN || 'kogni-ai.firebaseapp.com',
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || 'AIzaSyB9kGCuOYsAYLuZgmQZ2EPu5VxGY6I-dKA',
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 'kogni-ai.firebaseapp.com',
   databaseURL:
-    env.VITE_FIREBASE_DATABASE_URL ||
+    process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL ||
     'https://kogni-ai-default-rtdb.asia-southeast1.firebasedatabase.app',
-  projectId: env.VITE_FIREBASE_PROJECT_ID || 'kogni-ai',
-  storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET || 'kogni-ai.firebasestorage.app',
-  messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID || '718466926986',
-  appId: env.VITE_FIREBASE_APP_ID || '1:718466926986:web:f219f5bd9db8e6c9c92073',
-  measurementId: env.VITE_FIREBASE_MEASUREMENT_ID || 'G-RBZT9J5V5K',
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'kogni-ai',
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || 'kogni-ai.firebasestorage.app',
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '718466926986',
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || '1:718466926986:web:f219f5bd9db8e6c9c92073',
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || 'G-RBZT9J5V5K',
 }
 
 export const app = getApps().length ? getApp() : initializeApp(firebaseConfig)

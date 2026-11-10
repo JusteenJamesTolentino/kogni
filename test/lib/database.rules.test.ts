@@ -521,6 +521,14 @@ describeRules('account privacy, nickname, and presence rules', () => {
     await assertFails(set(ref(readerDatabase, `presenceSessions/${OWNER_ID}/forged`), true))
     await assertFails(set(ref(ownerDatabase, `presenceSessions/${OWNER_ID}/timestamp`), Date.now()))
     await assertSucceeds(set(ref(ownerDatabase, `presenceSessions/${OWNER_ID}/tab-a`), null))
+    expect((await get(ref(ownerDatabase, `presenceSessions/${OWNER_ID}`))).val()).toEqual({ 'tab-b': true })
+    await assertSucceeds(update(ref(ownerDatabase), {
+      [`accounts/${OWNER_ID}/preferences/presence`]: false,
+      [`accounts/${OWNER_ID}/updatedAt`]: Date.now(),
+      [`presenceSessions/${OWNER_ID}`]: null,
+    }))
+    await assertFails(set(ref(ownerDatabase, `presenceSessions/${OWNER_ID}/tab-new`), true))
+    await assertSucceeds(set(ref(ownerDatabase, `presenceSessions/${OWNER_ID}/tab-b`), null))
   })
 })
 
@@ -571,6 +579,19 @@ describeRules('trusted discovery projection rules', () => {
     await assertFails(get(query(ref(readerDatabase, `onlineDecksByOwner/${OWNER_ID}`), orderByChild('updatedAt'), limitToLast(22))))
     await assertFails(set(ref(readerDatabase, `onlineDecksByOwner/${OWNER_ID}/${ONLINE_DECK_ID}`), catalogDeck))
     await assertFails(get(query(ref(unauthenticatedDatabase, 'activePlayers'), orderByKey(), limitToFirst(21))))
+  })
+
+  it('denies active-player writes and deletes even for an eligible opted-in owner', async () => {
+    const ownerDatabase = testEnvironment.authenticatedContext(OWNER_ID).database()
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await update(ref(context.database()), {
+        [`accounts/${OWNER_ID}`]: accountRecord(OWNER_ID, 'Online_User', { discoverable: true, presence: true }),
+        [`presenceSessions/${OWNER_ID}/tab-a`]: true,
+        [`activePlayers/${OWNER_ID}`]: activePlayer,
+      })
+    })
+    await assertFails(set(ref(ownerDatabase, `activePlayers/${OWNER_ID}`), activePlayer))
+    await assertFails(set(ref(ownerDatabase, `activePlayers/${OWNER_ID}`), null))
   })
 
   it('allows exact active-player projection reads but not raw presence', async () => {
@@ -639,13 +660,27 @@ describeRules('trusted social graph database rules', () => {
     await assertFails(get(ref(recipientDatabase, `playerFollowers/${OWNER_ID}/${RECIPIENT_ID}`)))
     await assertFails(get(ref(outsiderDatabase, `playerBlocks/${OWNER_ID}/${OUTSIDER_ID}`)))
     await assertFails(get(ref(ownerDatabase, `playerFollowers/${OWNER_ID}`)))
+    await assertFails(get(ref(recipientDatabase, `playerFollowing/${RECIPIENT_ID}`)))
+    await assertFails(get(ref(recipientDatabase, `playerFollowers/${OWNER_ID}`)))
+    await assertFails(get(ref(ownerDatabase, 'playerFollowEdges')))
   })
 
   it('denies every client write to derived edges and private blocks', async () => {
     const ownerDatabase = testEnvironment.authenticatedContext(OWNER_ID).database()
     const recipientDatabase = testEnvironment.authenticatedContext(RECIPIENT_ID).database()
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await update(ref(context.database()), {
+        [`accounts/${OWNER_ID}`]: accountRecord(OWNER_ID, 'Owner_User', { discoverable: true, presence: true }),
+        [`accounts/${RECIPIENT_ID}`]: accountRecord(RECIPIENT_ID, 'Ready_Reader', { discoverable: true, presence: true }),
+        [`playerFollowing/${RECIPIENT_ID}/${OWNER_ID}`]: marker,
+        [`playerFollowers/${OWNER_ID}/${RECIPIENT_ID}`]: marker,
+      })
+    })
     await assertFails(set(ref(recipientDatabase, `playerFollowing/${RECIPIENT_ID}/${OWNER_ID}`), marker))
     await assertFails(set(ref(ownerDatabase, `playerFollowers/${OWNER_ID}/${RECIPIENT_ID}`), marker))
+    await assertFails(set(ref(recipientDatabase, `playerFollowers/${OWNER_ID}/${RECIPIENT_ID}`), marker))
+    await assertFails(set(ref(recipientDatabase, `playerFollowing/${RECIPIENT_ID}/${OWNER_ID}`), null))
+    await assertFails(set(ref(recipientDatabase, `playerFollowers/${OWNER_ID}/${RECIPIENT_ID}`), null))
     await assertFails(set(ref(ownerDatabase, `playerBlocks/${OWNER_ID}/${OUTSIDER_ID}`), Date.now()))
   })
 })

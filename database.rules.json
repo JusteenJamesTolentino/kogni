@@ -20,7 +20,7 @@
       "$uid": {
         "$targetUid": {
           ".read": "auth != null && $uid === auth.uid",
-          ".write": "auth != null && $uid === auth.uid && root.child('accounts').child(auth.uid).child('status').val() === 'ready' && root.child('accounts').child($targetUid).child('status').val() === 'ready' && root.child('accounts').child($targetUid).child('preferences').child('discoverable').val() === true",
+          ".write": false,
           ".validate": "!newData.exists() || (newData.hasChildren(['createdAt']) && newData.child('createdAt').isNumber())"
         }
       }
@@ -31,7 +31,7 @@
       "$uid": {
         "$followerUid": {
           ".read": "auth != null && $uid === auth.uid",
-          ".write": "auth != null && $followerUid === auth.uid && root.child('accounts').child(auth.uid).child('status').val() === 'ready' && root.child('accounts').child($uid).child('status').val() === 'ready' && root.child('accounts').child($uid).child('preferences').child('discoverable').val() === true",
+          ".write": false,
           ".validate": "!newData.exists() || (newData.hasChildren(['createdAt']) && newData.child('createdAt').isNumber())"
         }
       }
@@ -435,7 +435,7 @@
         "nicknameCanonical"
       ],
       "$uid": {
-        ".read": "auth != null && root.child('accounts').child(auth.uid).child('status').val() === 'ready' && root.child('accounts').child(auth.uid).child('privacy').child('currentVersion').val() === 'privacy-2026-11-10-ai-series-1'",
+        ".read": "auth != null && root.child('accounts').child(auth.uid).child('status').val() === 'ready'",
         ".write": "auth != null && $uid === auth.uid && ((!newData.exists() && newData.parent().parent().child('accounts').child(auth.uid).child('preferences').child('discoverable').val() === false) || (newData.exists() && newData.parent().parent().child('accounts').child(auth.uid).child('preferences').child('discoverable').val() === true && newData.child('nickname').val() === newData.parent().parent().child('accounts').child(auth.uid).child('nickname').val() && newData.child('nicknameCanonical').val() === newData.parent().parent().child('accounts').child(auth.uid).child('nicknameCanonical').val()))",
         ".validate": "!newData.exists() || (newData.hasChildren(['uid', 'nickname', 'nicknameCanonical', 'updatedAt']) && newData.child('uid').val() === auth.uid && newData.child('nickname').isString() && newData.child('nickname').val().matches(/^[A-Za-z0-9_]{3,24}$/) && newData.child('nicknameCanonical').val() === newData.child('nickname').val().toLowerCase() && newData.child('updatedAt').isNumber() && newData.child('updatedAt').val() >= now - 1000 && newData.child('updatedAt').val() <= now + 1000)",
         "uid": {
@@ -458,6 +458,7 @@
     "presenceSessions": {
       "$uid": {
         ".read": "auth != null && $uid === auth.uid",
+        ".write": "auth != null && $uid === auth.uid && !newData.exists()",
         "$sessionId": {
           ".write": "auth != null && $uid === auth.uid && (!newData.exists() || (newData.val() === true && newData.parent().parent().parent().child('accounts').child(auth.uid).child('status').val() === 'ready' && newData.parent().parent().parent().child('accounts').child(auth.uid).child('privacy').child('currentVersion').val() === 'privacy-2026-11-10-ai-series-1' && newData.parent().parent().parent().child('accounts').child(auth.uid).child('preferences').child('presence').val() === true))",
           ".validate": "!newData.exists() || newData.val() === true",
@@ -468,17 +469,18 @@
       }
     },
     "activePlayers": {
-      ".read": "auth != null && root.child('accounts').child(auth.uid).child('status').val() === 'ready' && root.child('accounts').child(auth.uid).child('privacy').child('currentVersion').val() === 'privacy-2026-11-10-ai-series-1' && query.orderByKey && query.limitToFirst != null && query.limitToFirst <= 21",
+      ".read": "auth != null && root.child('accounts').child(auth.uid).child('status').val() === 'ready' && query.orderByKey === true && query.limitToFirst != null && query.limitToFirst <= 21",
       "$uid": {
-        ".read": "auth != null && root.child('accounts').child(auth.uid).child('status').val() === 'ready' && root.child('accounts').child(auth.uid).child('privacy').child('currentVersion').val() === 'privacy-2026-11-10-ai-series-1'",
+        ".read": "auth != null && root.child('accounts').child(auth.uid).child('status').val() === 'ready'",
         ".write": false,
+        ".validate": "!newData.exists() || (newData.hasChildren(['uid', 'nickname', 'nicknameCanonical']) && newData.child('uid').val() === auth.uid && newData.child('nickname').val() === root.child('accounts').child(auth.uid).child('nickname').val() && newData.child('nicknameCanonical').val() === root.child('accounts').child(auth.uid).child('nicknameCanonical').val())",
         "$other": {
           ".validate": false
         }
       }
     },
     "publicOnlineDeckCatalog": {
-      ".read": "auth != null && root.child('accounts').child(auth.uid).child('status').val() === 'ready' && root.child('accounts').child(auth.uid).child('privacy').child('currentVersion').val() === 'privacy-2026-11-10-ai-series-1' && query.limitToFirst == null && query.limitToLast != null && query.limitToLast <= 21 && query.orderByChild === 'updatedAt' || auth != null && root.child('accounts').child(auth.uid).child('status').val() === 'ready' && root.child('accounts').child(auth.uid).child('privacy').child('currentVersion').val() === 'privacy-2026-11-10-ai-series-1' && query.limitToLast == null && query.limitToFirst != null && query.limitToFirst <= 21 && query.orderByChild === 'titleCanonical' && query.startAt != null && query.endAt != null",
+      ".read": "auth != null && root.child('accounts').child(auth.uid).child('status').val() === 'ready' && ((query.limitToFirst == null && query.limitToLast != null && query.limitToLast <= 21 && query.orderByChild === 'updatedAt') || (query.limitToLast == null && query.limitToFirst != null && query.limitToFirst <= 21 && query.orderByChild === 'titleCanonical' && query.startAt != null && query.endAt != null))",
       ".indexOn": [
         "updatedAt",
         "titleCanonical",
@@ -493,7 +495,7 @@
     },
     "onlineDecksByOwner": {
       "$uid": {
-        ".read": "auth != null && root.child('accounts').child(auth.uid).child('status').val() === 'ready' && root.child('accounts').child(auth.uid).child('privacy').child('currentVersion').val() === 'privacy-2026-11-10-ai-series-1' && query.orderByChild === 'updatedAt' && query.limitToLast != null && query.limitToLast <= 21",
+        ".read": "auth != null && root.child('accounts').child(auth.uid).child('status').val() === 'ready' && query.orderByChild === 'updatedAt' && query.limitToLast != null && query.limitToLast <= 21",
         ".indexOn": [
           "updatedAt"
         ],

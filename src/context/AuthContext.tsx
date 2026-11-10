@@ -51,85 +51,127 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [error, setError] = useState('')
   const [accountError, setAccountError] = useState('')
   const presenceSessionRef = useRef<PresenceSession | null>(null)
+  const currentUserRef = useRef<User | null>(null)
+  const authGenerationRef = useRef(0)
+  const accountRequestRef = useRef(0)
 
   useEffect(() => {
+    let active = true
+    const invalidateAuth = () => {
+      ++authGenerationRef.current
+      ++accountRequestRef.current
+      currentUserRef.current = null
+    }
     const unsubscribe = onAuthStateChanged(
       auth,
-      async (nextUser: User | null) => {
+      (nextUser: User | null) => {
+        if (!active) return
+        const generation = ++authGenerationRef.current
+        const request = ++accountRequestRef.current
+        currentUserRef.current = nextUser
         setDatabaseUser(nextUser?.uid || '')
         setUser(nextUser)
+        setAccount(null)
         setAccountError('')
         setLoading(false)
-        if (!nextUser) {
-          setAccount(null)
-          setAccountLoading(false)
-          return
-        }
-        setAccountLoading(true)
-        try {
-          setAccount(await getAccount(nextUser))
-        } catch (accountLoadError: unknown) {
-          setAccountError(getErrorMessage(accountLoadError, 'Your Kognit account could not be loaded.'))
-          setAccount(null)
-        } finally {
-          setAccountLoading(false)
-        }
+        setAccountLoading(Boolean(nextUser))
+        if (!nextUser) return
+        const isCurrent = () => active && generation === authGenerationRef.current && request === accountRequestRef.current
+        void getAccount(nextUser)
+          .then((nextAccount) => { if (isCurrent()) setAccount(nextAccount) })
+          .catch((accountLoadError: unknown) => {
+            if (isCurrent()) {
+              setAccountError(getErrorMessage(accountLoadError, 'Your Kognit account could not be loaded.'))
+              setAccount(null)
+            }
+          })
+          .finally(() => { if (isCurrent()) setAccountLoading(false) })
       },
       (authError: Error) => {
+        if (!active) return
+        invalidateAuth()
+        setDatabaseUser('')
+        setUser(null)
+        setAccount(null)
         setError(getFriendlyAuthError(authError))
         setLoading(false)
+        setAccountLoading(false)
       },
     )
 
-    return unsubscribe
+    return () => {
+      active = false
+      invalidateAuth()
+      unsubscribe()
+    }
   }, [])
 
   useEffect(() => {
-    const previousSession = presenceSessionRef.current
-    presenceSessionRef.current = null
-    void previousSession?.stop()
-    if (!user || !account?.preferences.presence) return
-
+    if (!user || account?.uid !== user.uid || !account.preferences.presence) return
     let active = true
-    void startPresenceSession(user)
+    let ownedSession: PresenceSession | null = null
+    const handlePresenceError = (presenceError: unknown) => {
+      if (active && currentUserRef.current === user) {
+        setAccountError(getErrorMessage(presenceError, 'Presence could not be updated.'))
+      }
+    }
+    const stopSession = (session: PresenceSession) => {
+      void session.stop().catch(handlePresenceError)
+    }
+    void startPresenceSession(user, handlePresenceError)
       .then((session) => {
-        if (active) presenceSessionRef.current = session
-        else void session.stop()
+        if (active && currentUserRef.current === user) {
+          ownedSession = session
+          presenceSessionRef.current = session
+        } else stopSession(session)
       })
-      .catch(() => undefined)
+      .catch(handlePresenceError)
 
     return () => {
       active = false
-      const session = presenceSessionRef.current
-      presenceSessionRef.current = null
-      void session?.stop()
+      if (presenceSessionRef.current === ownedSession) presenceSessionRef.current = null
+      if (ownedSession) stopSession(ownedSession)
     }
-  }, [account?.preferences.presence, user])
+  }, [account?.uid, account?.preferences.presence, user])
 
   const refreshAccount = async (): Promise<AccountRecord | null> => {
-    if (!user) return null
+    if (!user || currentUserRef.current !== user) return null
+    const generation = authGenerationRef.current
+    const request = ++accountRequestRef.current
+    const isCurrent = () => generation === authGenerationRef.current && request === accountRequestRef.current
     setAccountLoading(true)
     setAccountError('')
     try {
       const nextAccount = await getAccount(user)
-      setAccount(nextAccount)
+      if (isCurrent()) setAccount(nextAccount)
       return nextAccount
     } catch (accountLoadError: unknown) {
-      setAccountError(getErrorMessage(accountLoadError, 'Your Kognit account could not be loaded.'))
+      if (isCurrent()) setAccountError(getErrorMessage(accountLoadError, 'Your Kognit account could not be loaded.'))
       throw accountLoadError
     } finally {
-      setAccountLoading(false)
+      if (isCurrent()) setAccountLoading(false)
     }
   }
 
   const handleCompleteOnboarding = async (
     input: CompleteAccountOnboardingInput,
   ): Promise<AccountRecord> => {
-    if (!user) throw new Error('An authenticated user is required')
+    if (!user || currentUserRef.current !== user) throw new Error('An authenticated user is required')
+    const generation = authGenerationRef.current
+    const request = ++accountRequestRef.current
+    const isCurrent = () => generation === authGenerationRef.current && request === accountRequestRef.current
+    setAccountLoading(true)
     setAccountError('')
-    const nextAccount = await completeAccountOnboarding(user, input)
-    setAccount(nextAccount)
-    return nextAccount
+    try {
+      const nextAccount = await completeAccountOnboarding(user, input)
+      if (isCurrent()) setAccount(nextAccount)
+      return nextAccount
+    } catch (onboardingError: unknown) {
+      if (isCurrent()) setAccountError(getErrorMessage(onboardingError, 'Account onboarding could not be completed.'))
+      throw onboardingError
+    } finally {
+      if (isCurrent()) setAccountLoading(false)
+    }
   }
 
   const signInWithGoogle = async (): Promise<UserCredential> => {
@@ -173,7 +215,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setError('')
 
     try {
-      await presenceSessionRef.current?.stop()
+      const session = presenceSessionRef.current
+      presenceSessionRef.current = null
+      if (session) {
+        try {
+          await session.stop()
+        } catch (presenceError: unknown) {
+          setAccountError(getErrorMessage(presenceError, 'Presence cleanup could not be completed.'))
+        }
+      }
       localStorage.removeItem(GEMINI_API_KEY_STORAGE)
       localStorage.removeItem(GEMINI_MODEL_STORAGE)
       await signOut(auth)

@@ -23,6 +23,8 @@ export interface ProfileProps {
   /** Publicly shared presence. This is separate from device connectivity. */
   publicPresence: PublicPresenceStatus
   stats: ProfileStat[]
+  socialError?: string
+  onRetrySocial?: () => void
   privacyHref: string
   onEditProfile: () => void
   onEditAvatar?: () => void
@@ -48,6 +50,8 @@ export default function Profile({
   isDiscoverable,
   publicPresence,
   stats,
+  socialError = '',
+  onRetrySocial,
   privacyHref,
   onEditProfile,
   onEditAvatar,
@@ -118,7 +122,14 @@ export default function Profile({
               Device connectivity describes this browser only. Public presence is a separate status shared with other learners.
             </p>
 
-            <dl className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3" aria-label="Learning statistics">
+            {socialError && (
+              <div role="alert" className="alert alert-warning mt-5 text-sm">
+                <span>{socialError}</span>
+                {onRetrySocial && <button type="button" className="btn btn-sm" onClick={onRetrySocial}>Retry</button>}
+              </div>
+            )}
+
+            <dl className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3" aria-label="Profile statistics">
               {stats.map((stat) => (
                 <div key={stat.id} className="stat min-w-0 rounded-2xl border border-base-300 bg-base-200/45 p-4">
                   <dt className="stat-title truncate text-xs font-semibold uppercase tracking-wide">{stat.label}</dt>

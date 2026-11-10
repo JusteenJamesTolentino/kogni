@@ -8,6 +8,8 @@ import Leaderboard from '../components/Leaderboard'
 import MagicImport from '../components/MagicImport'
 import Profile from '../components/Profile'
 import StudySession from '../components/StudySession'
+import { getSocialSummary } from '../lib/social'
+import type { SocialSummary } from '../lib/social'
 import { PRIVACY_VERSION } from '../lib/account'
 import { getCardsByDeck, getDeck, getDueCards, saveDeckWithCards } from '../lib/db'
 import { getErrorMessage } from '../lib/errors'
@@ -206,8 +208,31 @@ export function ProfileRoute() {
     setDiscoverability,
     setPresenceVisibility,
   } = useAppShell()
+  const [socialSummary, setSocialSummary] = useState<SocialSummary | null>(null)
+  const [socialLoading, setSocialLoading] = useState(true)
+  const [socialError, setSocialError] = useState('')
+  const [socialRequest, setSocialRequest] = useState(0)
   const totalCards = decks.reduce((sum, deck) => sum + deck.cardCount, 0)
   const xp = Number(localStorage.getItem(`kognit_xp_${user.uid}`) || 0)
+
+  useEffect(() => {
+    const controller = new AbortController()
+    let active = true
+    setSocialLoading(true)
+    setSocialError('')
+    setSocialSummary(null)
+    void getSocialSummary({ signal: controller.signal })
+      .then((summary) => { if (active) setSocialSummary(summary) })
+      .catch((error: unknown) => {
+        if (active && !(error instanceof DOMException && error.name === 'AbortError')) {
+          setSocialError('Social counts could not be loaded.')
+        }
+      })
+      .finally(() => { if (active) setSocialLoading(false) })
+    return () => { active = false; controller.abort() }
+  }, [socialRequest, user.uid])
+
+  const socialValue = (value: number | undefined) => socialLoading ? 'Loading…' : socialError ? '—' : value ?? '—'
 
   return <Profile
     nickname={account.nickname}
@@ -216,11 +241,15 @@ export function ProfileRoute() {
     isDiscoverable={account.preferences.discoverable}
     publicPresence={account.preferences.presence ? 'online' : 'hidden'}
     stats={[
+      { id: 'followers', label: 'Followers', value: socialValue(socialSummary?.followerCount), helpText: socialLoading ? 'Loading social count' : undefined },
+      { id: 'following', label: 'Following', value: socialValue(socialSummary?.followingCount), helpText: socialLoading ? 'Loading social count' : undefined },
       { id: 'decks', label: 'Offline decks', value: decks.length, helpText: 'Saved in this browser' },
       { id: 'cards', label: 'Local cards', value: totalCards },
       { id: 'due', label: 'Due reviews', value: dueCards.length },
       { id: 'xp', label: 'Learning XP', value: xp },
     ]}
+    socialError={socialError}
+    onRetrySocial={() => setSocialRequest((request) => request + 1)}
     privacyHref={paths.privacy}
     onEditProfile={openProfileModal}
     onDiscoverabilityChange={setDiscoverability}

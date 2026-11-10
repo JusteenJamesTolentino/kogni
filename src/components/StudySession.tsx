@@ -319,7 +319,7 @@ export default function StudySession({ cards, deck, mode, onExit, onFinished, on
             const state = stepIndex < index ? 'completed' : stepIndex === index ? 'current' : 'future'
             return (
               <li
-                key={stepCard.id}
+                key={`${stepCard.id}-${stepIndex}`}
                 ref={state === 'current' ? currentStepRef : undefined}
                 className={`step min-w-16 ${state !== 'future' ? 'step-primary' : ''}`}
                 aria-current={state === 'current' ? 'step' : undefined}
@@ -336,7 +336,7 @@ export default function StudySession({ cards, deck, mode, onExit, onFinished, on
       <section aria-live="polite" aria-atomic="true">
         <AnimatePresence mode="wait">
           <motion.div
-            key={card.id}
+            key={`${card.id}-${index}`}
             initial={shouldReduceMotion ? false : { opacity: 0, x: 24 }}
             animate={{ opacity: 1, x: 0 }}
             exit={shouldReduceMotion ? undefined : { opacity: 0, x: -24 }}

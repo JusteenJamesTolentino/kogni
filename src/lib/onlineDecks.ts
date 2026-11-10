@@ -216,22 +216,81 @@ function buildVersion(
   }
 }
 
-function isOnlineDeckVersion(value: unknown): value is OnlineDeckVersion {
+export function isValidOnlineDeckVersion(value: unknown): value is OnlineDeckVersion {
   if (!isRecord(value) || !isRecord(value.cards) || !isRecord(value.cardOrder)) return false
-  const cards = Object.values(value.cards)
-  return typeof value.deckId === 'string' &&
-    typeof value.ownerId === 'string' &&
-    Number.isSafeInteger(value.version) &&
-    Number.isSafeInteger(value.baseVersion) &&
-    typeof value.title === 'string' &&
-    typeof value.description === 'string' &&
-    typeof value.cardCount === 'number' &&
-    value.cardCount === cards.length &&
-    typeof value.publishedAt === 'number' &&
-    cards.every((card) => isRecord(card) && typeof card.id === 'string' &&
-      typeof card.order === 'number' && typeof card.contentRevision === 'number' &&
-      typeof card.question === 'string' && typeof card.answer === 'string' &&
-      Array.isArray(card.distractors) && card.distractors.every((item) => typeof item === 'string'))
+
+  const cardEntries = Object.entries(value.cards)
+  const cardOrderEntries = Object.entries(value.cardOrder)
+  if (
+    typeof value.deckId !== 'string' ||
+    typeof value.ownerId !== 'string' ||
+    !Number.isSafeInteger(value.version) ||
+    typeof value.version !== 'number' ||
+    value.version < 1 ||
+    !Number.isSafeInteger(value.baseVersion) ||
+    typeof value.baseVersion !== 'number' ||
+    value.baseVersion < 0 ||
+    value.baseVersion !== value.version - 1 ||
+    typeof value.title !== 'string' ||
+    typeof value.description !== 'string' ||
+    !Number.isSafeInteger(value.cardCount) ||
+    typeof value.cardCount !== 'number' ||
+    value.cardCount < 1 ||
+    value.cardCount > ONLINE_DECK_MAX_CARDS ||
+    value.cardCount !== cardEntries.length ||
+    typeof value.publishedAt !== 'number' ||
+    !Number.isFinite(value.publishedAt) ||
+    value.publishedAt < 0 ||
+    cardOrderEntries.length !== cardEntries.length
+  ) {
+    return false
+  }
+
+  const cardIds = new Set<string>()
+  const cardOrders = new Set<number>()
+  for (const [key, card] of cardEntries) {
+    if (
+      !isRecord(card) ||
+      typeof card.id !== 'string' ||
+      card.id !== key ||
+      cardIds.has(card.id) ||
+      !Number.isSafeInteger(card.order) ||
+      typeof card.order !== 'number' ||
+      card.order < 0 ||
+      card.order >= value.cardCount ||
+      cardOrders.has(card.order) ||
+      !Number.isSafeInteger(card.contentRevision) ||
+      typeof card.contentRevision !== 'number' ||
+      card.contentRevision < 1 ||
+      typeof card.question !== 'string' ||
+      typeof card.answer !== 'string' ||
+      !Array.isArray(card.distractors) ||
+      !card.distractors.every((item) => typeof item === 'string')
+    ) {
+      return false
+    }
+    cardIds.add(card.id)
+    cardOrders.add(card.order)
+  }
+
+  const orderedCardIds = new Set<string>()
+  for (let order = 0; order < value.cardCount; order += 1) {
+    const orderKey = String(order)
+    const cardId = value.cardOrder[orderKey]
+    const card = typeof cardId === 'string' ? value.cards[cardId] : undefined
+    if (
+      !Object.prototype.hasOwnProperty.call(value.cardOrder, orderKey) ||
+      typeof cardId !== 'string' ||
+      orderedCardIds.has(cardId) ||
+      !isRecord(card) ||
+      card.order !== order
+    ) {
+      return false
+    }
+    orderedCardIds.add(cardId)
+  }
+
+  return cardOrders.size === value.cardCount && orderedCardIds.size === cardIds.size
 }
 
 function isOnlineDeckHead(value: unknown): value is OnlineDeckHead {
@@ -254,7 +313,14 @@ function readDeckRecord(value: unknown): OnlineDeckRecord | null {
   if (value.versions !== undefined) {
     if (!isRecord(value.versions)) return null
     for (const [key, version] of Object.entries(value.versions)) {
-      if (!isOnlineDeckVersion(version) || String(version.version) !== key) return null
+      if (
+        !isValidOnlineDeckVersion(version) ||
+        String(version.version) !== key ||
+        version.deckId !== value.head.id ||
+        version.ownerId !== value.head.ownerId
+      ) {
+        return null
+      }
       versions[key] = version
     }
   }
@@ -472,7 +538,9 @@ export async function getOnlineDeckVersion(
   const deckId = requireKey(deckIdValue, 'deckId')
   const version = requireVersion(versionValue)
   const value: unknown = (await get(ref(database, `onlineDecks/${deckId}/versions/${version}`))).val()
-  return isOnlineDeckVersion(value) ? value : null
+  return isValidOnlineDeckVersion(value) && value.deckId === deckId && value.version === version
+    ? value
+    : null
 }
 
 /** Selects the first N published cards by canonical order, never randomly. */
@@ -483,7 +551,7 @@ export function selectOnlineDeckOfflineSnapshot(
   saverQuestionLimitValue: unknown,
   savedAtValue: number = Date.now(),
 ): OnlineDeckOfflineSnapshot {
-  if (!isOnlineDeckHead(head) || !isOnlineDeckVersion(version) || head.id !== version.deckId) {
+  if (!isOnlineDeckHead(head) || !isValidOnlineDeckVersion(version) || head.id !== version.deckId) {
     throw new TypeError('A matching online deck head and version are required')
   }
   if (!head.offlinePolicy.allowed) throw new Error('The creator does not allow offline snapshots')

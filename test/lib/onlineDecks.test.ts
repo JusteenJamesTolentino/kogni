@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { selectOnlineDeckOfflineSnapshot } from '../../src/lib/onlineDecks'
+import { isValidOnlineDeckVersion, selectOnlineDeckOfflineSnapshot } from '../../src/lib/onlineDecks'
 import type { OnlineDeckHead, OnlineDeckVersion } from '../../src/types/domain'
 
 const head: OnlineDeckHead = {
@@ -69,5 +69,47 @@ describe('online deck offline snapshots', () => {
       300,
     )
     expect(snapshot.provenance).toMatchObject({ seriesId: 'series-one', partNumber: 2 })
+  })
+})
+
+describe('online deck version validation', () => {
+  const cloneVersion = (): OnlineDeckVersion => structuredClone(version)
+
+  it('accepts a valid record with exact card keys, count, orders, and cardOrder', () => {
+    expect(isValidOnlineDeckVersion(cloneVersion())).toBe(true)
+  })
+
+  it('rejects duplicate embedded card IDs stored under different Firebase keys', () => {
+    const candidate = cloneVersion()
+    candidate.cards['stable-c'] = { ...candidate.cards['stable-c'], id: 'stable-a' }
+    expect(isValidOnlineDeckVersion(candidate)).toBe(false)
+  })
+
+  it('rejects duplicate and missing contiguous card orders', () => {
+    const duplicateOrder = cloneVersion()
+    duplicateOrder.cards['stable-c'] = { ...duplicateOrder.cards['stable-c'], order: 1 }
+    expect(isValidOnlineDeckVersion(duplicateOrder)).toBe(false)
+
+    const missingOrder = cloneVersion()
+    missingOrder.cards['stable-c'] = { ...missingOrder.cards['stable-c'], order: 3 }
+    expect(isValidOnlineDeckVersion(missingOrder)).toBe(false)
+  })
+
+  it('rejects cardOrder mappings with duplicates, missing cards, extras, or wrong positions', () => {
+    const duplicate = cloneVersion()
+    duplicate.cardOrder = { '0': 'stable-b', '1': 'stable-a', '2': 'stable-a' }
+    expect(isValidOnlineDeckVersion(duplicate)).toBe(false)
+
+    const missing = cloneVersion()
+    missing.cardOrder = { '0': 'stable-b', '1': 'stable-a' }
+    expect(isValidOnlineDeckVersion(missing)).toBe(false)
+
+    const extra = cloneVersion()
+    extra.cardOrder = { ...extra.cardOrder, '3': 'stable-c' }
+    expect(isValidOnlineDeckVersion(extra)).toBe(false)
+
+    const mismatched = cloneVersion()
+    mismatched.cardOrder = { '0': 'stable-a', '1': 'stable-b', '2': 'stable-c' }
+    expect(isValidOnlineDeckVersion(mismatched)).toBe(false)
   })
 })

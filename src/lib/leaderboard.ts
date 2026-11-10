@@ -103,6 +103,38 @@ function isLeaderboardRecord(value: unknown): value is LeaderboardRecord {
   )
 }
 
+function isValidLeaderboardUid(value: unknown): value is string {
+  return typeof value === 'string' &&
+    value === value.trim() &&
+    value.length > 0 &&
+    value.length <= MAX_SCOPE_ID_LENGTH &&
+    !/[.#$[\]/]/.test(value)
+}
+
+/** Converts Firebase child entries into uniquely keyed, descending-XP rankings. */
+export function parseRankedLeaderboardEntries(
+  entries: Iterable<readonly [string | null, unknown]>,
+): RankedLeaderboardEntry[] {
+  const leaders: LeaderboardRecord[] = []
+  const seenUids = new Set<string>()
+
+  for (const [childKey, value] of entries) {
+    if (
+      !isValidLeaderboardUid(childKey) ||
+      !isLeaderboardRecord(value) ||
+      value.uid !== childKey ||
+      seenUids.has(childKey)
+    ) {
+      continue
+    }
+    seenUids.add(childKey)
+    leaders.push({ ...value, uid: childKey })
+  }
+
+  leaders.sort((a, b) => (Number(b.xp) || 0) - (Number(a.xp) || 0))
+  return leaders.map((leader, index) => ({ ...leader, rank: index + 1 }))
+}
+
 function profileFor(user: User): Pick<LeaderboardRecord, 'uid' | 'displayName' | 'photoURL'> {
   return {
     uid: user.uid,
@@ -126,13 +158,11 @@ function nextLeaderboardRecord(
 }
 
 function rankedEntries(snapshot: DataSnapshot): RankedLeaderboardEntry[] {
-  const leaders: LeaderboardRecord[] = []
+  const entries: Array<readonly [string | null, unknown]> = []
   snapshot.forEach((child) => {
-    const value: unknown = child.val()
-    if (isLeaderboardRecord(value)) leaders.push({ ...value, uid: value.uid || child.key || '' })
+    entries.push([child.key, child.val()])
   })
-  leaders.sort((a, b) => (Number(b.xp) || 0) - (Number(a.xp) || 0))
-  return leaders.map((leader, index) => ({ ...leader, rank: index + 1 }))
+  return parseRankedLeaderboardEntries(entries)
 }
 
 export function getReviewXp(quality: unknown): number {

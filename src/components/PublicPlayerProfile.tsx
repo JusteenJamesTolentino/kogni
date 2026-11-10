@@ -43,9 +43,14 @@ export interface PublicPlayerProfileProps {
   error?: string
   followPending?: boolean
   followError?: string
+  hasMoreDecks?: boolean
+  decksLoading?: boolean
+  decksError?: string
   blockPending?: boolean
   blockError?: string
   onRetry?: () => void | Promise<void>
+  onLoadMoreDecks?: () => void | Promise<void>
+  onRetryDecks?: () => void | Promise<void>
   onFollow?: () => void | Promise<void>
   onUnfollow?: () => void | Promise<void>
   onBlock?: () => void | Promise<void>
@@ -100,9 +105,14 @@ export default function PublicPlayerProfile({
   error = '',
   followPending = false,
   followError = '',
+  hasMoreDecks = false,
+  decksLoading = false,
+  decksError = '',
   blockPending = false,
   blockError = '',
   onRetry,
+  onLoadMoreDecks,
+  onRetryDecks,
   onFollow,
   onUnfollow,
   onBlock,
@@ -276,6 +286,22 @@ export default function PublicPlayerProfile({
               </li>
             ))}
           </ul>
+        )}
+        {(decksError || hasMoreDecks) && (
+          <div className="border-t border-base-300 px-5 py-4 text-center">
+            {decksError && <p role="alert" className="mb-3 text-sm text-error">{decksError}</p>}
+            {(hasMoreDecks ? onLoadMoreDecks : onRetryDecks) && (
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                disabled={decksLoading}
+                onClick={() => void (hasMoreDecks ? onLoadMoreDecks : onRetryDecks)?.()}
+              >
+                {decksLoading && <span className="loading loading-spinner loading-xs" aria-hidden="true" />}
+                {decksLoading ? 'Loading decks' : decksError ? 'Try again' : 'Load more decks'}
+              </button>
+            )}
+          </div>
         )}
       </section>
     </main>

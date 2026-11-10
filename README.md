@@ -1,5 +1,7 @@
 # Kognit
 
+## Overview
+
 Kognit is a local-first study application for creating AI-assisted flashcard decks, sharing independent copies with discoverable learners, and reviewing with spaced repetition. Decks and review schedules stay in the browser; Firebase provides Google sign-in, opt-in user discovery, shared deck snapshots, and global/deck leaderboards. Gemini API key and model settings are optional and are only needed when a learner chooses Magic Import.
 
 ## Features
@@ -15,9 +17,18 @@ Kognit is a local-first study application for creating AI-assisted flashcard dec
 - View real-time global and per-deck community leaderboards.
 - Use responsive light and dark interfaces with keyboard study controls.
 
-## Architecture
+## Architecture & Data Flow
 
-Kognit is a Vite single-page application with no application server.
+Kognit runs a Next.js application on Vercel with a React client-side router. Firebase Authentication and Realtime Database remain the identity and storage services.
+
+```text
+Browser → Firebase Auth → bearer ID token → Next.js /api → Firebase Admin → RTDB
+Browser → owner-private presenceSessions → Firebase onDisconnect removal
+Next.js online discovery → session candidates + eligible accounts → minimal player results
+Next.js follow/unfollow → canonical playerFollowEdges → synchronous derived lists/profiles
+```
+
+Presence, profile lookup, and follow/unfollow do not require Firebase Cloud Functions. Presence API polling reflects opaque per-tab markers; closing one tab does not remove another tab's session. Public online results require current privacy acknowledgement and both discoverability and presence opt-ins. The API never returns session IDs, email addresses, acknowledgement history, or last-seen timestamps.
 
 | Concern | Implementation |
 | --- | --- |
@@ -27,11 +38,13 @@ Kognit is a Vite single-page application with no application server.
 | Preferences and client metadata | Browser `localStorage` |
 | Authentication | Firebase Authentication with Google |
 | AI import | Direct browser requests through `@google/genai` |
-| Hosting | Static files generated in `dist/` |
+| Hosting | Next.js on Vercel; `.next/` production build and Node.js API functions |
 
 This design is **local-first, not account-synchronized**. Owned decks, copied decks, schedules, and answer history remain scoped to the current browser profile and origin. Firebase stores only an opted-in public profile, content-only snapshots explicitly shared with selected recipients, inbox/access metadata, review-event markers, and aggregate leaderboard records. Saving a shared snapshot creates a new independent local deck with reset scheduling; later source edits do not synchronize. Clearing site data, changing browsers, or changing deployment domains can make local study data unavailable.
 
-## Prerequisites
+## Setup & Dependencies
+
+Key packages: Next.js, React, Firebase client SDK, Firebase Admin SDK, `idb`, Tailwind CSS/daisyUI, and optional `@google/genai`. Vitest, Firebase rules-unit-testing, Oxlint, and TypeScript support verification. Java is required for database emulator tests.
 
 - Node.js `20.19+` or `22.12+`
 - npm
@@ -39,13 +52,15 @@ This design is **local-first, not account-synchronized**. Owned decks, copied de
 - A Google AI Studio Gemini API key, only when using Magic Import
 - [Firebase CLI](https://firebase.google.com/docs/cli) when deploying database rules
 
-## Install and run
+## Usage & API Reference
+
+### Install and run
 
 ```bash
 npm ci
 ```
 
-Create the local environment file from the committed template:
+Never overwrite an existing local environment file. If `.env.local` does not exist, create it from the committed template:
 
 ```bash
 # macOS/Linux
@@ -61,17 +76,18 @@ Populate `.env.local`, then start the development server:
 npm run dev
 ```
 
-Vite prints the local URL, normally `http://localhost:5173`.
+`VITE_FIREBASE_*` public settings remain supported during migration, but prefer the `NEXT_PUBLIC_FIREBASE_*` names in `.env.example`. Never overwrite an existing `.env.local` when copying the template. Next.js prints the local URL, normally `http://localhost:3000`.
 
 ### Available commands
 
 | Command | Purpose |
 | --- | --- |
-| `npm run dev` | Start the Vite development server with hot reload. |
+| `npm run dev` | Start the Next.js development server. |
 | `npm run test` | Run the Vitest suite once. |
 | `npm run test:rules` | Start the Realtime Database emulator and run authorization tests. |
-| `npm run lint` | Lint `src/` with Oxlint. |
-| `npm run build` | Create a production build in `dist/`. |
+| `npm run lint` | Lint `src/` and `app/` with Oxlint. |
+| `npm run typecheck` | Check browser and Next.js API TypeScript. |
+| `npm run build` | Create a production Next.js build in `.next/`. |
 | `npm run preview` | Serve the production build locally for verification. |
 
 A typical pre-deployment check is:
@@ -82,6 +98,45 @@ npm run test
 npm run test:rules
 npm run build
 npm run preview
+```
+
+### Player API
+
+All player APIs require `Authorization: Bearer <Firebase ID token>` and a ready account with the current privacy acknowledgement. Tokens and service-account credentials must not be logged or committed.
+
+| Method and path | Contract |
+| --- | --- |
+| `GET /api/players/online` | `{ items: [{ uid, nickname, nicknameCanonical }], hasMore }`, at most 20 eligible online players. |
+| `GET /api/players/:uid` | `{ profile, social: { following, followedBy } }`; profile XP is explicitly `client-reported`. |
+| `GET /api/players/me/social-summary` | Owner-only `{ followerCount, followingCount }`; follower identities are not returned. |
+| `GET /api/players/:uid/decks` | A bounded page of that eligible player’s active public published-deck metadata; local/imported deck contents are never returned. Uses an opaque cursor; owners exceeding the bounded 500-record scan fail closed rather than returning misleading pagination. |
+| `GET /api/players/:uid/presence` | `{ online: boolean }`, without session IDs or last-seen data. |
+| `POST /api/social/follow` | JSON `{ "uid": "target-user-id" }`; returns `{ targetUid, following: true }`. |
+| `POST /api/social/unfollow` | JSON `{ "uid": "target-user-id" }`; returns `{ targetUid, following: false }`. |
+
+The browser request helper obtains a token from the current Firebase session. For manual API testing, use a valid token from an authorized test session and do not paste it into source control:
+
+```bash
+curl -H "Authorization: Bearer $FIREBASE_ID_TOKEN" http://localhost:3000/api/players/online
+curl -X POST -H "Authorization: Bearer $FIREBASE_ID_TOKEN" -H "Content-Type: application/json" --data '{"uid":"target-user-id"}' http://localhost:3000/api/social/follow
+```
+
+## Error Handling & Edge Cases
+
+- Missing/malformed Firebase Admin configuration returns a sanitized service-unavailable response. Check the four server-only settings and that client/server Firebase project IDs match; a browser API key is not an Admin credential.
+- Missing/invalid/expired ID tokens return 401; malformed JSON, invalid Firebase keys, and self-follow requests return 400. Private or blocked targets are not disclosed.
+- Presence writes affect only the authenticated user's opaque tab markers. Firebase removes disconnected markers, and the user remains online while another tab survives. Preference opt-outs hide presence immediately when the next API read validates the account.
+- Player requests have finite timeout boundaries. Network failures do not fall back to untrusted client writes or stale `activePlayers` projections.
+- Follow/unfollow use canonical edges and reconcile derived data synchronously. Repeating a successful operation does not duplicate the edge or inflate counts. Your profile receives only owner-scoped follower/following totals; follower identity lists are not exposed.
+- Visited profiles list only active public online decks that the owner intentionally published. Imported, copied, AI-generated, and manually created decks stored only in another learner’s browser remain private. Published-deck pagination uses an opaque cursor and rechecks privacy and blocks at the response boundary.
+- Malformed legacy leaderboard identities and online deck versions are rejected before rendering; Firebase child identity must match embedded IDs, card order mappings must be exact, and the UI does not replace stable domain IDs with array-index React keys.
+- Without deployed Firebase triggers, account opt-outs are checked on reads/writes; legacy stored projections and edges may remain until service reconciliation. They are not treated as authorization or online-state sources. No scheduled retention cleanup is configured by this change.
+- Offline local study remains browser-scoped. Online social functions still require a connection; optional legacy catalog projection features are separate from these Vercel fixes.
+
+Run authorization tests only against the demo emulator:
+
+```bash
+firebase emulators:exec --only database --config firebase.test.json --project demo-kognit-rules "npx vitest run test/lib/database.rules.test.ts"
 ```
 
 ## Firebase setup
@@ -110,7 +165,7 @@ Enter hostnames only—do not include a protocol, path, or port. Add preview dep
 1. Open **Build > Realtime Database** and create a database.
 2. Choose the region appropriate for the deployment.
 3. Keep access closed until the repository rules have been deployed.
-4. Copy the resulting database URL into `VITE_FIREBASE_DATABASE_URL`.
+4. Copy the resulting database URL into `NEXT_PUBLIC_FIREBASE_DATABASE_URL`.
 
 ### 4. Deploy database rules
 
@@ -135,19 +190,19 @@ Select the intended project—`kogni-ai` when using that project—during `fireb
 Copy `.env.example` to `.env.local` and replace every placeholder with the Firebase Web app configuration from **Firebase console > Project settings > General > Your apps**:
 
 ```dotenv
-VITE_FIREBASE_API_KEY=your_firebase_web_api_key
-VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
-VITE_FIREBASE_DATABASE_URL=https://your-project-default-rtdb.region.firebasedatabase.app
-VITE_FIREBASE_PROJECT_ID=your-project
-VITE_FIREBASE_STORAGE_BUCKET=your-project.firebasestorage.app
-VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-VITE_FIREBASE_APP_ID=your_web_app_id
-VITE_FIREBASE_MEASUREMENT_ID=your_measurement_id
+NEXT_PUBLIC_FIREBASE_API_KEY=your_firebase_web_api_key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_DATABASE_URL=https://your-project-default-rtdb.region.firebasedatabase.app
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project.firebasestorage.app
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+NEXT_PUBLIC_FIREBASE_APP_ID=your_web_app_id
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=your_measurement_id
 ```
 
-`VITE_FIREBASE_MEASUREMENT_ID` is only used when Firebase Analytics is supported by the browser. Restart the development server after changing environment variables.
+`NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID` is only used when Firebase Analytics is supported by the browser. Restart the development server after changing environment variables.
 
-All `VITE_*` values are embedded in client JavaScript at build time. Firebase Web configuration, including its API key, is public project-identification data and is **not** a server secret or an authorization boundary. Security must come from Firebase Authentication, Realtime Database Rules, quotas, and abuse controls.
+All `NEXT_PUBLIC_*` values are embedded in client JavaScript at build time. Firebase Web configuration, including its API key, is public project-identification data and is **not** a server secret or an authorization boundary. Security must come from Firebase Authentication, Realtime Database Rules, quotas, and abuse controls.
 
 In Google Cloud Console, review the Firebase browser key and:
 
@@ -155,7 +210,20 @@ In Google Cloud Console, review the Firebase browser key and:
 - restrict the key to only the Google APIs required by the deployed Firebase features, where compatible;
 - monitor usage and quotas after applying restrictions, because an incorrect restriction can break sign-in or database access.
 
-Never place service-account credentials, private keys, or unrestricted server keys in a `VITE_*` variable. Keep `.env.local` uncommitted.
+Never place service-account credentials, private keys, or unrestricted server keys in a `NEXT_PUBLIC_*` or `VITE_*` variable. Keep `.env.local` uncommitted.
+
+### Firebase Admin server configuration
+
+The browser web-app configuration cannot authenticate Firebase Admin. In **Firebase console > Project settings > Service accounts**, generate a key for an authorized service account in the same project. Store its `project_id`, `client_email`, and `private_key` as the following **server-only** environment variables; keep the JSON key outside this repository:
+
+```dotenv
+FIREBASE_PROJECT_ID=your-project
+FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxxx@your-project.iam.gserviceaccount.com
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+FIREBASE_DATABASE_URL=https://your-project-default-rtdb.region.firebasedatabase.app
+```
+
+Use the complete private key, not the placeholder above. Literal PEM line breaks and escaped `\n` line breaks are supported. Use the exact Realtime Database HTTPS URL; local/private addresses and non-Firebase hosts are rejected. Grant only the project permissions the service needs, protect the key, and rotate it if exposed. Add these variables to local `.env.local` and the intended Vercel environments, then restart/redeploy. A missing or invalid Admin configuration returns HTTP 503 with a generic public error; it cannot be repaired with browser rules or public API keys.
 
 ### Optional Firebase App Check
 
@@ -279,7 +347,7 @@ Kognit uses protected browser routes for Dashboard, Community, Import, deck page
 
 ## Privacy onboarding and canonical identity
 
-Every Firebase-authenticated learner must complete `/onboarding` before using protected features. Onboarding requires a unique 3–24 character nickname and acknowledgement of `privacy-2026-11-10`; Community discoverability and public Online/Offline presence are separate opt-ins that default off. The private `accounts/{uid}` record stores acknowledgement history and preferences, while `nicknameClaims` enforces case-insensitive uniqueness and public projections exclude email. See [PRIVACY.md](./PRIVACY.md). This product disclosure is not legal advice; deployment-specific compliance requires qualified counsel.
+Every Firebase-authenticated learner must complete `/onboarding` before using protected features. Onboarding requires a unique 3–24 character nickname and acknowledgement of `privacy-2026-11-10-ai-series-1`; Community discoverability and public Online/Offline presence are separate opt-ins that default off. The private `accounts/{uid}` record stores acknowledgement history and preferences, while `nicknameClaims` enforces case-insensitive uniqueness and public projections exclude email. See [PRIVACY.md](./PRIVACY.md). This product disclosure is not legal advice; deployment-specific compliance requires qualified counsel.
 
 ## Online and offline decks
 
@@ -313,12 +381,16 @@ For a trusted or reward-bearing leaderboard, submit review events to a controlle
 
 ## Deploy to Vercel
 
-Kognit deploys as a static Vite application:
+Kognit deploys as a Next.js application with Vercel Node.js functions:
 
-1. Import the project into Vercel.
-2. Select the **Vite** framework preset.
-3. Use `npm run build` as the build command and `dist` as the output directory.
-4. Add every `VITE_FIREBASE_*` variable to the appropriate Vercel environments.
-5. Deploy, then add the resulting Vercel hostname to Firebase Authentication authorized domains.
+1. Import the project into Vercel and select the **Next.js** framework preset.
+2. Use `npm run build`; remove old `dist` output-directory overrides and static SPA rewrites. Let Vercel detect the Next.js output.
+3. Set the public `NEXT_PUBLIC_FIREBASE_*` web-app variables and the four server-only `FIREBASE_*` Admin variables for each intended environment. Existing public `VITE_FIREBASE_*` names are an explicit migration fallback; new `NEXT_PUBLIC_*` values take precedence.
+4. Deploy the database rules separately after reviewing the intended Firebase project and rule diff. This is not performed automatically by a Vercel deployment.
+5. Deploy the application, then add its exact hostname to Firebase Authentication authorized domains.
 
-Environment values are compiled into the deployment, so redeploy after changing them. Browser routes use the SPA fallback in `vercel.json`, so direct links and refreshes for `/decks/*`, `/portal/*`, `/community`, `/leaderboards`, and study routes continue serving `index.html` while preserving the original URL. Firebase Hosting uses the equivalent rewrite in `firebase.json`. Verify direct route refreshes, Google sign-in return destinations, Realtime Database access, portal redemption, Gemini import, and a production build preview before promoting a deployment.
+Restart local development or redeploy after configuration changes. Public variables are compiled into the browser bundle. `next.config.ts` applies the browser-route fallback only after API/dynamic/static routes and excludes `/api` and `/_next`. `vercel.json` selects Next.js rather than rewriting all requests to `index.html`. The legacy static Firebase Hosting configuration does not host these Next.js APIs.
+
+Presence, player profiles, and follow/unfollow work without Firebase database triggers. Optional legacy catalog/deck projection features under `functions/` have not been migrated by these fixes and require separate backend work if no such projections are maintained. Do not enable old trigger deployments unintentionally.
+
+Verify direct browser-route refreshes, Google sign-in, API authentication/configuration errors, two-tab presence, preference opt-outs, repeated follow/unfollow, profile counts, portal redemption, and Gemini import before promoting a deployment.
