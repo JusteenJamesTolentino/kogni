@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "mimosa-finding-history/v1",
+  "runId": "20261110T153415799Z-8084-305652353692",
+  "runStatus": "inconclusive",
+  "errors": [
+    "supply-chain-check:.: spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT"
+  ],
+  "target": ".",
+  "revision": "59c9363739031d4bbd55538a0241b635467f75c2",
+  "diffHash": "1674f0db4b5a3b5a102175bdbdf808b4562e4407af1ee0edb612db23eeec1199",
+  "rulesVersion": "unavailable",
+  "recordedAt": "2026-11-10T15:34:15.799Z",
+  "timing": {
+    "startedAt": "2026-11-10T15:34:12.860Z",
+    "completedAt": "2026-11-10T15:34:15.799Z",
+    "durationMs": 2939
+  },
+  "tokens": {
+    "input": 0,
+    "output": 0,
+    "total": 0,
+    "modelCalls": 0,
+    "measurement": "known-zero"
+  },
+  "findings": {
+    "total": 0,
+    "bySeverity": {},
+    "byStatus": {}
+  },
+  "coverage": {
+    "status": "partial",
+    "reasonCounts": {
+      "project_check_failed": 1
+    }
+  },
+  "evidenceBoundary": "static_only",
+  "immutableReport": ".mimosa/reports/task-review-sess_37762986-7d41-4fec-8d1e-b5fe3a28977f-20261110T153415799Z-8084-305652353692.json"
+}

@@ -247,7 +247,7 @@ export default function ShareDeckModal({
                   <div>
                     <UserRoundSearch size={29} className="mx-auto text-base-content/25" aria-hidden="true" />
                     <h3 className="mt-3 font-bold">Choose a recipient</h3>
-                    <p className="mt-1 text-sm text-base-content/55">Search by the public name they use on Kognit.</p>
+                    <p className="mt-1 text-sm text-base-content/55">Search by the public name they use on Kogni.</p>
                   </div>
                 </div>
               ) : !searchError && !searchResults.length ? (
@@ -282,7 +282,7 @@ export default function ShareDeckModal({
                           </span>
                           <span className="min-w-0 flex-1">
                             <span className="block truncate font-semibold">{result.displayName}</span>
-                            <span className="block truncate text-xs text-base-content/50">Kognit learner</span>
+                            <span className="block truncate text-xs text-base-content/50">Kogni learner</span>
                           </span>
                           <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full border ${selected ? 'border-primary bg-primary text-primary-content' : 'border-base-300'}`}>
                             {selected && <Check size={16} aria-hidden="true" />}

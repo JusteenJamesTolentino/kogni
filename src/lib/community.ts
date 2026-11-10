@@ -281,7 +281,7 @@ export async function shareDeckCopy(
   const shareId = requireId(push(ref(database, 'sharedDecks')).key, 'shareId')
   const lineageId = requireId(input.deck.lineageId || input.deck.id, 'lineageId')
   const senderDisplayName = cleanString(
-    input.senderDisplayName || authenticatedUser.displayName || 'Kognit learner',
+    input.senderDisplayName || authenticatedUser.displayName || 'Kogni learner',
     MAX_DISPLAY_NAME_LENGTH,
   )
   const title = cleanString(input.deck.title || 'Untitled deck', MAX_TITLE_LENGTH)

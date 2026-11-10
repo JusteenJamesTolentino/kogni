@@ -1,8 +1,8 @@
-# Kognit
+# Kogni
 
 ## Overview
 
-Kognit is a local-first study application for creating AI-assisted flashcard decks, sharing independent copies with discoverable learners, and reviewing with spaced repetition. Decks and review schedules stay in the browser; Firebase provides Google sign-in, opt-in user discovery, shared deck snapshots, and global/deck leaderboards. Gemini API key and model settings are optional and are only needed when a learner chooses Magic Import.
+Kogni is a local-first study application for creating AI-assisted flashcard decks, sharing independent copies with discoverable learners, and reviewing with spaced repetition. Decks and review schedules stay in the browser; Firebase provides Google sign-in, opt-in user discovery, shared deck snapshots, and global/deck leaderboards. Gemini API key and model settings are optional and are only needed when a learner chooses Magic Import.
 
 ## Features
 
@@ -19,7 +19,7 @@ Kognit is a local-first study application for creating AI-assisted flashcard dec
 
 ## Architecture & Data Flow
 
-Kognit runs a Next.js application on Vercel with a React client-side router. Firebase Authentication and Realtime Database remain the identity and storage services.
+Kogni runs a Next.js application on Vercel with a React client-side router. Firebase Authentication and Realtime Database remain the identity and storage services.
 
 ```text
 Browser → Firebase Auth → bearer ID token → Next.js /api → Firebase Admin → RTDB
@@ -233,11 +233,11 @@ App Check complements but does not replace Authentication or Database Rules, and
 
 ## Gemini BYOK and `@google/genai`
 
-Magic Import is an optional bring-your-own-key (BYOK) feature. Local and shared decks can be browsed, practiced, and reviewed without Gemini settings. When a learner chooses generation, Kognit stores the user-entered Gemini key under `user_gemini_api_key` and the selected model ID under `user_gemini_model` in `localStorage`. It sends the key directly from the browser to Gemini only while generating. Every generated deck requires selecting a new PDF, JPEG, PNG, or WebP source file; Kognit does not retain that source after generation.
+Magic Import is an optional bring-your-own-key (BYOK) feature. Local and shared decks can be browsed, practiced, and reviewed without Gemini settings. When a learner chooses generation, Kogni stores the user-entered Gemini key under `user_gemini_api_key` and the selected model ID under `user_gemini_model` in `localStorage`. It sends the key directly from the browser to Gemini only while generating. Every generated deck requires selecting a new PDF, JPEG, PNG, or WebP source file; Kogni does not retain that source after generation.
 
 A key in `localStorage` is not secret from JavaScript running on the same origin. Cross-site scripting, compromised dependencies, malicious browser extensions, shared browser profiles, and local device access could expose it. Use a dedicated key with minimal API scope, quota, and billing exposure; apply available Google Cloud application/API restrictions; monitor usage; and revoke or rotate the key if exposure is suspected. Clearing the saved key or all site data removes the local copy. For stronger production isolation, move Gemini calls behind a trusted server and keep the key there.
 
-Magic Import accepts PDF, JPEG, PNG, and WebP files up to 14 MiB. Files are sent as inline Base64 data; the raw limit leaves room for Base64 expansion and the surrounding JSON request beneath Gemini's whole-request inline limit. GIF is not accepted because support is inconsistent across Gemini models. Kognit does not use the Files API because each source is used once and the inline path avoids creating a separately retained remote file resource.
+Magic Import accepts PDF, JPEG, PNG, and WebP files up to 14 MiB. Files are sent as inline Base64 data; the raw limit leaves room for Base64 expansion and the surrounding JSON request beneath Gemini's whole-request inline limit. GIF is not accepted because support is inconsistent across Gemini models. Kogni does not use the Files API because each source is used once and the inline path avoids creating a separately retained remote file resource.
 
 The project uses `@google/genai` v3 with the `GoogleGenAI` client and `ai.models.generateContent`. It currently:
 
@@ -255,17 +255,17 @@ Do not replace this with examples from the legacy `@google/generative-ai` SDK. B
 
 ### Google AI Studio key setup
 
-AI generation requires a key from a Google AI Studio project the user controls or is authorized to use. Kognit provides no shared key. Existing/local/shared decks, Community, profiles, portals, leaderboards, practice, and review remain key-free.
+AI generation requires a key from a Google AI Studio project the user controls or is authorized to use. Kogni provides no shared key. Existing/local/shared decks, Community, profiles, portals, leaderboards, practice, and review remain key-free.
 
 1. Open [Google AI Studio API keys](https://aistudio.google.com/app/apikey) and sign in.
 2. Create, import, or select a Google Cloud project you control.
 3. Review that project's [pricing](https://aistudio.google.com/docs/pricing), [billing](https://aistudio.google.com/docs/billing), and [rate limits](https://aistudio.google.com/docs/rate-limits). Free-tier availability varies; paid projects may incur charges.
 4. Choose **Create API key** for that project.
-5. Copy the key into Kognit's **AI generation settings** and enter an exact model ID from the [models documentation](https://aistudio.google.com/docs/models).
+5. Copy the key into Kogni's **AI generation settings** and enter an exact model ID from the [models documentation](https://aistudio.google.com/docs/models).
 6. Select **Test key and model**. Verification performs model metadata lookup only—it uploads no source and generates no content.
 7. Save settings, select a PDF/JPEG/PNG/WebP source, then explicitly generate.
 
-Prefer a dedicated project/key with limited billing exposure and monitored quotas. Apply compatible API and referrer restrictions for the exact Kognit origins, then test them. Restrictions mitigate misuse but do not make browser-exposed keys secret. The saved key remains readable to same-origin JavaScript, extensions, shared profiles, or people with device access. Remove settings in Kognit and revoke/rotate the key in Google AI Studio if exposure is suspected.
+Prefer a dedicated project/key with limited billing exposure and monitored quotas. Apply compatible API and referrer restrictions for the exact Kogni origins, then test them. Restrictions mitigate misuse but do not make browser-exposed keys secret. The saved key remains readable to same-origin JavaScript, extensions, shared profiles, or people with device access. Remove settings in Kogni and revoke/rotate the key in Google AI Studio if exposure is suspected.
 
 ## Data model
 
@@ -343,7 +343,7 @@ Portal codes expire after 1–30 days. Owners can renew, revoke, or rotate them.
 
 ## Browser routes and guards
 
-Kognit uses protected browser routes for Dashboard, Community, Import, deck pages, study sessions, leaderboards, and portal redemption. Guests who open a protected deep link are sent to `/sign-in` and returned only to a validated internal destination after authentication. External, protocol-relative, backslash, control-character, and sign-in-loop redirect targets are rejected. Deck routes reload owner-scoped IndexedDB data on refresh and show a route error when the deck is not available in the current browser.
+Kogni uses protected browser routes for Dashboard, Community, Import, deck pages, study sessions, leaderboards, and portal redemption. Guests who open a protected deep link are sent to `/sign-in` and returned only to a validated internal destination after authentication. External, protocol-relative, backslash, control-character, and sign-in-loop redirect targets are rejected. Deck routes reload owner-scoped IndexedDB data on refresh and show a route error when the deck is not available in the current browser.
 
 ## Privacy onboarding and canonical identity
 
@@ -363,7 +363,7 @@ The protected Profile route uses the canonical nickname, versioned acknowledgeme
 
 Owned local decks support metadata and card editing through owner-checked IndexedDB transactions. Changing a question, answer, or distractors resets only that card's schedule; title, summary, study guide, and reorder changes preserve progress. Substantive edits to imported/offline snapshots create a new fork/lineage so changed content does not share source rankings.
 
-Kognit intentionally does not retain uploaded source files. Source-grounded regeneration therefore requires selecting the PDF/JPEG/PNG/WebP again and always creates a new independent deck; it never silently overwrites the old deck or its schedules. Local deletion removes the browser-local deck, cards, progress, and provenance and revokes an active portal first; published online versions and other learners' copies remain.
+Kogni intentionally does not retain uploaded source files. Source-grounded regeneration therefore requires selecting the PDF/JPEG/PNG/WebP again and always creates a new independent deck; it never silently overwrites the old deck or its schedules. Local deletion removes the browser-local deck, cards, progress, and provenance and revokes an active portal first; published online versions and other learners' copies remain.
 
 Online edits publish immutable successor versions. Metadata-only changes preserve card revisions, while changed learning content increments that card's revision and resets affected schedules. Online deletion is a terminal private tombstone: catalog/access ends, retained immutable versions may remain for audit/retention, and downloaded offline copies cannot be retracted.
 
@@ -371,7 +371,7 @@ Online edits publish immutable successor versions. Metadata-only changes preserv
 
 New AI-generated and verified decks use the `literal-answers-v1` contract: every card's complete answer phrase must occur naturally in the study guide after Unicode NFKC, case, whitespace, quote, and hyphen normalization. Matching is boundary-aware, so short answers do not match inside larger words or numbers. Multiword answers remain contiguous; reordered words and semantic paraphrases do not count.
 
-Kognit validates this locally after Gemini returns JSON, including schema-compatibility output and creator continuations. The guide remains explanatory prose—there is no answer bank or stored question-to-guide mapping. Legacy decks without the verification marker remain readable and practicable but do not carry this guarantee. Editing or publishing recomputes coverage; a stale marker is never trusted.
+Kogni validates this locally after Gemini returns JSON, including schema-compatibility output and creator continuations. The guide remains explanatory prose—there is no answer bank or stored question-to-guide mapping. Legacy decks without the verification marker remain readable and practicable but do not carry this guarantee. Editing or publishing recomputes coverage; a stale marker is never trusted.
 
 ## Leaderboard trust model
 
@@ -381,7 +381,7 @@ For a trusted or reward-bearing leaderboard, submit review events to a controlle
 
 ## Deploy to Vercel
 
-Kognit deploys as a Next.js application with Vercel Node.js functions:
+Kogni deploys as a Next.js application with Vercel Node.js functions:
 
 1. Import the project into Vercel and select the **Next.js** framework preset.
 2. Use `npm run build`; remove old `dist` output-directory overrides and static SPA rewrites. Let Vercel detect the Next.js output.

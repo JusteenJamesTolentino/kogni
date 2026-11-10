@@ -17,13 +17,13 @@ import {
   updateLocalCardContent,
   updateLocalDeckMetadata,
 } from '../../src/lib/db'
-import type { KognitDB, OnlineDeckOfflineSnapshot } from '../../src/types/domain'
+import type { KogniDB, OnlineDeckOfflineSnapshot } from '../../src/types/domain'
 
 const DB_NAME = 'FlashcardAppDB'
 let db: Awaited<ReturnType<typeof rawDatabase>>
 
 async function rawDatabase() {
-  return openDB<KognitDB>(DB_NAME, 2)
+  return openDB<KogniDB>(DB_NAME, 2)
 }
 
 beforeEach(async () => {

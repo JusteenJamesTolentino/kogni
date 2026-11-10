@@ -225,7 +225,7 @@ function portalRecord(
     id: code,
     ownerId: user.uid,
     ownerDisplayName: cleanString(
-      input.ownerDisplayName || user.displayName || 'Kognit learner',
+      input.ownerDisplayName || user.displayName || 'Kogni learner',
       MAX_OWNER_NAME_LENGTH,
     ),
     sourceDeckId,

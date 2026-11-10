@@ -149,10 +149,10 @@ export default function OnlineDeckCatalog({
                           creatorOnline: deck.creatorOnline,
                         })}
                         className="flex min-h-9 w-full items-center gap-2 rounded-lg px-1 text-left text-xs text-base-content/60 transition hover:bg-base-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
-                        aria-label={`Open ${deck.creatorNickname || 'Kognit creator'} profile`}
+                        aria-label={`Open ${deck.creatorNickname || 'Kogni creator'} profile`}
                       >
                         <UserRound size={15} aria-hidden="true" />
-                        <span className="min-w-0 flex-1 truncate font-semibold">{deck.creatorNickname || 'Kognit creator'}</span>
+                        <span className="min-w-0 flex-1 truncate font-semibold">{deck.creatorNickname || 'Kogni creator'}</span>
                         {deck.creatorOnline && (
                           <span className="badge badge-success badge-outline badge-xs ml-auto gap-1" aria-label={`${deck.creatorNickname} is online`}>
                             <Wifi size={10} aria-hidden="true" /> Online
@@ -162,7 +162,7 @@ export default function OnlineDeckCatalog({
                     ) : (
                       <div className="flex min-h-9 items-center gap-2 text-xs text-base-content/60">
                         <UserRound size={15} aria-hidden="true" />
-                        <span className="min-w-0 flex-1 truncate font-semibold">{deck.creatorNickname || 'Kognit creator'}</span>
+                        <span className="min-w-0 flex-1 truncate font-semibold">{deck.creatorNickname || 'Kogni creator'}</span>
                         {deck.creatorOnline && (
                           <span className="badge badge-success badge-outline badge-xs ml-auto gap-1" aria-label={`${deck.creatorNickname} is online`}>
                             <Wifi size={10} aria-hidden="true" /> Online

@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "mimosa-finding-ledger-batch/v1",
+  "batchId": "stop-20261110T153415799Z-8084-305652353692",
+  "runId": "20261110T153415799Z-8084-305652353692",
+  "runStatus": "inconclusive",
+  "coverage": {
+    "status": "partial",
+    "reasons": [
+      {
+        "code": "project_check_failed",
+        "stage": "supply-chain-check",
+        "target": ".",
+        "detail": "spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT",
+        "affectsCompletion": true
+      }
+    ]
+  },
+  "source": {
+    "component": "zcode-hook",
+    "operationId": "Stop"
+  },
+  "revision": "59c9363739031d4bbd55538a0241b635467f75c2",
+  "diffHash": "1674f0db4b5a3b5a102175bdbdf808b4562e4407af1ee0edb612db23eeec1199",
+  "rulesVersion": "unavailable",
+  "sessionHash": "231c6210fe24133d19b274597fddc7891d1ecf9a5dd04e6b0e313f09501fe22e",
+  "reportRef": ".mimosa/reports/task-review-sess_37762986-7d41-4fec-8d1e-b5fe3a28977f-20261110T153415799Z-8084-305652353692.json",
+  "events": [],
+  "observedFindingIds": [],
+  "verifiedFiles": [
+    {
+      "file": "next.config.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "test/lib/next-config.test.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "test/lib/branding.test.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    }
+  ],
+  "recordedAt": "2026-11-10T15:34:16.557Z"
+}

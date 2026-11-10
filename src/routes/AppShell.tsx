@@ -294,7 +294,7 @@ export default function AppShell({ user }: AppShellProps) {
         deck: shareDeck,
         cards,
         recipientId: recipient.id,
-        senderDisplayName: account?.nickname || 'Kognit learner',
+        senderDisplayName: account?.nickname || 'Kogni learner',
       })
       setShareDeck(null)
     } catch (shareFailure: unknown) {
@@ -330,7 +330,7 @@ export default function AppShell({ user }: AppShellProps) {
         const cards = await getCardsByDeck(shareDeck.id)
         setPortalRecord(await createDeckPortal(
           user,
-          { deck: shareDeck, cards, ownerDisplayName: account?.nickname || 'Kognit learner' },
+          { deck: shareDeck, cards, ownerDisplayName: account?.nickname || 'Kogni learner' },
           { expiresInDays },
         ))
       } else if (action === 'renew' && portalRecord) {

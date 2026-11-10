@@ -146,7 +146,7 @@ export default function MagicImport({ apiKey, model, onOpenApiKey, onComplete, o
         {(!apiKey || !model) && (
           <div role="alert" className="alert alert-warning mb-5">
             <KeyRound size={20} aria-hidden="true" />
-            <div><h3 className="font-bold">Use your own Google AI Studio key to generate</h3><p className="text-xs">Kognit provides no shared key. Existing/shared decks stay key-free; generation uses your project quota and may incur charges.</p></div>
+            <div><h3 className="font-bold">Use your own Google AI Studio key to generate</h3><p className="text-xs">Kogni provides no shared key. Existing/shared decks stay key-free; generation uses your project quota and may incur charges.</p></div>
             <button type="button" onClick={onOpenApiKey} className="btn btn-sm">Set up AI generation</button>
           </div>
         )}

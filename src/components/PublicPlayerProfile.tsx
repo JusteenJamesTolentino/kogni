@@ -131,7 +131,7 @@ export default function PublicPlayerProfile({
     return <StatePanel title="Profile unavailable" message="This public profile is unavailable or no longer shared." onRetry={onRetry} />
   }
 
-  const nickname = profile.nickname.trim() || 'Kognit player'
+  const nickname = profile.nickname.trim() || 'Kogni player'
   const initial = (nickname.charAt(0) || '?').toUpperCase()
   const followHandler = profile.isFollowing ? onUnfollow : onFollow
   const followerCount = safeCount(profile.followerCount)

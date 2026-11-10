@@ -2,7 +2,7 @@ import { openDB } from 'idb'
 import { assertNonEmptyString, assertRecord } from './errors'
 import { hasCompleteStudyGuideCoverage, STUDY_GUIDE_COVERAGE } from './studyGuideCoverage'
 import type {
-  KognitDB,
+  KogniDB,
   LocalOfflineSnapshotRecord,
   OnlineDeckOfflineSnapshot,
   StudyCard,
@@ -20,7 +20,7 @@ let currentUserId = ''
 const dbPromise = createDatabasePromise()
 
 function createDatabasePromise() {
-  return openDB<KognitDB>(DB_NAME, DB_VERSION, {
+  return openDB<KogniDB>(DB_NAME, DB_VERSION, {
     upgrade(db) {
       if (!db.objectStoreNames.contains(DECKS_STORE)) {
         const decks = db.createObjectStore(DECKS_STORE, { keyPath: 'id' })

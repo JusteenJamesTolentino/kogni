@@ -299,10 +299,10 @@ export default function Community({
                                 className="block max-w-full truncate rounded-sm text-left font-semibold text-base-content/75 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
                                 onClick={() => void onOpenPlayer({ id: sharedDeck.senderId, nickname: sharedDeck.senderDisplayName })}
                               >
-                                {sharedDeck.senderDisplayName || 'Kognit player'}
+                                {sharedDeck.senderDisplayName || 'Kogni player'}
                               </button>
                             ) : (
-                              <p className="truncate font-semibold text-base-content/75">{sharedDeck.senderDisplayName || 'Kognit player'}</p>
+                              <p className="truncate font-semibold text-base-content/75">{sharedDeck.senderDisplayName || 'Kogni player'}</p>
                             )}
                             <p>{formatSharedAt(sharedDeck.sharedAt)}{sharedDeck.cardCount !== undefined ? ` · ${sharedDeck.cardCount} cards` : ''}</p>
                           </div>

@@ -177,7 +177,7 @@ export default function RegenerateDeck({
         <div className="space-y-6 p-5 sm:p-8">
           <div id={sourceNoteId} className="alert border-info/30 bg-info/10 text-sm" role="note">
             <FileLock2 size={21} className="text-info" aria-hidden="true" />
-            <div><h2 className="font-bold">The original source was not retained</h2><p className="mt-0.5 text-xs leading-relaxed">Kognit does not store uploaded source files. Select the PDF or image again; it is used for this generation request only.</p></div>
+            <div><h2 className="font-bold">The original source was not retained</h2><p className="mt-0.5 text-xs leading-relaxed">Kogni does not store uploaded source files. Select the PDF or image again; it is used for this generation request only.</p></div>
           </div>
 
           {!draft ? (

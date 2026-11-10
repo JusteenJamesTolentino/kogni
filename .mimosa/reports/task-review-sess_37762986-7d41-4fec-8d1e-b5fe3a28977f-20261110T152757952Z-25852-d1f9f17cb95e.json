@@ -1,0 +1,797 @@
+{
+  "schema_version": "mimosa-task-review/v2",
+  "run_id": "20261110T152757952Z-25852-d1f9f17cb95e",
+  "run_status": "inconclusive",
+  "errors": [
+    {
+      "stage": "candidate-select",
+      "target": "src/components/PortalPreview.tsx",
+      "reason": "candidate_limit_exceeded: 10 changed reviewable file(s) were not scanned because the limit is 20"
+    },
+    {
+      "stage": "scan",
+      "target": "test/lib/branding.test.ts",
+      "reason": "scanner_failed: spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "test/lib/db.test.ts",
+      "reason": "scanner_failed: spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "src/types/domain.ts",
+      "reason": "scanner_failed: spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "src/routes/AppShell.tsx",
+      "reason": "scanner_failed: spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "src/routes/NotFoundRoute.tsx",
+      "reason": "scanner_failed: spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "src/router/LoadingScreen.tsx",
+      "reason": "scanner_failed: spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "src/lib/community.ts",
+      "reason": "scanner_failed: spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "src/lib/db.ts",
+      "reason": "scanner_failed: spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "src/lib/portal.ts",
+      "reason": "scanner_failed: spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "src/context/AuthContext.tsx",
+      "reason": "scanner_failed: spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "src/components/ApiKeyModal.tsx",
+      "reason": "scanner_failed: spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "src/components/Community.tsx",
+      "reason": "scanner_failed: spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "src/components/Leaderboard.tsx",
+      "reason": "scanner_failed: spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "src/components/MagicImport.tsx",
+      "reason": "scanner_failed: spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "src/components/Navbar.tsx",
+      "reason": "scanner_failed: spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "src/components/Onboarding.tsx",
+      "reason": "scanner_failed: spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "src/components/OnlineDeckCatalog.tsx",
+      "reason": "scanner_failed: spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "src/components/OnlinePlayers.tsx",
+      "reason": "scanner_failed: spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT"
+    },
+    {
+      "stage": "supply-chain-check",
+      "target": ".",
+      "reason": "stop_budget_exhausted: focused supply-chain check was not run before the gate budget"
+    }
+  ],
+  "coverage": {
+    "schema_version": "mimosa-hook-coverage/v1",
+    "status": "partial",
+    "scope": "hook_observed_diff",
+    "baseline": {
+      "complete": true,
+      "captured_files": 162,
+      "candidate_limit": 5000,
+      "truncated": false,
+      "enumeration_error_count": 0,
+      "snapshot_error_count": 0,
+      "compensated_target_count": 30
+    },
+    "change_tracking": {
+      "touched_observed": 1,
+      "touched_retained": 1,
+      "truncated": false,
+      "bash_mutation": true,
+      "bash_discovered": 30,
+      "bash_discovery_limit": 80,
+      "bash_discovery_truncated": false
+    },
+    "candidates": {
+      "eligible_files": 30,
+      "selected_files": 20,
+      "limit": 20,
+      "truncated": true
+    },
+    "scanning": {
+      "required_files": 18,
+      "scanned_files": 0,
+      "skipped_files": 0,
+      "failed_files": 18,
+      "project_checks_required": 1,
+      "project_checks_completed": 0
+    },
+    "notification": {
+      "eligible_findings": 0,
+      "detailed_findings": 0,
+      "detail_limit": 3,
+      "truncated": false
+    },
+    "reason_counts": {
+      "candidate_limit_exceeded": 1,
+      "scanner_failed": 18,
+      "stop_budget_exhausted": 1,
+      "project_check_failed": 20
+    },
+    "reasons": [
+      {
+        "code": "candidate_limit_exceeded",
+        "stage": "candidate-select",
+        "target": "src/components/PortalPreview.tsx",
+        "detail": "10 changed reviewable file(s) were not scanned because the limit is 20",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "test/lib/branding.test.ts",
+        "detail": "spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "test/lib/db.test.ts",
+        "detail": "spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "src/types/domain.ts",
+        "detail": "spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "src/routes/AppShell.tsx",
+        "detail": "spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "src/routes/NotFoundRoute.tsx",
+        "detail": "spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "src/router/LoadingScreen.tsx",
+        "detail": "spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "src/lib/community.ts",
+        "detail": "spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "src/lib/db.ts",
+        "detail": "spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "src/lib/portal.ts",
+        "detail": "spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "src/context/AuthContext.tsx",
+        "detail": "spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "src/components/ApiKeyModal.tsx",
+        "detail": "spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "src/components/Community.tsx",
+        "detail": "spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "src/components/Leaderboard.tsx",
+        "detail": "spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "src/components/MagicImport.tsx",
+        "detail": "spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "src/components/Navbar.tsx",
+        "detail": "spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "src/components/Onboarding.tsx",
+        "detail": "spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "src/components/OnlineDeckCatalog.tsx",
+        "detail": "spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "src/components/OnlinePlayers.tsx",
+        "detail": "spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "stop_budget_exhausted",
+        "stage": "supply-chain-check",
+        "target": ".",
+        "detail": "focused supply-chain check was not run before the gate budget",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "candidate-select",
+        "target": "src/components/PortalPreview.tsx",
+        "detail": "candidate_limit_exceeded: 10 changed reviewable file(s) were not scanned because the limit is 20",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "test/lib/branding.test.ts",
+        "detail": "scanner_failed: spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "test/lib/db.test.ts",
+        "detail": "scanner_failed: spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "src/types/domain.ts",
+        "detail": "scanner_failed: spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "src/routes/AppShell.tsx",
+        "detail": "scanner_failed: spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "src/routes/NotFoundRoute.tsx",
+        "detail": "scanner_failed: spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "src/router/LoadingScreen.tsx",
+        "detail": "scanner_failed: spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "src/lib/community.ts",
+        "detail": "scanner_failed: spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "src/lib/db.ts",
+        "detail": "scanner_failed: spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "src/lib/portal.ts",
+        "detail": "scanner_failed: spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "src/context/AuthContext.tsx",
+        "detail": "scanner_failed: spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "src/components/ApiKeyModal.tsx",
+        "detail": "scanner_failed: spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "src/components/Community.tsx",
+        "detail": "scanner_failed: spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "src/components/Leaderboard.tsx",
+        "detail": "scanner_failed: spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "src/components/MagicImport.tsx",
+        "detail": "scanner_failed: spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "src/components/Navbar.tsx",
+        "detail": "scanner_failed: spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "src/components/Onboarding.tsx",
+        "detail": "scanner_failed: spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "src/components/OnlineDeckCatalog.tsx",
+        "detail": "scanner_failed: spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "src/components/OnlinePlayers.tsx",
+        "detail": "scanner_failed: spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "supply-chain-check",
+        "target": ".",
+        "detail": "stop_budget_exhausted: focused supply-chain check was not run before the gate budget",
+        "affects_completion": true
+      }
+    ],
+    "reasons_truncated": false
+  },
+  "generated_at": "2026-11-10T15:27:57.952Z",
+  "session_id": "sess_37762986-7d41-4fec-8d1e-b5fe3a28977f",
+  "target": ".",
+  "revision": "59c9363739031d4bbd55538a0241b635467f75c2",
+  "rules_version": "unavailable",
+  "diff_hash": "ac721ae216ce88adf3275161358c365f8e77c6551073df062b0bf1e9c52247cd",
+  "diff": {
+    "algorithm": "sha256",
+    "changed_file_count": 20,
+    "changed_files": [
+      {
+        "file": "package-lock.json",
+        "ranges": [
+          {
+            "start": 2,
+            "end": 2
+          },
+          {
+            "start": 8,
+            "end": 8
+          }
+        ],
+        "before_hash": "9edd65935aa86fa38d29fd694f47577b16959f338c9acddea1c51fa11fe2e174",
+        "after_hash": "9f117cd89cfa6d7c8090373f6f2916a2dccb91f0ce2c8441698f27caddc6bc4d"
+      },
+      {
+        "file": "package.json",
+        "ranges": [
+          {
+            "start": 2,
+            "end": 2
+          }
+        ],
+        "before_hash": "2405bc9be2f3ea073159a495a2c7f888593515d796a804fcc5bdfaa8271787ea",
+        "after_hash": "e69ca393afe5b12d7ee2d64b1081ad147a401008bd0cf283bdfd849e9667fa76"
+      },
+      {
+        "file": "src/components/ApiKeyModal.tsx",
+        "ranges": [
+          {
+            "start": 87,
+            "end": 87
+          },
+          {
+            "start": 98,
+            "end": 98
+          },
+          {
+            "start": 108,
+            "end": 108
+          },
+          {
+            "start": 114,
+            "end": 114
+          }
+        ],
+        "before_hash": "f02d9f993eba12bac034fce6a209da31da237661b5dc2658333b6ba659ab1357",
+        "after_hash": "2005641828af83ce4a9e8195c4c98b73f399f7692c7996c32fd2673b6ff124b4"
+      },
+      {
+        "file": "src/components/Community.tsx",
+        "ranges": [
+          {
+            "start": 302,
+            "end": 302
+          },
+          {
+            "start": 305,
+            "end": 305
+          }
+        ],
+        "before_hash": "935c482e08ebe343e8e3f4865fd5a12cd8be3bc23c1701d3337b0acd5da2010c",
+        "after_hash": "4a2f4c17f4a0735a22787671d25b0e3cf19d91b3e2ab0c154b8dc7bce0c2feb6"
+      },
+      {
+        "file": "src/components/Leaderboard.tsx",
+        "ranges": [
+          {
+            "start": 71,
+            "end": 71
+          },
+          {
+            "start": 101,
+            "end": 101
+          }
+        ],
+        "before_hash": "ba43dbc6d2fd0dd1367956fa2907838e6048ffcbc153157be80df481326bb0a5",
+        "after_hash": "a4259bf094316fb02bb5f59a06e2026dd6dab621e37c918a91bac29d290f6841"
+      },
+      {
+        "file": "src/components/MagicImport.tsx",
+        "ranges": [
+          {
+            "start": 149,
+            "end": 149
+          }
+        ],
+        "before_hash": "c1c0f1d56fd336ec66026ee3449195f430aa5f3ff842caf51f295a34a33874ba",
+        "after_hash": "2c4de9dfe3c4b471af23f33f5197f7ce70d6a268946fa2e633ccd68814c3023a"
+      },
+      {
+        "file": "src/components/Navbar.tsx",
+        "ranges": [
+          {
+            "start": 68,
+            "end": 68
+          },
+          {
+            "start": 118,
+            "end": 118
+          }
+        ],
+        "before_hash": "863b6449506274a5637b833d8e4159e9ddfe266aa07761dfe13e6bf578cdc3e6",
+        "after_hash": "dc8dad3a1de4fa537a885b445c889e5a50fc54ad577ebf5047aa16de905d17d6"
+      },
+      {
+        "file": "src/components/Onboarding.tsx",
+        "ranges": [
+          {
+            "start": 38,
+            "end": 38
+          },
+          {
+            "start": 45,
+            "end": 45
+          },
+          {
+            "start": 87,
+            "end": 87
+          }
+        ],
+        "before_hash": "bf861f67fda6196141e25c46961ba54f3a20a2c0e0dfc4e37f895b0b9036c5b3",
+        "after_hash": "555d961b52a5b31edd8c6b368792c66e6abf65f035f92b5e96843128864bf15d"
+      },
+      {
+        "file": "src/components/OnlineDeckCatalog.tsx",
+        "ranges": [
+          {
+            "start": 152,
+            "end": 152
+          },
+          {
+            "start": 155,
+            "end": 155
+          },
+          {
+            "start": 165,
+            "end": 165
+          }
+        ],
+        "before_hash": "830b384aaa9c30df7bdc6fe72c629745e86288dfe4df228a6823bc034bdcb62f",
+        "after_hash": "c4d5a5d71af5c9bce9918fee9483b3c80e223d95c1e2f8492c433840a06a525c"
+      },
+      {
+        "file": "src/components/OnlinePlayers.tsx",
+        "ranges": [
+          {
+            "start": 86,
+            "end": 86
+          },
+          {
+            "start": 92,
+            "end": 92
+          },
+          {
+            "start": 101,
+            "end": 101
+          }
+        ],
+        "before_hash": "889a4da9a5b4532e639f611e3e1918dad814ebbcb76563b359a0cf8d03dfa09d",
+        "after_hash": "fa2a89191d7a60dc9ae8963ffc6b241124343b2863266885bb9da4782d4e3bf3"
+      },
+      {
+        "file": "src/context/AuthContext.tsx",
+        "ranges": [
+          {
+            "start": 84,
+            "end": 84
+          },
+          {
+            "start": 149,
+            "end": 149
+          },
+          {
+            "start": 184,
+            "end": 184
+          },
+          {
+            "start": 203,
+            "end": 203
+          }
+        ],
+        "before_hash": "4fd6846df8d02d5ce0db528bfc8ca856ef82e41ac4bf255e2130be792ecfc3b5",
+        "after_hash": "27b216f05bbd953e101b36c4f05a47d54146d3f7dfca808950261a26631b5bcf"
+      },
+      {
+        "file": "src/lib/community.ts",
+        "ranges": [
+          {
+            "start": 284,
+            "end": 284
+          }
+        ],
+        "before_hash": "fb79c366bd34fdc47628f6867f77c342c82638250a9a22b6ffb3fab85e088b28",
+        "after_hash": "f721c5cb719f684ab43e000ed528bd5b477c9dc3b675d0a8de54bfeb43a46226"
+      },
+      {
+        "file": "src/lib/db.ts",
+        "ranges": [
+          {
+            "start": 5,
+            "end": 5
+          },
+          {
+            "start": 23,
+            "end": 23
+          }
+        ],
+        "before_hash": "cb24934c567b62ef5f4013747dd1ba54649bba99cee914539a689e0fbd2ebac4",
+        "after_hash": "bd65383caea94b437cdf63add756367f30570471f9ef65141cd011b6896e7bff"
+      },
+      {
+        "file": "src/lib/portal.ts",
+        "ranges": [
+          {
+            "start": 228,
+            "end": 228
+          }
+        ],
+        "before_hash": "0757164f3254086420a8d13be38e07563140fba1c2cb0caabcef9a090e5107b2",
+        "after_hash": "37d43dc2ea9ea8a681071cd3ce5d062abb8cde3a43079a55e9391c852fa8ff88"
+      },
+      {
+        "file": "src/router/LoadingScreen.tsx",
+        "ranges": [
+          {
+            "start": 6,
+            "end": 6
+          }
+        ],
+        "before_hash": "63eda580cf107d62fc30ab658a47d38a08b4e0a87ffd222c65d05628a0f663f4",
+        "after_hash": "dcf9acf36271e476ffcfb4a6e07809a5761c44f54ec051702b52df9846fbebd5"
+      },
+      {
+        "file": "src/routes/AppShell.tsx",
+        "ranges": [
+          {
+            "start": 297,
+            "end": 297
+          },
+          {
+            "start": 333,
+            "end": 333
+          }
+        ],
+        "before_hash": "bfc0a21d069ad44e4b548be7aba3f725e6435693cec23c76e5b7e01cf6ef22df",
+        "after_hash": "d0110e53f62b279a4f88bf2e1ea1a14a3e9ebf88f690d971a258f6808a5bf221"
+      },
+      {
+        "file": "src/routes/NotFoundRoute.tsx",
+        "ranges": [
+          {
+            "start": 12,
+            "end": 12
+          }
+        ],
+        "before_hash": "98eb24b8f5477eaa2c1fbc0c53098a6abae5fb819a1d190867ea353d2b446bba",
+        "after_hash": "248c374f31f8d05a576e1e8b55e6e0011cad777ff7c54555c3db83b6ea4370ef"
+      },
+      {
+        "file": "src/types/domain.ts",
+        "ranges": [
+          {
+            "start": 82,
+            "end": 82
+          }
+        ],
+        "before_hash": "d664d5350a209dc1427db9727846b3556ecd9b5761331ec7022ba28688528a10",
+        "after_hash": "d68da30de42e3e5e40a1cc9cdb08288e5ec30579efacab1895c00db6d4ce8229"
+      },
+      {
+        "file": "test/lib/branding.test.ts",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 35
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "10bcf6e857033f58deb5a874f562ea3ecf06cdc6dcb88dc83a654ef3729fd48a"
+      },
+      {
+        "file": "test/lib/db.test.ts",
+        "ranges": [
+          {
+            "start": 20,
+            "end": 20
+          },
+          {
+            "start": 26,
+            "end": 26
+          }
+        ],
+        "before_hash": "dfb9141b32d701cafe40fcd5cc35ff2d19e2455f1b7d9909725afb1d2e49f4b8",
+        "after_hash": "09168da7e9f3e339d7dfe99505df677b92f0ae98c00552726b580344994ca9f8"
+      }
+    ]
+  },
+  "timing": {
+    "started_at": "2026-11-10T15:27:55.027Z",
+    "completed_at": "2026-11-10T15:27:57.952Z",
+    "duration_ms": 2925,
+    "measurement": "hook_wall_clock"
+  },
+  "tokens": {
+    "input": 0,
+    "output": 0,
+    "total": 0,
+    "model_calls": 0,
+    "measurement": "known-zero"
+  },
+  "telemetry": {
+    "schemaVersion": "mimosa-gate-telemetry/v1",
+    "profile": "gate",
+    "operation": "Stop",
+    "outcome": "partial/INCONCLUSIVE",
+    "latencyMs": 2925,
+    "peakMemoryBytes": 106967040,
+    "memoryMeasurement": "max-observed-process-rss",
+    "scannedFiles": 0,
+    "cache": {
+      "hits": 0,
+      "misses": 0,
+      "measurement": "not-applicable"
+    },
+    "denyCount": 0,
+    "tokens": {
+      "input": 0,
+      "output": 0,
+      "total": 0,
+      "modelCalls": 0,
+      "measurement": "known-zero"
+    }
+  },
+  "finding_count": 0,
+  "rewake_finding_count": 0,
+  "evidence_boundary": {
+    "scan": "candidate",
+    "static_fix_verification": "observed_static_only",
+    "runtime_verification": "not_performed"
+  },
+  "finding_events": [],
+  "findings": [],
+  "artifacts": {
+    "immutable_report": ".mimosa/reports/task-review-sess_37762986-7d41-4fec-8d1e-b5fe3a28977f-20261110T152757952Z-25852-d1f9f17cb95e.json",
+    "latest_report": ".mimosa/reports/task-review-sess_37762986-7d41-4fec-8d1e-b5fe3a28977f.json",
+    "history_summary": ".mimosa/history/run-20261110T152757952Z-25852-d1f9f17cb95e.json"
+  }
+}

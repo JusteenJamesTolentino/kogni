@@ -79,7 +79,7 @@ export interface LocalOfflineSnapshotRecord {
   partNumber?: number
 }
 
-export interface KognitDB extends DBSchema {
+export interface KogniDB extends DBSchema {
   decks: {
     key: string
     value: StudyDeck

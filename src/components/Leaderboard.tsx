@@ -68,7 +68,7 @@ export default function Leaderboard({ lineageId, deckTitle, compact = false, onV
         <section className="text-center">
           <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-warning/15 text-warning"><Trophy size={28} aria-hidden="true" /></div>
           <h1 className="mt-4 text-3xl font-black tracking-tight sm:text-4xl">{lineageId ? `${deckTitle || 'Deck'} leaderboard` : 'Learning leaderboard'}</h1>
-          <p className="mx-auto mt-2 max-w-xl text-base-content/60">{lineageId ? 'XP earned from scheduled reviews of this deck.' : 'Review consistently, answer honestly, and climb alongside the Kognit community.'}</p>
+          <p className="mx-auto mt-2 max-w-xl text-base-content/60">{lineageId ? 'XP earned from scheduled reviews of this deck.' : 'Review consistently, answer honestly, and climb alongside the Kogni community.'}</p>
         </section>
       )}
 
@@ -98,7 +98,7 @@ export default function Leaderboard({ lineageId, deckTitle, compact = false, onV
             {rankedPlayers.slice(0, compact ? 5 : undefined).map((player, index) => {
               const isCurrentUser = player.uid === user?.uid || player.userId === user?.uid
               const score = player.xp || player.score || 0
-              const name = player.displayName || player.name || 'Kognit learner'
+              const name = player.displayName || player.name || 'Kogni learner'
 
               return (
                 <motion.li key={player.uid || player.userId || `${name}-${index}`} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: Math.min(index * 0.035, 0.3) }} className={`flex items-center gap-3 px-5 py-4 sm:gap-4 sm:px-7 ${isCurrentUser ? 'bg-primary/8' : ''}`}>

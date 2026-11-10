@@ -2,6 +2,8 @@ import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Keep the Admin SDK and its Node-specific dependency graph out of Turbopack bundles.
+  serverExternalPackages: ['firebase-admin'],
   // Only public web-app settings are carried forward from the Vite migration.
   env: {
     NEXT_PUBLIC_FIREBASE_API_KEY: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.VITE_FIREBASE_API_KEY,

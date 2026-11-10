@@ -35,14 +35,14 @@ export default function Onboarding({ saving = false, error = '', initialNickname
             <div>
               <div className="badge badge-primary badge-outline">First-time account setup</div>
               <h1 id="onboarding-title" className="mt-3 text-3xl font-black tracking-tight">Privacy and learner identity</h1>
-              <p className="mt-2 text-base-content/60">Choose the nickname Kognit will use and acknowledge how account, public-feature, online, and local study data are handled.</p>
+              <p className="mt-2 text-base-content/60">Choose the nickname Kogni will use and acknowledge how account, public-feature, online, and local study data are handled.</p>
             </div>
           </div>
 
           {error && <div role="alert" className="alert alert-error mt-6"><span>{error}</span></div>}
 
           <label className="form-control mt-7 w-full">
-            <span className="label-text mb-2 font-semibold">Unique Kognit nickname</span>
+            <span className="label-text mb-2 font-semibold">Unique Kogni nickname</span>
             <label className="input input-bordered flex items-center gap-2 focus-within:input-primary">
               <UserRound size={17} className="text-base-content/45" aria-hidden="true" />
               <input value={nickname} onChange={(event) => setNickname(event.target.value)} className="grow" placeholder="study_learner" autoComplete="nickname" maxLength={24} disabled={saving} />
@@ -84,7 +84,7 @@ export default function Onboarding({ saving = false, error = '', initialNickname
               })}
             >
               {saving ? <span className="loading loading-spinner loading-sm" aria-hidden="true" /> : <Check size={17} aria-hidden="true" />}
-              Create Kognit profile
+              Create Kogni profile
             </button>
           </div>
           <button type="button" onClick={() => navigate('/sign-in', { replace: true })} className="btn btn-ghost btn-sm mt-2 self-center" disabled={saving}>Use another account</button>

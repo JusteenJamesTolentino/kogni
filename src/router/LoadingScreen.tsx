@@ -3,7 +3,7 @@ import { BrainCircuit } from 'lucide-react'
 
 export default function LoadingScreen() {
   return (
-    <main className="grid min-h-screen place-items-center bg-base-100" aria-label="Loading Kognit">
+    <main className="grid min-h-screen place-items-center bg-base-100" aria-label="Loading Kogni">
       <div className="text-center">
         <motion.div
           animate={{ rotate: 360 }}

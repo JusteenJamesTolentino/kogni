@@ -1,12 +1,12 @@
-# Kognit Account Privacy and Presence
+# Kogni Account Privacy and Presence
 
 Effective version: `privacy-2026-11-10-ai-series-1`
 
-This document is a product disclosure describing how the implemented Kognit account, onboarding, nickname, discoverability, and presence features handle data. It is not legal advice and is not a substitute for a privacy policy reviewed for the jurisdictions where Kognit is offered.
+This document is a product disclosure describing how the implemented Kogni account, onboarding, nickname, discoverability, and presence features handle data. It is not legal advice and is not a substitute for a privacy policy reviewed for the jurisdictions where Kogni is offered.
 
 ## Private account record
 
-After a signed-in person completes onboarding, Kognit stores an owner-readable account record containing:
+After a signed-in person completes onboarding, Kogni stores an owner-readable account record containing:
 
 - the Firebase user ID;
 - the chosen nickname and its lowercase canonical form;
@@ -18,13 +18,13 @@ Both preferences default to `false`. Authentication-provider data such as email 
 
 ## Nicknames
 
-Nicknames must contain 3–24 ASCII letters, digits, or underscores. Kognit reserves the lowercase canonical nickname in a separate claim, so names are unique without regard to case. For example, `Study_User` and `study_user` are the same claimed identity.
+Nicknames must contain 3–24 ASCII letters, digits, or underscores. Kogni reserves the lowercase canonical nickname in a separate claim, so names are unique without regard to case. For example, `Study_User` and `study_user` are the same claimed identity.
 
 Onboarding writes the nickname claim and private account atomically. Renaming atomically reserves the new claim, updates the account and any enabled public projection, and releases the former claim. Claims themselves are not readable by clients.
 
 ## Discoverability
 
-Discoverability is opt-in. When enabled, Kognit publishes only:
+Discoverability is opt-in. When enabled, Kogni publishes only:
 
 - user ID;
 - nickname;
@@ -43,7 +43,7 @@ Disabling presence removes the user's current session markers as part of the pre
 
 ## AI-generated deck series
 
-Creators may explicitly generate a continuation part from the published series topic, study guide, and prior series questions using the creator's locally configured Gemini key and quota. Players do not trigger Gemini generation or AI charges by completing a part. Kognit does not send player ratings or private schedules for continuation generation. The creator reviews and publishes each continuation before it becomes available to learners.
+Creators may explicitly generate a continuation part from the published series topic, study guide, and prior series questions using the creator's locally configured Gemini key and quota. Players do not trigger Gemini generation or AI charges by completing a part. Kogni does not send player ratings or private schedules for continuation generation. The creator reviews and publishes each continuation before it becomes available to learners.
 
 ## Public player profiles and following
 
@@ -55,17 +55,17 @@ Community XP is client-reported and unverified. It is not suitable for rewards, 
 
 ## Editing, regeneration, and deletion
 
-Kognit does not retain uploaded source files. Source-grounded regeneration requires the learner to select the source again and creates a new independent local deck, leaving existing progress and publications unchanged. Editing a question, answer, or distractors resets that card's local learning schedule; editing deck metadata or the study guide does not.
+Kogni does not retain uploaded source files. Source-grounded regeneration requires the learner to select the source again and creates a new independent local deck, leaving existing progress and publications unchanged. Editing a question, answer, or distractors resets that card's local learning schedule; editing deck metadata or the study guide does not.
 
 Deleting a local deck removes its cards, local schedules, and snapshot provenance from that browser and revokes an active portal by default. It does not remove online published versions, direct-share snapshots, portals already imported elsewhere, or other learners' offline copies. Online deletion is a terminal private tombstone rather than immediate physical erasure; retained immutable versions and online schedules follow the service retention policy.
 
 ## Study-guide coverage
 
-New verified decks require each complete answer phrase to appear naturally in the study guide after deterministic Unicode, case, whitespace, quote, and hyphen normalization. Kognit does not store an explicit question-to-answer or card-to-guide mapping. This is a syntactic coverage guarantee, not a claim that the guide proves the answer's factual accuracy. Legacy unverified decks may not provide this guarantee.
+New verified decks require each complete answer phrase to appear naturally in the study guide after deterministic Unicode, case, whitespace, quote, and hyphen normalization. Kogni does not store an explicit question-to-answer or card-to-guide mapping. This is a syntactic coverage guarantee, not a claim that the guide proves the answer's factual accuracy. Legacy unverified decks may not provide this guarantee.
 
 ## Optional Google AI Studio BYOK
 
-Kognit does not provide a shared Gemini key. AI import, source re-upload regeneration, and creator continuation generation require the user or creator's own Google AI Studio key, model access, project quota, and any resulting charges. Browsing, copying, practicing, reviewing, Community, profiles, leaderboards, and shared decks remain key-free.
+Kogni does not provide a shared Gemini key. AI import, source re-upload regeneration, and creator continuation generation require the user or creator's own Google AI Studio key, model access, project quota, and any resulting charges. Browsing, copying, practicing, reviewing, Community, profiles, leaderboards, and shared decks remain key-free.
 
 Explicit settings verification sends a key-authenticated model metadata request to Google but creates no content and uploads no source. Generation sends the selected source file or the published continuation context disclosed to the creator. A saved key remains a browser-readable localStorage value and may be accessible to same-origin scripts, extensions, shared browser profiles, or people with device access. It is never stored in Firebase or included in decks, shares, portals, activity logs, analytics, or URLs. Recipients and players never use the creator's key or quota. Users can remove settings, sign out, clear site data, or revoke/rotate a key in Google AI Studio.
 

@@ -81,7 +81,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           .then((nextAccount) => { if (isCurrent()) setAccount(nextAccount) })
           .catch((accountLoadError: unknown) => {
             if (isCurrent()) {
-              setAccountError(getErrorMessage(accountLoadError, 'Your Kognit account could not be loaded.'))
+              setAccountError(getErrorMessage(accountLoadError, 'Your Kogni account could not be loaded.'))
               setAccount(null)
             }
           })
@@ -146,7 +146,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (isCurrent()) setAccount(nextAccount)
       return nextAccount
     } catch (accountLoadError: unknown) {
-      if (isCurrent()) setAccountError(getErrorMessage(accountLoadError, 'Your Kognit account could not be loaded.'))
+      if (isCurrent()) setAccountError(getErrorMessage(accountLoadError, 'Your Kogni account could not be loaded.'))
       throw accountLoadError
     } finally {
       if (isCurrent()) setAccountLoading(false)
@@ -181,7 +181,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const credential = await signInWithPopup(auth, googleProvider)
       if (getAdditionalUserInfo(credential)?.isNewUser) {
         await signOut(auth)
-        throw new Error('No Kognit account was found for this Google account. Use Sign up to create one.')
+        throw new Error('No Kogni account was found for this Google account. Use Sign up to create one.')
       }
       return credential
     } catch (authError: unknown) {
@@ -200,7 +200,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const existingAccount = await getAccount(credential.user)
         if (existingAccount) {
           await signOut(auth)
-          throw new Error('This Google account already has a Kognit account. Use Sign in instead.')
+          throw new Error('This Google account already has a Kogni account. Use Sign in instead.')
         }
       }
       return credential

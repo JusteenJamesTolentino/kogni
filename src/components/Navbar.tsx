@@ -65,7 +65,7 @@ export default function Navbar({ onOpenApiKey, theme, onToggleTheme, searchQuery
               <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-primary-content shadow-lg shadow-primary/20">
                 <BrainCircuit size={21} aria-hidden="true" />
               </span>
-              <span>Kognit</span>
+              <span>Kogni</span>
             </Link>
           </div>
           <div className="dropdown dropdown-end min-w-0 flex-1">
@@ -115,7 +115,7 @@ export default function Navbar({ onOpenApiKey, theme, onToggleTheme, searchQuery
               </button>
               <div tabIndex={0} className="dropdown-content z-50 mt-3 w-64 rounded-box border border-base-300 bg-base-100 p-2 shadow-xl">
                 <div className="px-3 py-2">
-                  <p className="truncate font-semibold">{user?.displayName || 'Kognit learner'}</p>
+                  <p className="truncate font-semibold">{user?.displayName || 'Kogni learner'}</p>
                   <p className="truncate text-xs opacity-60">{user?.email}</p>
                 </div>
                 <div className="divider my-1" />

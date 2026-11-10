@@ -99,7 +99,7 @@ export default function Profile({
                 </div>
               </div>
               <div className="min-w-0 flex-1 pb-1">
-                <h2 className="truncate text-2xl font-black sm:text-3xl">{nickname || 'Kognit learner'}</h2>
+                <h2 className="truncate text-2xl font-black sm:text-3xl">{nickname || 'Kogni learner'}</h2>
                 <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2 text-sm font-semibold">
                   <span className={`inline-flex items-center gap-1.5 ${presence.text}`}>
                     <span className={`h-2.5 w-2.5 rounded-full ${presence.dot}`} aria-hidden="true" />

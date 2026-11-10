@@ -49,7 +49,7 @@ export default function PortalPreview({
         </h2>
         <p className="mt-2 flex items-center gap-2 text-sm text-base-content/60">
           <UserRound size={16} className="shrink-0" aria-hidden="true" />
-          Shared by <span className="font-semibold text-base-content">{preview.senderDisplayName || 'A Kognit learner'}</span>
+          Shared by <span className="font-semibold text-base-content">{preview.senderDisplayName || 'A Kogni learner'}</span>
         </p>
       </div>
 
@@ -57,7 +57,7 @@ export default function PortalPreview({
         {error && <div role="alert" className="alert alert-error mb-5 text-sm"><span>{error}</span></div>}
 
         <p className="whitespace-pre-wrap text-sm leading-relaxed text-base-content/70">
-          {preview.description || 'A reusable study deck shared through Kognit.'}
+          {preview.description || 'A reusable study deck shared through Kogni.'}
         </p>
 
         <dl className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">

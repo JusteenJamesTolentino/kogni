@@ -65,7 +65,7 @@ export default function SignInScreen({ mode = 'signIn' }: AuthScreenProps) {
           </button>
           <p className="mt-2 text-xs text-base-content/45">Google is the only supported sign-in method.</p>
           <p className="mt-4 text-sm text-base-content/60">
-            {mode === 'signUp' ? 'Already have an account?' : 'New to Kognit?'}{' '}
+            {mode === 'signUp' ? 'Already have an account?' : 'New to Kogni?'}{' '}
             <Link className="link link-primary font-semibold" to={mode === 'signUp' ? paths.signIn : paths.signUp}>
               {mode === 'signUp' ? 'Sign in' : 'Create an account'}
             </Link>

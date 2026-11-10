@@ -20,6 +20,10 @@ describe('Next.js migration configuration', () => {
     expect(nextConfig.env).not.toHaveProperty('FIREBASE_CLIENT_EMAIL')
   })
 
+  it('externalizes Firebase Admin for the Node.js route-handler runtime', () => {
+    expect(nextConfig.serverExternalPackages).toContain('firebase-admin')
+  })
+
   it('preserves API routes before applying the browser fallback', async () => {
     const rewrites = await nextConfig.rewrites!()
     expect(Array.isArray(rewrites)).toBe(false)

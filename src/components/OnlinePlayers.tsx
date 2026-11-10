@@ -83,13 +83,13 @@ export default function OnlinePlayers({
                     type="button"
                     onClick={() => void onOpenPlayer(player)}
                     className="flex min-h-14 w-full items-center gap-3 px-5 py-3 text-left transition hover:bg-base-200/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary"
-                    aria-label={`Open ${player.nickname || 'Kognit player'} profile`}
+                    aria-label={`Open ${player.nickname || 'Kogni player'} profile`}
                   >
                     <span className="relative grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/10 font-bold text-primary" aria-hidden="true">
                       {(player.nickname.trim().charAt(0) || '?').toUpperCase()}
                       <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-base-100 bg-success" />
                     </span>
-                    <span className="min-w-0 flex-1 truncate text-sm font-semibold">{player.nickname || 'Kognit player'}</span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-semibold">{player.nickname || 'Kogni player'}</span>
                     <span className="sr-only">Online</span>
                   </button>
                 ) : (
@@ -98,7 +98,7 @@ export default function OnlinePlayers({
                       {(player.nickname.trim().charAt(0) || '?').toUpperCase()}
                       <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-base-100 bg-success" />
                     </span>
-                    <span className="min-w-0 flex-1 truncate text-sm font-semibold">{player.nickname || 'Kognit player'}</span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-semibold">{player.nickname || 'Kogni player'}</span>
                     <span className="sr-only">Online</span>
                   </div>
                 )}
