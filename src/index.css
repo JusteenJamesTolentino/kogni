@@ -20,13 +20,6 @@ body {
   min-width: 320px;
   min-height: 100vh;
   margin: 0;
-  padding-bottom: calc(4rem + env(safe-area-inset-bottom));
-}
-
-@media (min-width: 1024px) {
-  body {
-    padding-bottom: 0;
-  }
 }
 
 button,
@@ -39,25 +32,26 @@ input {
   background-color: color-mix(in srgb, oklch(var(--p)) 8%, transparent);
 }
 
-.mobile-dock {
-  height: calc(4rem + env(safe-area-inset-bottom));
-  padding-bottom: env(safe-area-inset-bottom);
-}
-
-.mobile-dock-link {
-  height: 4rem;
-  padding: 0.35rem 0.15rem;
-}
-
-.mobile-dock-link::before {
-  width: 2rem;
-  height: 0.2rem;
-  border-radius: 9999px;
-}
-
 .study-steps-scroll {
   scrollbar-width: thin;
   scroll-padding-inline: 50%;
+  padding-inline: 1.5rem;
+  /* Fade the edges so step circles scroll out softly instead of being hard-clipped */
+  mask-image: linear-gradient(to right, transparent, black 1.5rem, black calc(100% - 1.5rem), transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 1.5rem, black calc(100% - 1.5rem), transparent);
+}
+
+.study-steps-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+
+.study-steps-scroll::-webkit-scrollbar-thumb {
+  border-radius: 9999px;
+  background: color-mix(in srgb, oklch(var(--bc)) 18%, transparent);
+}
+
+.study-steps-scroll::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .profile-card-3d {

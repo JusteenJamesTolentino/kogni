@@ -37,15 +37,15 @@ export default function OnlinePlayers({
       aria-busy={loading}
     >
       <div className="flex items-center justify-between gap-3 border-b border-base-300 bg-base-200/50 px-5 py-4">
-        <div>
+        <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <Wifi size={18} className="text-success" aria-hidden="true" />
+            <Wifi size={18} className="shrink-0 text-success" aria-hidden="true" />
             <h2 id="online-players-title" className="font-bold">{title}</h2>
           </div>
           <p className="mt-1 text-xs text-base-content/50">{description}</p>
         </div>
         {!loading && !error && (
-          <span className="badge badge-success badge-outline" aria-label={`${onlinePlayers.length} players online`}>
+          <span className="badge badge-success badge-outline shrink-0 whitespace-nowrap" aria-label={`${onlinePlayers.length} players online`}>
             {onlinePlayers.length} online
           </span>
         )}

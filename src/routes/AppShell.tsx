@@ -3,6 +3,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import type { User } from 'firebase/auth'
 import ApiKeyModal from '../components/ApiKeyModal'
 import Navbar from '../components/Navbar'
+import SideNav from '../components/SideNav'
 import PublicProfileModal from '../components/PublicProfileModal'
 import type { PublicProfileDraft } from '../components/PublicProfileModal'
 import ShareDeckModal from '../components/ShareDeckModal'
@@ -37,12 +38,21 @@ import type { DeckPortalRecord, PublicProfile, SharedDeckInboxItem, StudyCard, S
 import { deckPath, paths } from '../router/paths'
 
 const THEME_STORAGE = 'kognit_theme'
+const SIDEBAR_STORAGE = 'kognit_sidebar'
 type Theme = 'light' | 'dark'
 
 function getInitialTheme(): Theme {
   const saved = localStorage.getItem(THEME_STORAGE)
   if (saved === 'light' || saved === 'dark') return saved
   return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+}
+
+/** Expanded by default on desktop, collapsed to the icon rail on small screens. */
+function getInitialSidebarCollapsed(): boolean {
+  const saved = localStorage.getItem(SIDEBAR_STORAGE)
+  if (saved === 'collapsed') return true
+  if (saved === 'expanded') return false
+  return !(window.matchMedia?.('(min-width: 1024px)').matches ?? false)
 }
 
 function toSearchResult(profile: PublicProfile): CommunitySearchResult {
@@ -119,6 +129,7 @@ export default function AppShell({ user }: AppShellProps) {
   const [apiKeyModalOpen, setApiKeyModalOpen] = useState(false)
   const [importBusy, setImportBusy] = useState(false)
   const [theme, setTheme] = useState<Theme>(getInitialTheme)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(getInitialSidebarCollapsed)
 
   const [profile, setProfile] = useState<PublicProfile | null>(null)
   const [profileLoading, setProfileLoading] = useState(false)
@@ -414,18 +425,44 @@ export default function AppShell({ user }: AppShellProps) {
       }
     : null
 
+  const toggleSidebar = (): void => {
+    const next = !sidebarCollapsed
+    setSidebarCollapsed(next)
+    localStorage.setItem(SIDEBAR_STORAGE, next ? 'collapsed' : 'expanded')
+  }
+
+  // The expanded panel overlays content on small screens; close it after navigation there.
+  const closeSidebarOverlay = (): void => {
+    if (!(window.matchMedia?.('(min-width: 1024px)').matches ?? false)) {
+      setSidebarCollapsed(true)
+      localStorage.setItem(SIDEBAR_STORAGE, 'collapsed')
+    }
+  }
+
+  const shellPadding = isStudyRoute ? '' : sidebarCollapsed ? 'pl-16' : 'pl-16 lg:pl-60'
+
   return (
-    <div className="min-h-screen bg-base-200/35 text-base-content">
+    <div className={`min-h-screen bg-base-200/35 text-base-content transition-[padding] duration-200 ${shellPadding}`}>
       {!isStudyRoute && (
-        <Navbar
-          onOpenApiKey={() => setApiKeyModalOpen(true)}
-          theme={theme}
-          onToggleTheme={() => setTheme((previous) => previous === 'dark' ? 'light' : 'dark')}
-          searchQuery={searchQuery}
-          searchResults={context.searchResults}
-          searchLoading={searchLoading}
-          onSearch={runSearch}
-        />
+        <>
+          <SideNav collapsed={sidebarCollapsed} onToggle={toggleSidebar} onNavigate={closeSidebarOverlay} />
+          {!sidebarCollapsed && (
+            <div
+              className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden"
+              onClick={closeSidebarOverlay}
+              aria-hidden="true"
+            />
+          )}
+          <Navbar
+            onOpenApiKey={() => setApiKeyModalOpen(true)}
+            theme={theme}
+            onToggleTheme={() => setTheme((previous) => previous === 'dark' ? 'light' : 'dark')}
+            searchQuery={searchQuery}
+            searchResults={context.searchResults}
+            searchLoading={searchLoading}
+            onSearch={runSearch}
+          />
+        </>
       )}
 
       <Outlet context={context} />

@@ -298,19 +298,24 @@ export default function StudySession({ cards, deck, mode, onExit, onFinished, on
 
   return (
     <main className="mx-auto w-full max-w-4xl px-4 py-5 sm:px-6 sm:py-8 lg:px-8">
-      <header className="mb-5 flex items-center gap-3">
+      <header className="mb-5 flex items-start gap-2 sm:items-center sm:gap-3">
         <button type="button" onClick={onExit} className="btn btn-ghost btn-circle btn-sm" aria-label="Exit study session"><ArrowLeft size={19} aria-hidden="true" /></button>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center justify-between text-xs font-semibold text-base-content/55">
+          <div className="flex items-center justify-between gap-2 text-xs font-semibold text-base-content/55">
             <span className="truncate">{deck?.title || (isPractice ? 'Practice session' : 'Due cards')}</span>
             <span className="flex shrink-0 items-center gap-2">
-              {isPractice && <span className="badge badge-secondary badge-outline badge-xs">Practice · no progress saved</span>}
+              {isPractice && <span className="badge badge-secondary badge-outline badge-xs hidden sm:inline-flex">Practice · no progress saved</span>}
               <span>{index + 1} / {cards.length}</span>
             </span>
           </div>
+          {isPractice && (
+            <div className="mt-1.5 sm:hidden">
+              <span className="badge badge-secondary badge-outline badge-xs">Practice · no progress saved</span>
+            </div>
+          )}
           <progress className="progress progress-primary mt-2 h-2 w-full" value={progress} max="100" aria-label={`${Math.round(progress)} percent complete`} />
         </div>
-        <button type="button" onClick={onExit} className="btn btn-ghost btn-circle btn-sm" aria-label="Close study session"><X size={19} aria-hidden="true" /></button>
+        <button type="button" onClick={onExit} className="btn btn-ghost btn-circle btn-sm hidden sm:inline-flex" aria-label="Close study session"><X size={19} aria-hidden="true" /></button>
       </header>
 
       <nav className="study-steps-scroll mb-5 overflow-x-auto pb-2" aria-label="Question progress">
@@ -321,11 +326,10 @@ export default function StudySession({ cards, deck, mode, onExit, onFinished, on
               <li
                 key={`${stepCard.id}-${stepIndex}`}
                 ref={state === 'current' ? currentStepRef : undefined}
-                className={`step min-w-16 ${state !== 'future' ? 'step-primary' : ''}`}
+                className={`step min-w-10 ${state !== 'future' ? 'step-primary' : ''}`}
                 aria-current={state === 'current' ? 'step' : undefined}
                 aria-label={`Question ${stepIndex + 1}, ${state}`}
               >
-                <span className="sr-only">Question {stepIndex + 1}: {state}</span>
                 <span aria-hidden="true" className="text-[0.65rem] font-semibold text-base-content/60">{stepIndex + 1}</span>
               </li>
             )
@@ -355,7 +359,17 @@ export default function StudySession({ cards, deck, mode, onExit, onFinished, on
                       <h1 ref={questionHeadingRef} tabIndex={-1} className="mx-auto max-w-2xl rounded-lg text-2xl font-bold leading-snug outline-none focus-visible:ring-2 focus-visible:ring-primary sm:text-3xl">{getQuestion(card)}</h1>
                       {choices.length > 0 ? (
                         <div className="mx-auto mt-8 grid w-full max-w-xl gap-3 sm:grid-cols-2">
-                          {choices.map((choice, choiceIndex) => <button key={`${choice}-${choiceIndex}`} type="button" onClick={() => revealChoice(choice)} className="btn h-auto min-h-12 justify-start whitespace-normal border-base-300 bg-base-200/50 px-4 py-3 text-left hover:btn-primary"><span className="badge badge-ghost badge-sm mr-1">{String.fromCharCode(65 + choiceIndex)}</span>{choice}</button>)}
+                          {choices.map((choice, choiceIndex) => (
+                            <button
+                              key={`${choice}-${choiceIndex}`}
+                              type="button"
+                              onClick={() => revealChoice(choice)}
+                              className="btn h-auto min-h-12 grid grid-cols-[auto_minmax(0,1fr)] items-center justify-start gap-x-3 whitespace-normal border-base-300 bg-base-200/50 px-4 py-3 text-left hover:btn-primary"
+                            >
+                              <span className="badge badge-ghost badge-sm justify-self-center">{String.fromCharCode(65 + choiceIndex)}</span>
+                              <span className="leading-snug">{choice}</span>
+                            </button>
+                          ))}
                         </div>
                       ) : (
                         <button type="button" onClick={() => setRevealed(true)} className="btn btn-primary mt-9 gap-2"><Eye size={18} aria-hidden="true" /> Reveal answer</button>

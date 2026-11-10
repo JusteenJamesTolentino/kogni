@@ -79,15 +79,15 @@ export default function Dashboard({ decks, dueCards, loading, error, onRetry, on
         <StatCard icon={Trophy} label="Learning XP" value={xp} help="Earned from reviews" tone="bg-success/10 text-success" />
       </section>
 
-      <section className="mt-9" aria-labelledby="decks-title">
+      <section id="decks" className="mt-9 scroll-mt-24" aria-labelledby="decks-title">
         <div className="mb-4 flex items-center justify-between gap-4">
           <div>
             <h2 id="decks-title" className="text-2xl font-bold">Your decks</h2>
             <p className="text-sm text-base-content/55">Pick up where you left off.</p>
           </div>
-          <button type="button" onClick={onImport} className="btn btn-outline btn-sm gap-2">
+          <button type="button" onClick={onImport} className="btn btn-primary btn-sm gap-2 shadow-md shadow-primary/30">
             <Plus size={15} aria-hidden="true" />
-            <span>Add</span>
+            <span>Magic import</span>
           </button>
         </div>
         <DeckList decks={decks} dueCards={dueCards} loading={loading} onReviewDue={onStudy} onOpenDeck={onOpenDeck} onImport={onImport} onBrowseShared={onBrowseShared} />

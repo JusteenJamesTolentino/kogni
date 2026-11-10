@@ -136,13 +136,13 @@ export default function MagicImport({ apiKey, model, onOpenApiKey, onComplete, o
 
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
-      <section className="mx-auto max-w-3xl text-center">
-        <div className="badge badge-primary badge-outline mb-3 gap-1.5"><WandSparkles size={14} aria-hidden="true" /> Magic import</div>
+      <section className="mx-auto max-w-3xl rounded-3xl bg-gradient-to-br from-primary/25 via-secondary/15 to-primary/10 p-5 text-center shadow-lg shadow-primary/10 ring-1 ring-primary/30 sm:p-8">
+        <div className="badge badge-primary badge-lg mb-3 gap-1.5 shadow-md shadow-primary/30"><WandSparkles size={15} aria-hidden="true" /> Magic import</div>
         <h1 className="text-3xl font-black tracking-tight sm:text-4xl">Turn a document into a study deck</h1>
-        <p className="mx-auto mt-3 max-w-2xl text-base-content/60">Choose a PDF or image source file. Your own Google AI Studio key and project quota create one exact 30-question verified deck.</p>
+        <p className="mx-auto mt-3 max-w-2xl text-base-content/70">Choose a PDF or image source file. Your own Google AI Studio key and project quota create one exact 30-question verified deck.</p>
       </section>
 
-      <section className="mx-auto mt-8 max-w-3xl rounded-3xl border border-base-300 bg-base-100 p-4 shadow-xl sm:p-7" aria-labelledby="upload-title">
+      <section className="mx-auto mt-8 max-w-3xl rounded-3xl border border-primary/40 bg-gradient-to-br from-primary/10 via-base-100 to-secondary/10 p-4 shadow-2xl shadow-primary/20 sm:p-7" aria-labelledby="upload-title">
         {(!apiKey || !model) && (
           <div role="alert" className="alert alert-warning mb-5">
             <KeyRound size={20} aria-hidden="true" />
@@ -152,7 +152,7 @@ export default function MagicImport({ apiKey, model, onOpenApiKey, onComplete, o
         )}
 
         <div
-          className={`relative grid min-h-64 place-items-center rounded-2xl border-2 border-dashed p-6 text-center transition-colors ${dragActive ? 'border-primary bg-primary/10' : 'border-base-300 bg-base-200/40 hover:border-primary/50'}`}
+          className={`relative grid min-h-64 place-items-center rounded-2xl border-2 border-dashed p-6 text-center transition-colors ${dragActive ? 'border-primary bg-primary/20' : 'border-primary/50 bg-primary/10 hover:border-primary hover:bg-primary/15'}`}
           onDragEnter={(event) => { event.preventDefault(); setDragActive(true) }}
           onDragOver={(event) => event.preventDefault()}
           onDragLeave={() => setDragActive(false)}
@@ -169,10 +169,10 @@ export default function MagicImport({ apiKey, model, onOpenApiKey, onComplete, o
             </div>
           ) : (
             <div>
-              <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-primary/10 text-primary"><UploadCloud size={28} aria-hidden="true" /></div>
+              <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-primary text-primary-content shadow-lg shadow-primary/40"><UploadCloud size={28} aria-hidden="true" /></div>
               <h2 id="upload-title" className="mt-4 text-lg font-bold">Drop your document here</h2>
-              <p className="mt-1 text-sm text-base-content/55">PDF, JPEG, PNG, or WebP up to {MAX_INLINE_FILE_SIZE_LABEL}</p>
-              <button type="button" onClick={() => inputRef.current?.click()} className="btn btn-outline btn-sm mt-5">Browse files</button>
+              <p className="mt-1 text-sm text-base-content/60">PDF, JPEG, PNG, or WebP up to {MAX_INLINE_FILE_SIZE_LABEL}</p>
+              <button type="button" onClick={() => inputRef.current?.click()} className="btn btn-primary btn-sm mt-5 gap-2 shadow-md shadow-primary/30">Browse files</button>
             </div>
           )}
         </div>
@@ -181,7 +181,7 @@ export default function MagicImport({ apiKey, model, onOpenApiKey, onComplete, o
         {status === 'success' && <div role="status" className="alert alert-success mt-5"><span>Deck saved. Taking you back to the dashboard…</span></div>}
 
         {apiKey && model && <div className="mt-5 flex items-center justify-between rounded-xl bg-success/10 px-4 py-3 text-sm"><span className="font-semibold text-success">Gemini configured · {model}</span><button type="button" onClick={onOpenApiKey} className="btn btn-ghost btn-xs">Change settings</button></div>}
-        <button type="button" onClick={() => void handleGenerate()} disabled={!file || busy || status === 'success'} className="btn btn-primary mt-5 w-full gap-2">
+        <button type="button" onClick={() => void handleGenerate()} disabled={!file || busy || status === 'success'} className="btn btn-primary mt-5 w-full gap-2 shadow-lg shadow-primary/40">
           {busy ? <span className="loading loading-spinner loading-sm" aria-hidden="true" /> : <Sparkles size={18} aria-hidden="true" />}
           {busy ? 'Building your deck…' : !apiKey || !model ? 'Set up AI generation' : 'Generate 30-question deck'}
         </button>

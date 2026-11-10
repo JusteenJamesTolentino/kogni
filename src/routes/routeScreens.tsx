@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { ArrowRight, WandSparkles } from 'lucide-react'
 import { Link, useNavigate, useOutletContext, useParams } from 'react-router-dom'
 import Community from '../components/Community'
 import Dashboard from '../components/Dashboard'
@@ -87,8 +88,24 @@ export function ImportRoute() {
         <section className="mx-auto max-w-3xl text-center">
           <div className="badge badge-primary badge-outline mb-3">Add a deck</div>
           <h1 className="text-3xl font-black tracking-tight sm:text-4xl">Create your own questions</h1>
-          <p className="mx-auto mt-3 max-w-2xl text-base-content/60">Add cards manually without AI. You can use Magic Import later if you want help generating questions.</p>
+          <p className="mx-auto mt-3 max-w-2xl text-base-content/60">Add cards manually without AI, or let Magic Import generate a deck from a document.</p>
         </section>
+
+        <button
+          type="button"
+          onClick={() => setMode('ai')}
+          className="group mx-auto mt-8 flex w-full max-w-3xl items-center gap-4 rounded-3xl bg-gradient-to-br from-primary/30 via-secondary/20 to-primary/15 p-5 text-left shadow-xl shadow-primary/25 ring-1 ring-primary/50 transition hover:shadow-2xl hover:ring-primary sm:p-6"
+        >
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-primary text-primary-content shadow-md shadow-primary/40">
+            <WandSparkles size={24} aria-hidden="true" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-lg font-black">Try Magic Import</span>
+            <span className="mt-0.5 block text-sm text-base-content/70">Upload a PDF or image and Gemini builds a verified 30-question deck for you.</span>
+          </span>
+          <ArrowRight size={20} className="shrink-0 text-primary transition-transform group-hover:translate-x-1" aria-hidden="true" />
+        </button>
+
         <DeckEditor
           initialDraft={{ title: '', description: '', studyGuide: '', cards: [{ id: 'new-card', question: '', answer: '', distractors: [] }] }}
           minimumCards={1}
@@ -108,11 +125,6 @@ export function ImportRoute() {
             }
           }}
         />
-        <div className="mx-auto mt-4 flex max-w-6xl justify-center px-4 pb-8">
-          <button type="button" className="btn btn-ghost gap-2" onClick={() => setMode('ai')}>
-            <span>Use Magic Import instead</span>
-          </button>
-        </div>
       </main>
     )
   }
