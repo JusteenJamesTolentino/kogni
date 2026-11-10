@@ -140,7 +140,7 @@ export default function PublicPlayerProfile({
   const level = Math.max(1, safeCount(profile.level))
 
   return (
-    <main className={`mx-auto w-full max-w-6xl px-4 py-7 pb-24 sm:px-6 sm:py-10 lg:px-8 ${className}`.trim()}>
+    <main className={`mx-auto w-full max-w-[100rem] px-4 py-7 pb-24 sm:px-6 sm:py-10 lg:px-8 ${className}`.trim()}>
       <ProfileCard3D className="card overflow-visible border border-base-300 bg-base-100 shadow-xl">
         <div className="h-28 overflow-hidden rounded-t-[inherit] bg-gradient-to-br from-primary/30 via-secondary/20 to-accent/20 sm:h-40" aria-hidden="true" />
         <div className="card-body px-5 pb-6 pt-0 sm:px-8 sm:pb-8">

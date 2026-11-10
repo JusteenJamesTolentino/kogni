@@ -92,7 +92,7 @@ export function LocalDeckEditRoute() {
 
   return <>
     <DeckEditor initialDraft={toDraft(deck, cards)} saving={saving} saveError={error} onSave={save} onCancel={() => navigate(deckPath(deck.id))} />
-    <div className="mx-auto -mt-16 mb-24 max-w-6xl px-4 sm:px-6 lg:px-8"><button className="btn btn-error btn-outline" onClick={() => setDeleteOpen(true)}>Delete deck</button></div>
+    <div className="mx-auto -mt-16 mb-24 max-w-[100rem] px-4 sm:px-6 lg:px-8"><button className="btn btn-error btn-outline" onClick={() => setDeleteOpen(true)}>Delete deck</button></div>
     <DeleteDeckDialog open={deleteOpen} deckTitle={deck.title} cardCount={cards.length} isOfflineSnapshot={snapshot} hasActivePortal onClose={() => setDeleteOpen(false)} onDelete={async () => {
       if (user) {
         const portal = await getDeckPortalCode(user, deck.id)

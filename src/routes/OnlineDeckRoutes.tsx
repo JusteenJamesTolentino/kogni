@@ -30,7 +30,7 @@ export interface OnlineDeckIndexShellProps {
 /** UI-only list shell. Data loading, search, pagination, and navigation stay with the route integrator. */
 export function OnlineDeckIndexShell({ catalog, players }: OnlineDeckIndexShellProps) {
   return (
-    <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
+    <main className="mx-auto w-full max-w-[100rem] px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
       <header>
         <div className="badge badge-primary badge-outline gap-1"><Cloud size={13} aria-hidden="true" /> Online library</div>
         <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">Study published decks</h1>

@@ -316,7 +316,7 @@ export default function DeckEditor({
   const showError = (value?: string): string | undefined => attemptedSave ? value : undefined
 
   return (
-    <main ref={editorRootRef} className="mx-auto w-full max-w-7xl px-4 py-6 pb-28 sm:px-6 sm:py-9 sm:pb-32 lg:px-8">
+    <main ref={editorRootRef} className="mx-auto w-full max-w-[100rem] px-4 py-6 pb-28 sm:px-6 sm:py-9 sm:pb-32 lg:px-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <button type="button" onClick={() => void requestCancel()} className="btn btn-ghost btn-sm -ml-2 gap-2" disabled={saving}>
           <ArrowLeft size={17} aria-hidden="true" /> Back
@@ -440,12 +440,12 @@ export default function DeckEditor({
       </div>
 
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-base-300 bg-base-100/95 p-3 shadow-[0_-10px_30px_rgba(0,0,0,0.08)] backdrop-blur motion-reduce:backdrop-filter-none lg:hidden">
-        <div className="mx-auto flex max-w-7xl items-center gap-2">
+        <div className="mx-auto flex max-w-[100rem] items-center gap-2">
           <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{dirty ? 'Unsaved changes' : 'No changes'}</p><p className="text-xs text-base-content/50">{changes.scheduleResetCardIds.length ? `${changes.scheduleResetCardIds.length} schedule reset` : `${draft.cards.length} cards`}</p></div>
           <button type="button" onClick={() => void requestCancel()} disabled={saving} className="btn btn-ghost btn-sm">Cancel</button>
           <button type="button" onClick={() => void handleSave()} disabled={!dirty || saving} className="btn btn-primary btn-sm gap-2">{saving ? <span className="loading loading-spinner loading-xs" aria-hidden="true" /> : <Check size={16} aria-hidden="true" />} Save</button>
         </div>
-        {saveError && <p role="alert" className="mx-auto mt-2 max-w-7xl text-xs font-semibold text-error">{saveError}</p>}
+        {saveError && <p role="alert" className="mx-auto mt-2 max-w-[100rem] text-xs font-semibold text-error">{saveError}</p>}
       </div>
     </main>
   )

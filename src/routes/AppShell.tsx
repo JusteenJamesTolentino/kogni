@@ -3,7 +3,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import type { User } from 'firebase/auth'
 import ApiKeyModal from '../components/ApiKeyModal'
 import Navbar from '../components/Navbar'
-import SideNav from '../components/SideNav'
+import SideNav, { MobileNavDrawer } from '../components/SideNav'
 import PublicProfileModal from '../components/PublicProfileModal'
 import type { PublicProfileDraft } from '../components/PublicProfileModal'
 import ShareDeckModal from '../components/ShareDeckModal'
@@ -130,6 +130,7 @@ export default function AppShell({ user }: AppShellProps) {
   const [importBusy, setImportBusy] = useState(false)
   const [theme, setTheme] = useState<Theme>(getInitialTheme)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(getInitialSidebarCollapsed)
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
 
   const [profile, setProfile] = useState<PublicProfile | null>(null)
   const [profileLoading, setProfileLoading] = useState(false)
@@ -431,28 +432,14 @@ export default function AppShell({ user }: AppShellProps) {
     localStorage.setItem(SIDEBAR_STORAGE, next ? 'collapsed' : 'expanded')
   }
 
-  // The expanded panel overlays content on small screens; close it after navigation there.
-  const closeSidebarOverlay = (): void => {
-    if (!(window.matchMedia?.('(min-width: 1024px)').matches ?? false)) {
-      setSidebarCollapsed(true)
-      localStorage.setItem(SIDEBAR_STORAGE, 'collapsed')
-    }
-  }
-
-  const shellPadding = isStudyRoute ? '' : sidebarCollapsed ? 'pl-16' : 'pl-16 lg:pl-60'
+  const shellPadding = isStudyRoute ? '' : sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-60'
 
   return (
     <div className={`min-h-screen bg-base-200/35 text-base-content transition-[padding] duration-200 ${shellPadding}`}>
       {!isStudyRoute && (
         <>
-          <SideNav collapsed={sidebarCollapsed} onToggle={toggleSidebar} onNavigate={closeSidebarOverlay} />
-          {!sidebarCollapsed && (
-            <div
-              className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden"
-              onClick={closeSidebarOverlay}
-              aria-hidden="true"
-            />
-          )}
+          <SideNav collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
+          <MobileNavDrawer open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
           <Navbar
             onOpenApiKey={() => setApiKeyModalOpen(true)}
             theme={theme}
@@ -461,6 +448,7 @@ export default function AppShell({ user }: AppShellProps) {
             searchResults={context.searchResults}
             searchLoading={searchLoading}
             onSearch={runSearch}
+            onOpenSidebar={() => setMobileNavOpen(true)}
           />
         </>
       )}

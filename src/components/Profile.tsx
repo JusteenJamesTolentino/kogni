@@ -66,7 +66,7 @@ export default function Profile({
   const initial = (nickname.trim().charAt(0) || '?').toUpperCase()
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-7 pb-28 sm:px-6 sm:py-10 sm:pb-10 lg:px-8">
+    <main className="mx-auto w-full max-w-[100rem] px-4 py-7 pb-28 sm:px-6 sm:py-10 sm:pb-10 lg:px-8">
       <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-primary">

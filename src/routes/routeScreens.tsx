@@ -84,7 +84,7 @@ export function ImportRoute() {
 
   if (mode === 'manual') {
     return (
-      <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
+      <main className="mx-auto w-full max-w-[100rem] px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
         <section className="mx-auto max-w-3xl text-center">
           <div className="badge badge-primary badge-outline mb-3">Add a deck</div>
           <h1 className="text-3xl font-black tracking-tight sm:text-4xl">Create your own questions</h1>

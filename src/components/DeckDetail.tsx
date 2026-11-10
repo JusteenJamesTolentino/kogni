@@ -91,7 +91,7 @@ export default function DeckDetail({
   }
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-9 lg:px-8">
+    <main className="mx-auto w-full max-w-[100rem] px-4 py-6 sm:px-6 sm:py-9 lg:px-8">
       <button type="button" onClick={onBack} className="btn btn-ghost btn-sm -ml-2 gap-2">
         <ArrowLeft size={17} aria-hidden="true" />
         Back to decks

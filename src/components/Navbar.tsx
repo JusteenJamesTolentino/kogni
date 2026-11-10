@@ -1,4 +1,4 @@
-import { BrainCircuit, KeyRound, LogOut, Moon, Sun, UserRound } from 'lucide-react'
+import { BrainCircuit, KeyRound, LogOut, Menu, Moon, Sun, UserRound } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import type { CommunitySearchResult } from './Community'
 import { useAuth } from '../context/AuthContext'
@@ -14,6 +14,8 @@ export interface NavbarProps {
   searchResults: CommunitySearchResult[]
   searchLoading: boolean
   onSearch: (query: string) => void | Promise<void>
+  /** Opens the mobile navigation drawer; rendered as a hamburger below lg. */
+  onOpenSidebar?: () => void
 }
 
 interface SearchFieldProps {
@@ -54,7 +56,7 @@ function SearchField({ searchQuery, searchResults, searchLoading, onSearch, navi
   )
 }
 
-export default function Navbar({ onOpenApiKey, theme, onToggleTheme, searchQuery, searchResults, searchLoading, onSearch }: NavbarProps) {
+export default function Navbar({ onOpenApiKey, theme, onToggleTheme, searchQuery, searchResults, searchLoading, onSearch, onOpenSidebar }: NavbarProps) {
   const { user, signOutUser } = useAuth()
   const navigate = useNavigate()
 
@@ -69,8 +71,18 @@ export default function Navbar({ onOpenApiKey, theme, onToggleTheme, searchQuery
   return (
     <>
       <header className="sticky top-0 z-40 border-b border-base-300/80 bg-base-100/90 backdrop-blur-xl">
-        <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-[100rem] px-3 sm:px-6 lg:px-8">
           <div className="flex min-h-16 items-center gap-2">
+            {onOpenSidebar && (
+              <button
+                type="button"
+                onClick={onOpenSidebar}
+                className="btn btn-ghost btn-square btn-sm shrink-0 lg:hidden"
+                aria-label="Open navigation menu"
+              >
+                <Menu size={20} aria-hidden="true" />
+              </button>
+            )}
             <div className="shrink-0">
               <Link
                 to={paths.dashboard}

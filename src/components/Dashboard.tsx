@@ -49,7 +49,7 @@ export default function Dashboard({ decks, dueCards, loading, error, onRetry, on
   const xp = Number(localStorage.getItem(`kognit_xp_${user?.uid}`) || 0)
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-4 py-7 sm:px-6 sm:py-10 lg:px-8">
+    <main className="mx-auto w-full max-w-[100rem] px-4 py-7 sm:px-6 sm:py-10 lg:px-8">
       <section className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
         <div>
           <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-primary">
