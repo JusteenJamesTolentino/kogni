@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { metadata } from '../../app/layout'
 import packageMetadata from '../../package.json'
+import packageLock from '../../package-lock.json'
 import functionsPackageMetadata from '../../functions/package.json'
 
 const root = process.cwd()
@@ -18,9 +19,14 @@ describe('Kogni brand migration', () => {
     expect(source('src/router/LoadingScreen.tsx')).toContain('Kogni')
   })
 
-  it('renames private package metadata and pins the Firebase Admin runtime', () => {
+  it('renames private package metadata and pins the compatible Firebase Admin runtime', () => {
     expect(packageMetadata.name).toBe('kogni')
     expect(packageMetadata.engines).toEqual({ node: '22.x' })
+    expect(packageMetadata.dependencies['firebase-admin']).toBe('13.7.0')
+    const packages = packageLock.packages as Record<string, { version?: string }>
+    expect(packages['node_modules/firebase-admin']?.version).toBe('13.7.0')
+    expect(packages['node_modules/jwks-rsa']?.version).toBe('3.2.2')
+    expect(packages['node_modules/jose']?.version).toBe('4.15.9')
     expect(functionsPackageMetadata.name).toBe('kogni-functions')
   })
 
