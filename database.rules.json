@@ -78,7 +78,7 @@
           ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() % 1 === 0"
         },
         "lastReviewAt": {
-          ".validate": "newData.isNumber() && newData.val() >= now - 1000 && newData.val() <= now + 1000"
+          ".validate": "newData.isNumber() && newData.val() >= now - 60000 && newData.val() <= now + 60000"
         },
         "$other": {
           ".validate": false
@@ -110,7 +110,7 @@
             ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() % 1 === 0"
           },
           "lastReviewAt": {
-            ".validate": "newData.isNumber() && newData.val() >= now - 1000 && newData.val() <= now + 1000"
+            ".validate": "newData.isNumber() && newData.val() >= now - 60000 && newData.val() <= now + 60000"
           },
           "$other": {
             ".validate": false
@@ -123,7 +123,7 @@
         ".read": "$uid === auth.uid",
         "$eventId": {
           ".write": "$uid === auth.uid && !data.exists() && newData.exists()",
-          ".validate": "newData.hasChildren(['uid', 'cardId', 'deckId', 'lineageId', 'dueAt', 'reviewedAt', 'xpAwarded']) && newData.child('uid').val() === auth.uid && newData.child('cardId').isString() && newData.child('cardId').val().length > 0 && newData.child('cardId').val().length <= 200 && newData.child('deckId').isString() && newData.child('deckId').val().length > 0 && newData.child('deckId').val().length <= 200 && newData.child('lineageId').isString() && newData.child('lineageId').val().length <= 200 && newData.child('dueAt').isNumber() && newData.child('dueAt').val() >= 0 && newData.child('dueAt').val() <= now && newData.child('reviewedAt').isNumber() && newData.child('reviewedAt').val() >= now - 1000 && newData.child('reviewedAt').val() <= now + 1000 && newData.child('xpAwarded').isNumber() && newData.child('xpAwarded').val() >= 2 && newData.child('xpAwarded').val() <= 12 && newData.child('xpAwarded').val() % 2 === 0",
+          ".validate": "newData.hasChildren(['uid', 'cardId', 'deckId', 'lineageId', 'dueAt', 'reviewedAt', 'xpAwarded']) && newData.child('uid').val() === auth.uid && newData.child('cardId').isString() && newData.child('cardId').val().length > 0 && newData.child('cardId').val().length <= 200 && newData.child('deckId').isString() && newData.child('deckId').val().length > 0 && newData.child('deckId').val().length <= 200 && newData.child('lineageId').isString() && newData.child('lineageId').val().length <= 200 && newData.child('dueAt').isNumber() && newData.child('dueAt').val() >= 0 && newData.child('dueAt').val() <= now && newData.child('reviewedAt').isNumber() && newData.child('reviewedAt').val() >= now - 60000 && newData.child('reviewedAt').val() <= now + 60000 && newData.child('xpAwarded').isNumber() && newData.child('xpAwarded').val() >= 2 && newData.child('xpAwarded').val() <= 12 && newData.child('xpAwarded').val() % 2 === 0",
           "$other": {
             ".validate": false
           }
@@ -152,7 +152,7 @@
           ".validate": "newData.isString() && newData.val().length <= 1000 && (newData.val() === '' || newData.val().beginsWith('https://'))"
         },
         "updatedAt": {
-          ".validate": "newData.isNumber() && newData.val() >= now - 1000 && newData.val() <= now + 1000"
+          ".validate": "newData.isNumber() && newData.val() >= now - 60000 && newData.val() <= now + 60000"
         },
         "$other": {
           ".validate": false
@@ -163,7 +163,7 @@
       "$shareId": {
         ".read": "auth != null && (data.child('ownerId').val() === auth.uid || data.child('recipientId').val() === auth.uid)",
         ".write": "auth != null && !data.exists() && newData.child('ownerId').val() === auth.uid",
-        ".validate": "newData.hasChildren(['id', 'ownerId', 'recipientId', 'senderDisplayName', 'lineageId', 'title', 'description', 'cardCount', 'createdAt', 'cards']) && newData.child('id').val() === $shareId && newData.child('ownerId').val() === auth.uid && newData.child('recipientId').isString() && newData.child('recipientId').val() !== auth.uid && newData.child('senderDisplayName').isString() && newData.child('senderDisplayName').val().length > 0 && newData.child('senderDisplayName').val().length <= 80 && newData.child('lineageId').isString() && newData.child('lineageId').val().length > 0 && newData.child('lineageId').val().length <= 200 && newData.child('title').isString() && newData.child('title').val().length > 0 && newData.child('title').val().length <= 160 && newData.child('description').isString() && newData.child('description').val().length <= 2000 && newData.child('cardCount').isNumber() && newData.child('cardCount').val() >= 1 && newData.child('cardCount').val() <= 500 && newData.child('cardCount').val() % 1 === 0 && newData.child('createdAt').isNumber() && newData.child('createdAt').val() >= now - 1000 && newData.child('createdAt').val() <= now + 1000",
+        ".validate": "newData.hasChildren(['id', 'ownerId', 'recipientId', 'senderDisplayName', 'lineageId', 'title', 'description', 'cardCount', 'createdAt', 'cards']) && newData.child('id').val() === $shareId && newData.child('ownerId').val() === auth.uid && newData.child('recipientId').isString() && newData.child('recipientId').val() !== auth.uid && newData.child('senderDisplayName').isString() && newData.child('senderDisplayName').val().length > 0 && newData.child('senderDisplayName').val().length <= 80 && newData.child('lineageId').isString() && newData.child('lineageId').val().length > 0 && newData.child('lineageId').val().length <= 200 && newData.child('title').isString() && newData.child('title').val().length > 0 && newData.child('title').val().length <= 160 && newData.child('description').isString() && newData.child('description').val().length <= 2000 && newData.child('cardCount').isNumber() && newData.child('cardCount').val() >= 1 && newData.child('cardCount').val() <= 500 && newData.child('cardCount').val() % 1 === 0 && newData.child('createdAt').isNumber() && newData.child('createdAt').val() >= now - 60000 && newData.child('createdAt').val() <= now + 60000",
         "id": {
           ".validate": "newData.isString() && newData.val() === $shareId"
         },
@@ -195,7 +195,7 @@
           ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 500 && newData.val() % 1 === 0"
         },
         "createdAt": {
-          ".validate": "newData.isNumber() && newData.val() >= now - 1000 && newData.val() <= now + 1000"
+          ".validate": "newData.isNumber() && newData.val() >= now - 60000 && newData.val() <= now + 60000"
         },
         "cards": {
           "$cardId": {
@@ -233,7 +233,7 @@
         ],
         "$shareId": {
           ".write": "auth != null && ((newData.exists() && !data.exists() && newData.child('ownerId').val() === auth.uid && newData.child('sharedDeckId').val() === $shareId) || (!newData.exists() && $uid === auth.uid))",
-          ".validate": "!newData.exists() || (newData.hasChildren(['id', 'sharedDeckId', 'ownerId', 'senderDisplayName', 'lineageId', 'title', 'description', 'cardCount', 'createdAt']) && newData.child('id').val() === $shareId && newData.child('sharedDeckId').val() === $shareId && newData.child('ownerId').val() === auth.uid && newData.child('senderDisplayName').isString() && newData.child('senderDisplayName').val().length > 0 && newData.child('senderDisplayName').val().length <= 80 && newData.child('lineageId').isString() && newData.child('lineageId').val().length > 0 && newData.child('lineageId').val().length <= 200 && newData.child('title').isString() && newData.child('title').val().length > 0 && newData.child('title').val().length <= 160 && newData.child('description').isString() && newData.child('description').val().length <= 2000 && newData.child('cardCount').isNumber() && newData.child('cardCount').val() >= 1 && newData.child('cardCount').val() <= 500 && newData.child('createdAt').isNumber() && newData.child('createdAt').val() >= now - 1000 && newData.child('createdAt').val() <= now + 1000)",
+          ".validate": "!newData.exists() || (newData.hasChildren(['id', 'sharedDeckId', 'ownerId', 'senderDisplayName', 'lineageId', 'title', 'description', 'cardCount', 'createdAt']) && newData.child('id').val() === $shareId && newData.child('sharedDeckId').val() === $shareId && newData.child('ownerId').val() === auth.uid && newData.child('senderDisplayName').isString() && newData.child('senderDisplayName').val().length > 0 && newData.child('senderDisplayName').val().length <= 80 && newData.child('lineageId').isString() && newData.child('lineageId').val().length > 0 && newData.child('lineageId').val().length <= 200 && newData.child('title').isString() && newData.child('title').val().length > 0 && newData.child('title').val().length <= 160 && newData.child('description').isString() && newData.child('description').val().length <= 2000 && newData.child('cardCount').isNumber() && newData.child('cardCount').val() >= 1 && newData.child('cardCount').val() <= 500 && newData.child('createdAt').isNumber() && newData.child('createdAt').val() >= now - 60000 && newData.child('createdAt').val() <= now + 60000)",
           "id": {
             ".validate": "!newData.exists() || (newData.isString() && newData.val() === $shareId)"
           },
@@ -259,7 +259,7 @@
             ".validate": "!newData.exists() || (newData.isNumber() && newData.val() >= 1 && newData.val() <= 500 && newData.val() % 1 === 0)"
           },
           "createdAt": {
-            ".validate": "!newData.exists() || (newData.isNumber() && newData.val() >= now - 1000 && newData.val() <= now + 1000)"
+            ".validate": "!newData.exists() || (newData.isNumber() && newData.val() >= now - 60000 && newData.val() <= now + 60000)"
           },
           "$other": {
             ".validate": false
@@ -270,8 +270,8 @@
     "deckPortals": {
       "$portalId": {
         ".read": "auth != null && (data.child('ownerId').val() === auth.uid || (data.child('status').val() === 'active' && data.child('expiresAt').val() > now))",
-        ".write": "auth != null && ((!data.exists() && newData.exists() && newData.child('ownerId').val() === auth.uid && newData.child('status').val() === 'active' && newData.parent().parent().child('portalByDeck').child(auth.uid).child(newData.child('sourceDeckId').val()).val() === $portalId) || (data.exists() && data.child('ownerId').val() === auth.uid && data.child('status').val() === 'active' && newData.exists() && ((newData.child('status').val() === 'active' && !newData.child('revokedAt').exists() && newData.child('expiresAt').val() >= now + 86399000 && newData.child('expiresAt').val() <= now + 2592001000 && newData.parent().parent().child('portalByDeck').child(auth.uid).child(data.child('sourceDeckId').val()).val() === $portalId) || (newData.child('status').val() === 'revoked' && newData.child('expiresAt').val() === data.child('expiresAt').val() && newData.child('revokedAt').val() >= now - 1000 && newData.child('revokedAt').val() <= now + 1000 && newData.parent().parent().child('portalByDeck').child(auth.uid).child(data.child('sourceDeckId').val()).val() !== $portalId))))",
-        ".validate": "newData.hasChildren(['id', 'ownerId', 'ownerDisplayName', 'sourceDeckId', 'status', 'createdAt', 'expiresAt', 'snapshot']) && newData.child('id').val() === $portalId && $portalId.length === 12 && $portalId.matches(/^[0-9A-HJKMNP-TV-Z]{12}$/) && newData.child('ownerId').isString() && newData.child('ownerId').val().length > 0 && newData.child('ownerId').val().length <= 200 && newData.child('ownerDisplayName').isString() && newData.child('ownerDisplayName').val().length > 0 && newData.child('ownerDisplayName').val().length <= 80 && newData.child('sourceDeckId').isString() && newData.child('sourceDeckId').val().length > 0 && newData.child('sourceDeckId').val().length <= 200 && (newData.child('status').val() === 'active' || newData.child('status').val() === 'revoked') && newData.child('createdAt').isNumber() && newData.child('expiresAt').isNumber() && ((!data.exists() && newData.child('createdAt').val() >= now - 1000 && newData.child('createdAt').val() <= now + 1000 && newData.child('expiresAt').val() >= newData.child('createdAt').val() + 86400000 && newData.child('expiresAt').val() <= newData.child('createdAt').val() + 2592000000 && !newData.child('revokedAt').exists()) || (data.exists() && newData.child('id').val() === data.child('id').val() && newData.child('ownerId').val() === data.child('ownerId').val() && newData.child('ownerDisplayName').val() === data.child('ownerDisplayName').val() && newData.child('sourceDeckId').val() === data.child('sourceDeckId').val() && newData.child('createdAt').val() === data.child('createdAt').val()))",
+        ".write": "auth != null && ((!data.exists() && newData.exists() && newData.child('ownerId').val() === auth.uid && newData.child('status').val() === 'active' && newData.parent().parent().child('portalByDeck').child(auth.uid).child(newData.child('sourceDeckId').val()).val() === $portalId) || (data.exists() && data.child('ownerId').val() === auth.uid && data.child('status').val() === 'active' && newData.exists() && ((newData.child('status').val() === 'active' && !newData.child('revokedAt').exists() && newData.child('expiresAt').val() >= now + 86399000 && newData.child('expiresAt').val() <= now + 2592001000 && newData.parent().parent().child('portalByDeck').child(auth.uid).child(data.child('sourceDeckId').val()).val() === $portalId) || (newData.child('status').val() === 'revoked' && newData.child('expiresAt').val() === data.child('expiresAt').val() && newData.child('revokedAt').val() >= now - 60000 && newData.child('revokedAt').val() <= now + 60000 && newData.parent().parent().child('portalByDeck').child(auth.uid).child(data.child('sourceDeckId').val()).val() !== $portalId))))",
+        ".validate": "newData.hasChildren(['id', 'ownerId', 'ownerDisplayName', 'sourceDeckId', 'status', 'createdAt', 'expiresAt', 'snapshot']) && newData.child('id').val() === $portalId && $portalId.length === 12 && $portalId.matches(/^[0-9A-HJKMNP-TV-Z]{12}$/) && newData.child('ownerId').isString() && newData.child('ownerId').val().length > 0 && newData.child('ownerId').val().length <= 200 && newData.child('ownerDisplayName').isString() && newData.child('ownerDisplayName').val().length > 0 && newData.child('ownerDisplayName').val().length <= 80 && newData.child('sourceDeckId').isString() && newData.child('sourceDeckId').val().length > 0 && newData.child('sourceDeckId').val().length <= 200 && (newData.child('status').val() === 'active' || newData.child('status').val() === 'revoked') && newData.child('createdAt').isNumber() && newData.child('expiresAt').isNumber() && ((!data.exists() && newData.child('createdAt').val() >= now - 60000 && newData.child('createdAt').val() <= now + 60000 && newData.child('expiresAt').val() >= newData.child('createdAt').val() + 86400000 && newData.child('expiresAt').val() <= newData.child('createdAt').val() + 2592000000 && !newData.child('revokedAt').exists()) || (data.exists() && newData.child('id').val() === data.child('id').val() && newData.child('ownerId').val() === data.child('ownerId').val() && newData.child('ownerDisplayName').val() === data.child('ownerDisplayName').val() && newData.child('sourceDeckId').val() === data.child('sourceDeckId').val() && newData.child('createdAt').val() === data.child('createdAt').val()))",
         "id": {
           ".validate": "newData.isString() && newData.val() === $portalId"
         },
@@ -374,7 +374,7 @@
       "$uid": {
         ".read": "auth != null && $uid === auth.uid",
         ".write": "auth != null && $uid === auth.uid && newData.exists() && ((!data.exists() && newData.child('status').val() === 'ready') || data.child('status').val() === 'ready') && newData.parent().parent().child('nicknameClaims').child(newData.child('nicknameCanonical').val()).val() === auth.uid && ((newData.child('preferences').child('discoverable').val() === true && newData.parent().parent().child('publicAccounts').child(auth.uid).child('nicknameCanonical').val() === newData.child('nicknameCanonical').val()) || (newData.child('preferences').child('discoverable').val() === false && !newData.parent().parent().child('publicAccounts').child(auth.uid).exists())) && (newData.child('preferences').child('presence').val() === true || !newData.parent().parent().child('presenceSessions').child(auth.uid).exists())",
-        ".validate": "newData.hasChildren(['uid', 'status', 'nickname', 'nicknameCanonical', 'createdAt', 'updatedAt', 'privacy', 'preferences']) && newData.child('uid').val() === auth.uid && newData.child('status').val() === 'ready' && newData.child('nickname').isString() && newData.child('nickname').val().matches(/^[A-Za-z0-9_]{3,24}$/) && newData.child('nicknameCanonical').val() === newData.child('nickname').val().toLowerCase() && newData.child('nicknameCanonical').val().matches(/^[a-z0-9_]{3,24}$/) && newData.child('createdAt').isNumber() && newData.child('updatedAt').isNumber() && newData.child('updatedAt').val() >= now - 1000 && newData.child('updatedAt').val() <= now + 1000 && ((!data.exists() && newData.child('createdAt').val() >= now - 1000 && newData.child('createdAt').val() <= now + 1000) || (data.exists() && newData.child('uid').val() === data.child('uid').val() && newData.child('status').val() === data.child('status').val() && newData.child('createdAt').val() === data.child('createdAt').val()))",
+        ".validate": "newData.hasChildren(['uid', 'status', 'nickname', 'nicknameCanonical', 'createdAt', 'updatedAt', 'privacy', 'preferences']) && newData.child('uid').val() === auth.uid && newData.child('status').val() === 'ready' && newData.child('nickname').isString() && newData.child('nickname').val().matches(/^[A-Za-z0-9_]{3,24}$/) && newData.child('nicknameCanonical').val() === newData.child('nickname').val().toLowerCase() && newData.child('nicknameCanonical').val().matches(/^[a-z0-9_]{3,24}$/) && newData.child('createdAt').isNumber() && newData.child('updatedAt').isNumber() && newData.child('updatedAt').val() >= now - 60000 && newData.child('updatedAt').val() <= now + 60000 && ((!data.exists() && newData.child('createdAt').val() >= now - 60000 && newData.child('createdAt').val() <= now + 60000) || (data.exists() && newData.child('uid').val() === data.child('uid').val() && newData.child('status').val() === data.child('status').val() && newData.child('createdAt').val() === data.child('createdAt').val()))",
         "uid": {
           ".validate": "newData.isString() && newData.val() === auth.uid"
         },
@@ -391,7 +391,7 @@
           ".validate": "newData.isNumber()"
         },
         "updatedAt": {
-          ".validate": "newData.isNumber() && newData.val() >= now - 1000 && newData.val() <= now + 1000"
+          ".validate": "newData.isNumber() && newData.val() >= now - 60000 && newData.val() <= now + 60000"
         },
         "privacy": {
           ".validate": "newData.hasChildren(['currentVersion', 'acknowledgedAt', 'acknowledgements']) && newData.child('currentVersion').val() === 'privacy-2026-11-10-ai-series-1' && newData.child('acknowledgedAt').isNumber() && newData.child('acknowledgements').child('privacy-2026-11-10-ai-series-1').val() === newData.child('acknowledgedAt').val()",
@@ -437,7 +437,7 @@
       "$uid": {
         ".read": "auth != null && root.child('accounts').child(auth.uid).child('status').val() === 'ready'",
         ".write": "auth != null && $uid === auth.uid && ((!newData.exists() && newData.parent().parent().child('accounts').child(auth.uid).child('preferences').child('discoverable').val() === false) || (newData.exists() && newData.parent().parent().child('accounts').child(auth.uid).child('preferences').child('discoverable').val() === true && newData.child('nickname').val() === newData.parent().parent().child('accounts').child(auth.uid).child('nickname').val() && newData.child('nicknameCanonical').val() === newData.parent().parent().child('accounts').child(auth.uid).child('nicknameCanonical').val()))",
-        ".validate": "!newData.exists() || (newData.hasChildren(['uid', 'nickname', 'nicknameCanonical', 'updatedAt']) && newData.child('uid').val() === auth.uid && newData.child('nickname').isString() && newData.child('nickname').val().matches(/^[A-Za-z0-9_]{3,24}$/) && newData.child('nicknameCanonical').val() === newData.child('nickname').val().toLowerCase() && newData.child('updatedAt').isNumber() && newData.child('updatedAt').val() >= now - 1000 && newData.child('updatedAt').val() <= now + 1000)",
+        ".validate": "!newData.exists() || (newData.hasChildren(['uid', 'nickname', 'nicknameCanonical', 'updatedAt']) && newData.child('uid').val() === auth.uid && newData.child('nickname').isString() && newData.child('nickname').val().matches(/^[A-Za-z0-9_]{3,24}$/) && newData.child('nicknameCanonical').val() === newData.child('nickname').val().toLowerCase() && newData.child('updatedAt').isNumber() && newData.child('updatedAt').val() >= now - 60000 && newData.child('updatedAt').val() <= now + 60000)",
         "uid": {
           ".validate": "newData.isString() && newData.val() === auth.uid"
         },
@@ -512,7 +512,7 @@
         "head/ownerId"
       ],
       "$deckId": {
-        ".read": "auth != null && (data.child('head').child('ownerId').val() === auth.uid || (data.child('head').child('status').val() === 'active' && (data.child('head').child('visibility').val() === 'public' || data.child('head').child('visibility').val() === 'unlisted' || root.child('onlineDeckAccess').child($deckId).child(auth.uid).child('uid').val() === auth.uid)))",
+        ".read": "auth != null && (!data.exists() || data.child('head').child('ownerId').val() === auth.uid || (data.child('head').child('status').val() === 'active' && (data.child('head').child('visibility').val() === 'public' || data.child('head').child('visibility').val() === 'unlisted' || root.child('onlineDeckAccess').child($deckId).child(auth.uid).child('uid').val() === auth.uid)))",
         ".write": "auth != null && newData.exists() && ((!data.exists() && newData.child('head').child('ownerId').val() === auth.uid) || (data.child('head').child('ownerId').val() === auth.uid && data.child('head').child('status').val() !== 'deleted' && newData.child('head').child('ownerId').val() === auth.uid))",
         ".validate": "newData.hasChildren(['head', 'versions']) && newData.child('head').child('id').val() === $deckId && ((!data.exists() && newData.child('head').child('latestVersion').val() === 1 && newData.child('versions').child('1').child('baseVersion').val() === 0) || (data.exists() && (newData.child('head').child('latestVersion').val() === data.child('head').child('latestVersion').val() || (data.child('head').child('status').val() === 'active' && newData.child('head').child('latestVersion').val() === data.child('head').child('latestVersion').val() + 1)))) && (!data.exists() || (newData.child('head').child('createdAt').val() === data.child('head').child('createdAt').val() && data.child('head').child('status').val() !== 'deleted' && (newData.child('head').child('status').val() !== 'deleted' || (newData.child('head').child('visibility').val() === 'private' && newData.child('head').child('deletedAt').isNumber()))))",
         "head": {
@@ -557,7 +557,7 @@
             ".validate": "newData.isNumber()"
           },
           "updatedAt": {
-            ".validate": "newData.isNumber() && newData.val() >= now - 1000 && newData.val() <= now + 1000"
+            ".validate": "newData.isNumber() && newData.val() >= now - 60000 && newData.val() <= now + 60000"
           },
           "seriesId": {
             ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 200 && newData.parent().child('partNumber').isNumber() && (!data.exists() || newData.val() === data.val())"
@@ -577,7 +577,7 @@
         },
         "versions": {
           "$version": {
-            ".validate": "newData.hasChildren(['deckId', 'ownerId', 'version', 'baseVersion', 'title', 'description', 'cardCount', 'publishedAt', 'cardOrder', 'cards']) && newData.child('deckId').val() === $deckId && newData.child('ownerId').val() === auth.uid && newData.child('version').isNumber() && newData.child('version').val() >= 1 && newData.child('version').val() % 1 === 0 && (newData.val() === data.val() || newData.child('version').val() === newData.parent().parent().child('head').child('latestVersion').val()) && newData.child('baseVersion').val() === newData.child('version').val() - 1 && newData.child('title').isString() && newData.child('title').val().length > 0 && newData.child('title').val().length <= 160 && newData.child('description').isString() && newData.child('description').val().length <= 2000 && newData.child('cardCount').isNumber() && newData.child('cardCount').val() >= 1 && newData.child('cardCount').val() <= 500 && newData.child('cardCount').val() % 1 === 0 && newData.child('publishedAt').isNumber() && ((!data.exists() && newData.child('publishedAt').val() >= now - 1000 && newData.child('publishedAt').val() <= now + 1000) || newData.val() === data.val()) && (!data.exists() || newData.val() === data.val())",
+            ".validate": "newData.hasChildren(['deckId', 'ownerId', 'version', 'baseVersion', 'title', 'description', 'cardCount', 'publishedAt', 'cardOrder', 'cards']) && newData.child('deckId').val() === $deckId && newData.child('ownerId').val() === auth.uid && newData.child('version').isNumber() && newData.child('version').val() >= 1 && newData.child('version').val() % 1 === 0 && (newData.val() === data.val() || newData.child('version').val() === newData.parent().parent().child('head').child('latestVersion').val()) && newData.child('baseVersion').val() === newData.child('version').val() - 1 && newData.child('title').isString() && newData.child('title').val().length > 0 && newData.child('title').val().length <= 160 && newData.child('description').isString() && newData.child('description').val().length <= 2000 && newData.child('cardCount').isNumber() && newData.child('cardCount').val() >= 1 && newData.child('cardCount').val() <= 500 && newData.child('cardCount').val() % 1 === 0 && newData.child('publishedAt').isNumber() && ((!data.exists() && newData.child('publishedAt').val() >= now - 60000 && newData.child('publishedAt').val() <= now + 60000) || newData.val() === data.val()) && (!data.exists() || newData.val() === data.val())",
             "deckId": {
               ".validate": "newData.isString() && newData.val() === $deckId"
             },
@@ -656,7 +656,7 @@
         ".read": "auth != null && root.child('onlineDecks').child($deckId).child('head').child('ownerId').val() === auth.uid",
         "$uid": {
           ".write": "auth != null && root.child('onlineDecks').child($deckId).child('head').child('ownerId').val() === auth.uid && (!newData.exists() || root.child('onlineDecks').child($deckId).child('head').child('status').val() !== 'deleted')",
-          ".validate": "!newData.exists() || (root.child('onlineDecks').child($deckId).child('head').child('status').val() !== 'deleted' && newData.hasChildren(['deckId', 'uid', 'grantedBy', 'grantedAt']) && newData.child('deckId').val() === $deckId && newData.child('uid').val() === $uid && newData.child('grantedBy').val() === auth.uid && newData.child('grantedAt').isNumber() && newData.child('grantedAt').val() >= now - 1000 && newData.child('grantedAt').val() <= now + 1000)",
+          ".validate": "!newData.exists() || (root.child('onlineDecks').child($deckId).child('head').child('status').val() !== 'deleted' && newData.hasChildren(['deckId', 'uid', 'grantedBy', 'grantedAt']) && newData.child('deckId').val() === $deckId && newData.child('uid').val() === $uid && newData.child('grantedBy').val() === auth.uid && newData.child('grantedAt').isNumber() && newData.child('grantedAt').val() >= now - 60000 && newData.child('grantedAt').val() <= now + 60000)",
           "deckId": {
             ".validate": "newData.isString() && newData.val() === $deckId"
           },
@@ -702,7 +702,7 @@
           ".validate": "newData.isNumber()"
         },
         "updatedAt": {
-          ".validate": "newData.isNumber() && newData.val() >= now - 1000 && newData.val() <= now + 1000"
+          ".validate": "newData.isNumber() && newData.val() >= now - 60000 && newData.val() <= now + 60000"
         },
         "parts": {
           "$partNumber": {
@@ -769,7 +769,7 @@
               ".validate": "newData.isNumber() && newData.parent().child('complete').val() === true"
             },
             "updatedAt": {
-              ".validate": "newData.isNumber() && newData.val() >= now - 1000 && newData.val() <= now + 1000"
+              ".validate": "newData.isNumber() && newData.val() >= now - 60000 && newData.val() <= now + 60000"
             },
             "$other": {
               ".validate": false

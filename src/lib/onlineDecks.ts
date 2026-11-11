@@ -1,6 +1,5 @@
 import type { User } from 'firebase/auth'
-import { get, ref, runTransaction, update } from 'firebase/database'
-import type { TransactionResult } from 'firebase/database'
+import { get, ref, set, update } from 'firebase/database'
 import { database } from './firebase'
 import { isRecord } from './errors'
 import { hasCompleteStudyGuideCoverage, STUDY_GUIDE_COVERAGE } from './studyGuideCoverage'
@@ -332,13 +331,6 @@ function readDeckRecord(value: unknown): OnlineDeckRecord | null {
   return { head: value.head, ...(Object.keys(versions).length ? { versions } : {}) }
 }
 
-function transactionRecord(result: TransactionResult): OnlineDeckRecord {
-  if (!result.committed) throw new Error('The online deck transaction was not committed')
-  const record = readDeckRecord(result.snapshot.val())
-  if (!record) throw new Error('The online deck transaction returned invalid data')
-  return record
-}
-
 /** Builds a validated initial deck record without writing it. This is used by
  * root-level atomic publication flows such as series continuation publishing. */
 export function buildOnlineDeckRecord(
@@ -375,19 +367,18 @@ export function buildOnlineDeckRecord(
   return { head, versions: { '1': version } }
 }
 
-/** Atomically creates a head and immutable version 1 from expected base version 0. */
+/** Creates a head and immutable version 1. Rules enforce owner-only creation
+ * and reject writes that would rewind or skip versions. */
 export async function createOnlineDeck(
   user: User | null | undefined,
   input: CreateOnlineDeckInput,
 ): Promise<OnlineDeckRecord> {
   const record = buildOnlineDeckRecord(user, input)
-  const result = await runTransaction(ref(database, `onlineDecks/${record.head.id}`), (current) =>
-    current === null ? record : undefined,
-  )
-  return transactionRecord(result)
+  await set(ref(database, `onlineDecks/${record.head.id}`), record)
+  return record
 }
 
-/** Publishes exactly one successor. A stale expected base aborts without writing. */
+/** Publishes exactly one successor version. A stale expected base throws without writing. */
 export async function publishOnlineDeckVersion(
   user: User | null | undefined,
   deckIdValue: unknown,
@@ -398,44 +389,33 @@ export async function publishOnlineDeckVersion(
   if (!isRecord(input)) throw new TypeError('input must be an object')
   const expectedBaseVersion = requireVersion(input.expectedBaseVersion, 'expectedBaseVersion')
   const now = requireTimestamp(input.now ?? Date.now(), 'now')
-  let abortReason = 'Online deck not found'
 
-  const result = await runTransaction(ref(database, `onlineDecks/${deckId}`), (current) => {
-    const record = readDeckRecord(current)
-    if (!record) return undefined
-    if (record.head.ownerId !== authenticatedUser.uid) {
-      abortReason = 'Only the deck owner can publish a version'
-      return undefined
-    }
-    if (record.head.status !== 'active') {
-      abortReason = 'Only an active deck can be published'
-      return undefined
-    }
-    if (record.head.latestVersion !== expectedBaseVersion) {
-      abortReason = `Stale base version: expected ${expectedBaseVersion}, current ${record.head.latestVersion}`
-      return undefined
-    }
-    const previous = record.versions?.[String(expectedBaseVersion)]
-    if (!previous) {
-      abortReason = 'The expected base version is unavailable'
-      return undefined
-    }
-    const version = buildVersion(deckId, authenticatedUser.uid, expectedBaseVersion, input, previous, now)
-    return {
-      ...record,
-      head: {
-        ...record.head,
-        latestVersion: version.version,
-        title: version.title,
-        description: version.description,
-        cardCount: version.cardCount,
-        updatedAt: now,
-      },
-      versions: { ...record.versions, [String(version.version)]: version },
-    }
-  })
-  if (!result.committed) throw new Error(abortReason)
-  return transactionRecord(result)
+  const current: unknown = (await get(ref(database, `onlineDecks/${deckId}`))).val()
+  const record = readDeckRecord(current)
+  if (!record) throw new Error('Online deck not found')
+  if (record.head.ownerId !== authenticatedUser.uid) throw new Error('Only the deck owner can publish a version')
+  if (record.head.status !== 'active') throw new Error('Only an active deck can be published')
+  if (record.head.latestVersion !== expectedBaseVersion) {
+    throw new Error(`Stale base version: expected ${expectedBaseVersion}, current ${record.head.latestVersion}`)
+  }
+  const previous = record.versions?.[String(expectedBaseVersion)]
+  if (!previous) throw new Error('The expected base version is unavailable')
+
+  const version = buildVersion(deckId, authenticatedUser.uid, expectedBaseVersion, input, previous, now)
+  const next: OnlineDeckRecord = {
+    ...record,
+    head: {
+      ...record.head,
+      latestVersion: version.version,
+      title: version.title,
+      description: version.description,
+      cardCount: version.cardCount,
+      updatedAt: now,
+    },
+    versions: { ...record.versions, [String(version.version)]: version },
+  }
+  await set(ref(database, `onlineDecks/${deckId}`), next)
+  return next
 }
 
 export interface UpdateOnlineDeckPolicyInput {
@@ -452,17 +432,18 @@ export async function updateOnlineDeckPolicy(
   const authenticatedUser = requireUser(user)
   const deckId = requireKey(deckIdValue, 'deckId')
   const now = requireTimestamp(input.now ?? Date.now(), 'now')
-  const result = await runTransaction(ref(database, `onlineDecks/${deckId}/head`), (current) => {
-    if (!isOnlineDeckHead(current) || current.ownerId !== authenticatedUser.uid || current.status === 'deleted') return undefined
-    return {
-      ...current,
-      ...(input.visibility === undefined ? {} : { visibility: requireVisibility(input.visibility) }),
-      ...(input.offlinePolicy === undefined ? {} : { offlinePolicy: normalizeOfflinePolicy(input.offlinePolicy) }),
-      updatedAt: now,
-    }
-  })
-  if (!result.committed || !isOnlineDeckHead(result.snapshot.val())) throw new Error('Online deck policy update denied')
-  return result.snapshot.val() as OnlineDeckHead
+  const headValue: unknown = (await get(ref(database, `onlineDecks/${deckId}/head`))).val()
+  if (!isOnlineDeckHead(headValue) || headValue.ownerId !== authenticatedUser.uid || headValue.status === 'deleted') {
+    throw new Error('Online deck policy update denied')
+  }
+  const nextHead: OnlineDeckHead = {
+    ...headValue,
+    ...(input.visibility === undefined ? {} : { visibility: requireVisibility(input.visibility) }),
+    ...(input.offlinePolicy === undefined ? {} : { offlinePolicy: normalizeOfflinePolicy(input.offlinePolicy) }),
+    updatedAt: now,
+  }
+  await update(ref(database, `onlineDecks/${deckId}/head`), nextHead)
+  return nextHead
 }
 
 export async function setOnlineDeckStatus(
@@ -475,20 +456,23 @@ export async function setOnlineDeckStatus(
   const deckId = requireKey(deckIdValue, 'deckId')
   if (status !== 'active' && status !== 'archived' && status !== 'deleted') throw new TypeError('Invalid deck status')
   const now = requireTimestamp(nowValue, 'now')
-  const result = await runTransaction(ref(database, `onlineDecks/${deckId}/head`), (current) => {
-    if (!isOnlineDeckHead(current) || current.ownerId !== authenticatedUser.uid || current.status === 'deleted') return undefined
-    if (status === 'active' && current.status !== 'archived') return undefined
-    return {
-      ...current,
-      status,
-      updatedAt: now,
-      ...(status === 'archived' ? { archivedAt: now } : {}),
-      ...(status === 'active' ? { archivedAt: null } : {}),
-      ...(status === 'deleted' ? { deletedAt: now, visibility: 'private' as const } : {}),
-    }
-  })
-  if (!result.committed || !isOnlineDeckHead(result.snapshot.val())) throw new Error('Online deck status update denied')
-  return result.snapshot.val() as OnlineDeckHead
+  const headValue: unknown = (await get(ref(database, `onlineDecks/${deckId}/head`))).val()
+  if (!isOnlineDeckHead(headValue) || headValue.ownerId !== authenticatedUser.uid || headValue.status === 'deleted') {
+    throw new Error('Online deck status update denied')
+  }
+  if (status === 'active' && headValue.status !== 'archived') throw new Error('Only an archived deck can be restored')
+  // Writing null removes a stale archivedAt when restoring to active.
+  const { archivedAt: _staleArchivedAt, ...headRest } = headValue
+  const nextHead: Record<string, unknown> = {
+    ...headRest,
+    status,
+    updatedAt: now,
+    ...(status === 'archived' ? { archivedAt: now } : {}),
+    ...(status === 'active' ? { archivedAt: null } : {}),
+    ...(status === 'deleted' ? { deletedAt: now, visibility: 'private' as const } : {}),
+  }
+  await update(ref(database, `onlineDecks/${deckId}/head`), nextHead)
+  return { ...headRest, status, updatedAt: now, ...(status === 'archived' ? { archivedAt: now } : {}) }
 }
 
 /** Grants private-deck read access. Visibility rules still deny archived/deleted decks to viewers. */

@@ -5,13 +5,14 @@ import Community from '../components/Community'
 import Dashboard from '../components/Dashboard'
 import DeckDetail from '../components/DeckDetail'
 import DeckEditor from '../components/DeckEditor'
+import DeleteDeckDialog from '../components/DeleteDeckDialog'
 import Leaderboard from '../components/Leaderboard'
 import MagicImport from '../components/MagicImport'
 import Profile from '../components/Profile'
 import StudySession from '../components/StudySession'
 import { getSocialSummary } from '../lib/social'
 import type { SocialSummary } from '../lib/social'
-import { getCardsByDeck, getDeck, getDueCards, saveDeckWithCards } from '../lib/db'
+import { deleteLocalDeck, getCardsByDeck, getDeck, getDueCards, saveDeckWithCards } from '../lib/db'
 import { getErrorMessage } from '../lib/errors'
 import type { StudyCard, StudyDeck } from '../types/domain'
 import type { AppShellContextValue } from './AppShell'
@@ -300,39 +301,65 @@ function useLoadedDeck(): { data: LoadedDeck | null; loading: boolean; error: st
 
 export function DeckRoute() {
   const navigate = useNavigate()
-  const { dueCards, openShareModal, user } = useAppShell()
+  const { dueCards, openShareModal, user, loadLibrary } = useAppShell()
   const { data, loading, error } = useLoadedDeck()
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
 
   if (loading) return <RouteLoading label="Loading deck" />
   if (!data) return <RouteError title="Deck unavailable" message={error} />
 
   const lineageId = data.deck.lineageId || data.deck.id
   return (
-    <DeckDetail
-      deck={data.deck}
-      cards={data.cards}
-      dueCards={dueCards}
-      onBack={() => navigate(paths.dashboard)}
-      onReviewDue={(deck) => navigate(deckStudyPath(deck.id, 'due'))}
-      onPracticeAll={(deck) => navigate(deckStudyPath(deck.id, 'practice'))}
-      onShare={openShareModal}
-      onEdit={(deck) => navigate(deckEditPath(deck.id))}
-      onPublishOnline={(deck) => navigate(onlineDeckEditPath(deck.id))}
-      onRegenerate={(deck) => navigate(deckRegeneratePath(deck.id))}
-      storageBadge={{
-        kind: data.deck.lineageId ? 'shared-copy' : 'local',
-        label: data.deck.lineageId ? 'Independent shared copy' : 'Offline · This browser',
-      }}
-      leaderboardSlot={(
-        <Leaderboard
-          compact
-          lineageId={lineageId}
-          deckTitle={data.deck.title}
-          onViewAll={() => navigate(deckLeaderboardPath(data.deck.id))}
-          onOpenPlayer={(player) => navigate(player.id === user.uid ? paths.profile : playerProfilePath(player.id))}
-        />
-      )}
-    />
+    <>
+      <DeckDetail
+        deck={data.deck}
+        cards={data.cards}
+        dueCards={dueCards}
+        onBack={() => navigate(paths.dashboard)}
+        onReviewDue={(deck) => navigate(deckStudyPath(deck.id, 'due'))}
+        onPracticeAll={(deck) => navigate(deckStudyPath(deck.id, 'practice'))}
+        onShare={openShareModal}
+        onEdit={(deck) => navigate(deckEditPath(deck.id))}
+        onPublishOnline={(deck) => navigate(onlineDeckEditPath(deck.id))}
+        onRegenerate={(deck) => navigate(deckRegeneratePath(deck.id))}
+        onDelete={() => setDeleteOpen(true)}
+        storageBadge={{
+          kind: data.deck.lineageId ? 'shared-copy' : 'local',
+          label: data.deck.lineageId ? 'Independent shared copy' : 'Offline · This browser',
+        }}
+        leaderboardSlot={(
+          <Leaderboard
+            compact
+            lineageId={lineageId}
+            deckTitle={data.deck.title}
+            onViewAll={() => navigate(deckLeaderboardPath(data.deck.id))}
+            onOpenPlayer={(player) => navigate(player.id === user.uid ? paths.profile : playerProfilePath(player.id))}
+          />
+        )}
+      />
+      <DeleteDeckDialog
+        open={deleteOpen}
+        deckTitle={data.deck.title}
+        cardCount={data.cards.length}
+        deleting={deleting}
+        deleteError={deleteError}
+        onClose={() => { if (!deleting) { setDeleteOpen(false); setDeleteError('') } }}
+        onDelete={async () => {
+          setDeleting(true)
+          setDeleteError('')
+          try {
+            await deleteLocalDeck(data.deck.id)
+            await loadLibrary()
+            navigate(paths.dashboard)
+          } catch (cause: unknown) {
+            setDeleteError(getErrorMessage(cause, 'The deck could not be deleted.'))
+            setDeleting(false)
+          }
+        }}
+      />
+    </>
   )
 }
 

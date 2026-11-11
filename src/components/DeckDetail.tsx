@@ -135,7 +135,7 @@ export default function DeckDetail({
               </div>
             </div>
 
-            <div className="grid w-full gap-2 sm:grid-cols-3 lg:w-auto lg:min-w-72 lg:grid-cols-1">
+            <div className="grid w-full gap-2 sm:grid-cols-2 lg:w-auto lg:min-w-72 lg:grid-cols-1">
               <button
                 type="button"
                 onClick={() => void onReviewDue(deck, deckDueCards)}

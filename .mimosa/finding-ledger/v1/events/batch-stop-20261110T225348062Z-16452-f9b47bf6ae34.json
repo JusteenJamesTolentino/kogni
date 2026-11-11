@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "mimosa-finding-ledger-batch/v1",
+  "batchId": "stop-20261110T225348062Z-16452-f9b47bf6ae34",
+  "runId": "20261110T225348062Z-16452-f9b47bf6ae34",
+  "runStatus": "completed",
+  "coverage": {
+    "status": "complete",
+    "reasons": []
+  },
+  "source": {
+    "component": "zcode-hook",
+    "operationId": "Stop"
+  },
+  "revision": "2c861f58f97521fe1a57d340a0840103f7a96c58",
+  "diffHash": "84d9594619a5e4361acf5d7659492bca1d127ed05ca8bd74ad1e7260a2345955",
+  "rulesVersion": "unavailable",
+  "sessionHash": "b9281abf04a046c754a82b38cc3b4b7ce416c1f8376f22b9c74de490659be1ed",
+  "reportRef": ".mimosa/reports/task-review-sess_37bc48ff-4fdf-484b-affe-3297f19ae1a1-20261110T225348062Z-16452-f9b47bf6ae34.json",
+  "events": [],
+  "observedFindingIds": [],
+  "verifiedFiles": [
+    {
+      "file": "src/routes/OnlineDeckRoutes.tsx",
+      "direct": "complete",
+      "projectContext": "partial"
+    }
+  ],
+  "recordedAt": "2026-11-10T22:53:48.699Z"
+}
