@@ -2,8 +2,6 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import confetti from 'canvas-confetti'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { ArrowLeft, BookOpenText, Brain, Check, Eye, Sparkles, X } from 'lucide-react'
-import { calculateSm2 } from '../lib/sm2'
-import { recordCardScheduledReview } from '../lib/db'
 import { awardReviewXp } from '../lib/leaderboard'
 import { getErrorMessage } from '../lib/errors'
 import { useAuth } from '../context/AuthContext'
@@ -37,6 +35,7 @@ export interface StudySessionProps {
   onExit: () => void
   onFinished: () => void | Promise<void>
   onGenerateAnother: () => void | Promise<void>
+  onSaveReview?: (card: StudyCard, quality: ReviewQuality) => Promise<void>
   onCardRated?: (cardId: string, quality: ReviewQuality) => void | Promise<void>
   onlinePartCompletion?: OnlinePartCompletion
 }
@@ -65,7 +64,7 @@ function isShortcutBlocked(event: KeyboardEvent): boolean {
   return ['BUTTON', 'INPUT', 'SELECT', 'TEXTAREA', 'A'].includes(target.tagName)
 }
 
-export default function StudySession({ cards, deck, mode, onExit, onFinished, onGenerateAnother, onCardRated, onlinePartCompletion }: StudySessionProps) {
+export default function StudySession({ cards, deck, mode, onExit, onFinished, onGenerateAnother, onSaveReview, onCardRated, onlinePartCompletion }: StudySessionProps) {
   const { user } = useAuth()
   const isPractice = mode === 'practice'
   const onlinePartComplete = onlinePartCompletion?.ratedDistinctCount === 30
@@ -110,8 +109,8 @@ export default function StudySession({ cards, deck, mode, onExit, onFinished, on
 
     try {
       if (!isPractice) {
-        const progressUpdate = calculateSm2(card, quality)
-        await recordCardScheduledReview(card.id, progressUpdate)
+        if (!onSaveReview) throw new Error('Cloud review persistence is unavailable. Start this session again.')
+        await onSaveReview(card, quality)
         const eventId = `${sessionId}-${card.id}`
 
         try {

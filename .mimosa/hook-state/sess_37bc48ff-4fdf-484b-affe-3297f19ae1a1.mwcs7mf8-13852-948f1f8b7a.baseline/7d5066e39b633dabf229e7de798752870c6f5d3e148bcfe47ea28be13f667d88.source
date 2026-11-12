@@ -1,0 +1,21 @@
+import type { CoreDatabase as Database } from './database-core';
+import type { PublicOnlineDeckProjection } from './projections';
+export declare const PLAYER_DECK_PAGE_SIZE = 20;
+export declare const PLAYER_DECK_MAX_OWNER_RECORDS = 500;
+export interface PlayerDeckCursor {
+    updatedAt: number;
+    id: string;
+}
+export interface PlayerDeckPage {
+    items: PublicOnlineDeckProjection[];
+    hasMore: boolean;
+    nextCursor?: string;
+}
+export declare function encodePlayerDeckCursor(cursor: PlayerDeckCursor): string;
+export declare function parsePlayerDeckCursor(value: unknown): PlayerDeckCursor | undefined;
+/**
+ * Firebase RTDB supports one orderBy only. This performs an indexed owner query,
+ * scans at most 501 canonical owner records, fails closed above 500, then applies
+ * exact newest-first (updatedAt, id) keyset pagination in memory.
+ */
+export declare function listPlayerDecksService(database: Database, actorUid: string, targetUid: string, expectedPrivacyVersion: string, cursorValue?: unknown): Promise<PlayerDeckPage>;

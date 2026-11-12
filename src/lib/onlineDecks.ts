@@ -219,10 +219,14 @@ function buildVersion(
   }
 }
 
-export function isValidOnlineDeckVersion(value: unknown): value is OnlineDeckVersion {
-  if (!isRecord(value) || !isRecord(value.cards) || !isRecord(value.cardOrder)) return false
+function isFirebaseCollection(value: unknown): value is Record<string, unknown> {
+  return isRecord(value) || Array.isArray(value)
+}
 
-  const cardEntries = Object.entries(value.cards)
+export function isValidOnlineDeckVersion(value: unknown): value is OnlineDeckVersion {
+  if (!isRecord(value) || !isFirebaseCollection(value.cards) || !isFirebaseCollection(value.cardOrder)) return false
+
+  const cardEntries = Object.entries(value.cards).filter(([, card]) => !Array.isArray(value.cards) || card !== null)
   const cardOrderEntries = Object.entries(value.cardOrder)
   if (
     typeof value.deckId !== 'string' ||
@@ -297,7 +301,7 @@ export function isValidOnlineDeckVersion(value: unknown): value is OnlineDeckVer
   return cardOrders.size === value.cardCount && orderedCardIds.size === cardIds.size
 }
 
-function isOnlineDeckHead(value: unknown): value is OnlineDeckHead {
+export function isOnlineDeckHead(value: unknown): value is OnlineDeckHead {
   return isRecord(value) && typeof value.id === 'string' && typeof value.ownerId === 'string' &&
     (value.visibility === 'private' || value.visibility === 'unlisted' || value.visibility === 'public') &&
     (value.status === 'active' || value.status === 'archived' || value.status === 'deleted') &&
@@ -315,8 +319,9 @@ function readDeckRecord(value: unknown): OnlineDeckRecord | null {
   if (!isRecord(value) || !isOnlineDeckHead(value.head)) return null
   const versions: Record<string, OnlineDeckVersion> = {}
   if (value.versions !== undefined) {
-    if (!isRecord(value.versions)) return null
+    if (!isFirebaseCollection(value.versions)) return null
     for (const [key, version] of Object.entries(value.versions)) {
+      if (Array.isArray(value.versions) && version === null) continue
       if (
         !isValidOnlineDeckVersion(version) ||
         String(version.version) !== key ||
@@ -374,7 +379,9 @@ export async function createOnlineDeck(
   input: CreateOnlineDeckInput,
 ): Promise<OnlineDeckRecord> {
   const record = buildOnlineDeckRecord(user, input)
-  await set(ref(database, `onlineDecks/${record.head.id}`), record)
+  const target = ref(database, `onlineDecks/${record.head.id}`)
+  if ((await get(target)).exists()) throw new Error('A deck with this ID already exists. Reload it instead of creating it again.')
+  await set(target, record)
   return record
 }
 
@@ -517,7 +524,9 @@ export async function revokeOnlineDeckAccess(
 export async function getOnlineDeckHead(deckIdValue: unknown): Promise<OnlineDeckHead | null> {
   const deckId = requireKey(deckIdValue, 'deckId')
   const value: unknown = (await get(ref(database, `onlineDecks/${deckId}/head`))).val()
-  return isOnlineDeckHead(value) ? value : null
+  if (value === null) return null
+  if (!isOnlineDeckHead(value) || value.id !== deckId) throw new Error('The saved deck metadata is invalid.')
+  return value
 }
 
 export async function getOnlineDeckVersion(
@@ -527,9 +536,11 @@ export async function getOnlineDeckVersion(
   const deckId = requireKey(deckIdValue, 'deckId')
   const version = requireVersion(versionValue)
   const value: unknown = (await get(ref(database, `onlineDecks/${deckId}/versions/${version}`))).val()
-  return isValidOnlineDeckVersion(value) && value.deckId === deckId && value.version === version
-    ? value
-    : null
+  if (value === null) return null
+  if (!isValidOnlineDeckVersion(value) || value.deckId !== deckId || value.version !== version) {
+    throw new Error('The saved deck version is invalid.')
+  }
+  return { ...value, cards: Object.fromEntries(Object.entries(value.cards).filter(([, card]) => card !== null)), cardOrder: Object.fromEntries(Object.entries(value.cardOrder)) }
 }
 
 /** Selects the first N published cards by canonical order, never randomly. */

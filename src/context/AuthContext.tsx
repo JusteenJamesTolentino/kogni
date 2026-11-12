@@ -8,7 +8,6 @@ import { completeAccountOnboarding, getAccount } from '../lib/account'
 import type { CompleteAccountOnboardingInput } from '../lib/account'
 import { startPresenceSession } from '../lib/presence'
 import type { PresenceSession } from '../lib/presence'
-import { setDatabaseUser } from '../lib/db'
 import { getErrorMessage, isRecord } from '../lib/errors'
 import { GEMINI_API_KEY_STORAGE, GEMINI_MODEL_STORAGE } from '../lib/geminiSettings'
 
@@ -69,7 +68,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const generation = ++authGenerationRef.current
         const request = ++accountRequestRef.current
         currentUserRef.current = nextUser
-        setDatabaseUser(nextUser?.uid || '')
         setUser(nextUser)
         setAccount(null)
         setAccountError('')
@@ -90,7 +88,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       (authError: Error) => {
         if (!active) return
         invalidateAuth()
-        setDatabaseUser('')
         setUser(null)
         setAccount(null)
         setError(getFriendlyAuthError(authError))

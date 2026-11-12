@@ -75,6 +75,28 @@ describe('online deck offline snapshots', () => {
 describe('online deck version validation', () => {
   const cloneVersion = (): OnlineDeckVersion => structuredClone(version)
 
+  it('accepts Firebase array materialization for numeric cardOrder and numeric card IDs', () => {
+    const candidate = cloneVersion() as unknown as Record<string, unknown>
+    candidate.cardOrder = ['0', '1', '2']
+    candidate.cards = [
+      { id: '0', order: 0, contentRevision: 1, question: 'Q0', answer: 'A0' },
+      { id: '1', order: 1, contentRevision: 1, question: 'Q1', answer: 'A1', distractors: ['X'] },
+      { id: '2', order: 2, contentRevision: 1, question: 'Q2', answer: 'A2' },
+    ]
+    expect(isValidOnlineDeckVersion(candidate)).toBe(true)
+  })
+
+  it('rejects sparse Firebase arrays with missing cards', () => {
+    const candidate = cloneVersion() as unknown as Record<string, unknown>
+    candidate.cardOrder = ['0', '1', '2']
+    candidate.cards = [
+      { id: '0', order: 0, contentRevision: 1, question: 'Q0', answer: 'A0' },
+      null,
+      { id: '2', order: 2, contentRevision: 1, question: 'Q2', answer: 'A2' },
+    ]
+    expect(isValidOnlineDeckVersion(candidate)).toBe(false)
+  })
+
   it('accepts a valid record with exact card keys, count, orders, and cardOrder', () => {
     expect(isValidOnlineDeckVersion(cloneVersion())).toBe(true)
   })

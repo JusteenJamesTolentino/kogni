@@ -9,6 +9,7 @@ export const paths = {
   community: '/community',
   leaderboards: '/leaderboards',
   onlineDecks: '/online-decks',
+  legacyDecks: '/legacy-decks',
   studyDue: '/study/due',
 } as const
 

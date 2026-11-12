@@ -1,0 +1,28 @@
+import type { CoreDatabase } from './database-core.js';
+export declare function eligibleTestAccount(uid: string, privacyVersion?: string): {
+    uid: string;
+    status: string;
+    nickname: string;
+    nicknameCanonical: string;
+    privacy: {
+        currentVersion: string;
+        acknowledgements: {
+            [privacyVersion]: number;
+        };
+    };
+    preferences: {
+        discoverable: boolean;
+        presence: boolean;
+    };
+};
+export declare function memoryDatabase(initial?: Record<string, unknown>): {
+    database: CoreDatabase;
+    data: Record<string, unknown>;
+    reads: {
+        path: string;
+        limit?: number;
+        after?: string;
+    }[];
+    read: (path: string) => unknown;
+    write: (path: string, value: unknown) => void;
+};

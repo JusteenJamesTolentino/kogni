@@ -1,0 +1,90 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.buildOnlineDeckProjectionRemoval = buildOnlineDeckProjectionRemoval;
+exports.isPlainRecord = isPlainRecord;
+exports.readEligibleAccount = readEligibleAccount;
+exports.buildActivePlayerProjection = buildActivePlayerProjection;
+exports.buildPublicOnlineDeckProjection = buildPublicOnlineDeckProjection;
+/** Tombstones never retain discovery entries, including stale owner-index rows. */
+function buildOnlineDeckProjectionRemoval(deckId, currentOwnerId, previousOwnerId) {
+    return {
+        catalogDeckId: deckId,
+        ownerDeckIds: [...new Set([currentOwnerId, previousOwnerId].filter((value) => Boolean(value)))],
+    };
+}
+function isPlainRecord(value) {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+function readEligibleAccount(value, uid, expectedPrivacyVersion) {
+    if (!isPlainRecord(value) || !isPlainRecord(value.privacy) || !isPlainRecord(value.preferences))
+        return null;
+    if (value.uid !== uid ||
+        value.status !== 'ready' ||
+        typeof value.nickname !== 'string' ||
+        !/^[A-Za-z0-9_]{3,24}$/.test(value.nickname) ||
+        typeof value.nicknameCanonical !== 'string' ||
+        value.nicknameCanonical !== value.nickname.toLowerCase() ||
+        value.privacy.currentVersion !== expectedPrivacyVersion ||
+        !isPlainRecord(value.privacy.acknowledgements) ||
+        value.privacy.acknowledgements[expectedPrivacyVersion] === undefined ||
+        typeof value.preferences.discoverable !== 'boolean' ||
+        typeof value.preferences.presence !== 'boolean')
+        return null;
+    return value;
+}
+function buildActivePlayerProjection(accountValue, uid, presenceValue, expectedPrivacyVersion) {
+    const account = readEligibleAccount(accountValue, uid, expectedPrivacyVersion);
+    if (!account || !account.preferences.discoverable || !account.preferences.presence)
+        return null;
+    if (!isPlainRecord(presenceValue) || !Object.values(presenceValue).some((marker) => marker === true))
+        return null;
+    return {
+        uid,
+        nickname: account.nickname,
+        nicknameCanonical: account.nicknameCanonical,
+    };
+}
+function readDeckHead(value, deckId) {
+    if (!isPlainRecord(value))
+        return null;
+    if (value.id !== deckId ||
+        typeof value.ownerId !== 'string' ||
+        value.visibility !== 'public' ||
+        value.status !== 'active' ||
+        !Number.isSafeInteger(value.latestVersion) ||
+        value.latestVersion < 1 ||
+        typeof value.title !== 'string' ||
+        value.title.length < 1 ||
+        value.title.length > 160 ||
+        typeof value.description !== 'string' ||
+        value.description.length > 2000 ||
+        !Number.isSafeInteger(value.cardCount) ||
+        value.cardCount < 1 ||
+        value.cardCount > 500 ||
+        typeof value.updatedAt !== 'number' ||
+        !Number.isSafeInteger(value.updatedAt) ||
+        value.updatedAt < 0)
+        return null;
+    return value;
+}
+function buildPublicOnlineDeckProjection(headValue, deckId, ownerAccountValue, expectedPrivacyVersion) {
+    const head = readDeckHead(headValue, deckId);
+    if (!head)
+        return null;
+    const account = readEligibleAccount(ownerAccountValue, head.ownerId, expectedPrivacyVersion);
+    if (!account?.preferences.discoverable)
+        return null;
+    return {
+        id: deckId,
+        ownerId: head.ownerId,
+        ownerNickname: account.nickname,
+        ownerNicknameCanonical: account.nicknameCanonical,
+        title: head.title,
+        titleCanonical: head.title.toLowerCase(),
+        description: head.description,
+        cardCount: head.cardCount,
+        latestVersion: head.latestVersion,
+        updatedAt: head.updatedAt,
+    };
+}
+//# sourceMappingURL=projections.js.map

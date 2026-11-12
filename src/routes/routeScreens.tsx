@@ -1,28 +1,21 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ArrowRight, WandSparkles } from 'lucide-react'
-import { Link, useNavigate, useOutletContext, useParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useOutletContext, useParams } from 'react-router-dom'
 import Community from '../components/Community'
 import Dashboard from '../components/Dashboard'
-import DeckDetail from '../components/DeckDetail'
 import DeckEditor from '../components/DeckEditor'
-import DeleteDeckDialog from '../components/DeleteDeckDialog'
 import Leaderboard from '../components/Leaderboard'
 import MagicImport from '../components/MagicImport'
 import Profile from '../components/Profile'
 import StudySession from '../components/StudySession'
 import { getSocialSummary } from '../lib/social'
 import type { SocialSummary } from '../lib/social'
-import { deleteLocalDeck, getCardsByDeck, getDeck, getDueCards, saveDeckWithCards } from '../lib/db'
+import { createCloudReviewSaver, createPrivateDeck, loadCloudDeck, loadCloudLibrary, newCloudDeckId } from '../lib/cloudDecks'
 import { getErrorMessage } from '../lib/errors'
 import type { StudyCard, StudyDeck } from '../types/domain'
 import type { AppShellContextValue } from './AppShell'
 import {
-  deckEditPath,
-  deckLeaderboardPath,
-  deckPath,
-  deckRegeneratePath,
   deckStudyPath,
-  onlineDeckEditPath,
   onlineDeckPath,
   playerProfilePath,
   paths,
@@ -65,7 +58,7 @@ export function DashboardRoute() {
       error={libraryError}
       onRetry={loadLibrary}
       onStudy={(deck) => navigate(deck ? deckStudyPath(deck.id, 'due') : paths.studyDue)}
-      onOpenDeck={(deck) => navigate(deckPath(deck.id))}
+      onOpenDeck={(deck) => navigate(onlineDeckPath(deck.id))}
       onImport={() => navigate(paths.import)}
       onBrowseShared={() => navigate(paths.community)}
       suggestedUsers={activePlayers}
@@ -78,7 +71,8 @@ export function DashboardRoute() {
 
 export function ImportRoute() {
   const navigate = useNavigate()
-  const { apiKey, geminiModel, loadLibrary, openApiKeyModal, setImportBusy } = useAppShell()
+  const { apiKey, geminiModel, loadLibrary, openApiKeyModal, setImportBusy, user } = useAppShell()
+  const [saveId] = useState(newCloudDeckId)
   const [mode, setMode] = useState<'manual' | 'ai'>('manual')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -117,9 +111,9 @@ export function ImportRoute() {
             setSaving(true)
             setError('')
             try {
-              const saved = await saveDeckWithCards(draft, draft.cards)
+              const saved = await createPrivateDeck(user, draft, saveId)
               await loadLibrary()
-              navigate(deckPath(saved.id))
+              navigate(onlineDeckPath(saved.id))
             } catch (cause: unknown) {
               setError(getErrorMessage(cause, 'The deck could not be saved.'))
               setSaving(false)
@@ -140,10 +134,11 @@ export function ImportRoute() {
         model={geminiModel}
         onOpenApiKey={openApiKeyModal}
         onBusyChange={setImportBusy}
-        onComplete={async () => {
+        onComplete={async (draft) => {
+          const saved = await createPrivateDeck(user, draft, saveId)
           await loadLibrary()
           setImportBusy(false)
-          navigate(paths.dashboard)
+          navigate(onlineDeckPath(saved.id))
         }}
       />
     </>
@@ -246,8 +241,8 @@ export function ProfileRoute() {
     stats={[
       { id: 'followers', label: 'Followers', value: socialValue(socialSummary?.followerCount), helpText: socialLoading ? 'Loading social count' : undefined },
       { id: 'following', label: 'Following', value: socialValue(socialSummary?.followingCount), helpText: socialLoading ? 'Loading social count' : undefined },
-      { id: 'decks', label: 'Offline decks', value: decks.length, helpText: 'Saved in this browser' },
-      { id: 'cards', label: 'Local cards', value: totalCards },
+      { id: 'decks', label: 'Cloud decks', value: decks.length, helpText: 'Saved to your account' },
+      { id: 'cards', label: 'Cards', value: totalCards },
       { id: 'due', label: 'Due reviews', value: dueCards.length },
       { id: 'xp', label: 'Learning XP', value: xp },
     ]}
@@ -263,191 +258,45 @@ export function GlobalLeaderboardRoute() {
   return <Leaderboard onOpenPlayer={(player) => navigate(player.id === user.uid ? paths.profile : playerProfilePath(player.id))} />
 }
 
-interface LoadedDeck {
-  deck: StudyDeck
-  cards: StudyCard[]
-}
-
-function useLoadedDeck(): { data: LoadedDeck | null; loading: boolean; error: string } {
-  const { deckId = '' } = useParams()
-  const [data, setData] = useState<LoadedDeck | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-
-  useEffect(() => {
-    let active = true
-    setLoading(true)
-    setError('')
-    setData(null)
-
-    void Promise.all([getDeck(deckId), getCardsByDeck(deckId)])
-      .then(([deck, cards]) => {
-        if (!active) return
-        if (!deck) throw new Error('This deck was not found in this browser.')
-        setData({ deck, cards })
-      })
-      .catch((loadError: unknown) => {
-        if (active) setError(getErrorMessage(loadError, 'This deck could not be loaded.'))
-      })
-      .finally(() => {
-        if (active) setLoading(false)
-      })
-
-    return () => { active = false }
-  }, [deckId])
-
-  return { data, loading, error }
-}
-
 export function DeckRoute() {
-  const navigate = useNavigate()
-  const { dueCards, openShareModal, user, loadLibrary } = useAppShell()
-  const { data, loading, error } = useLoadedDeck()
-  const [deleteOpen, setDeleteOpen] = useState(false)
-  const [deleting, setDeleting] = useState(false)
-  const [deleteError, setDeleteError] = useState('')
-
-  if (loading) return <RouteLoading label="Loading deck" />
-  if (!data) return <RouteError title="Deck unavailable" message={error} />
-
-  const lineageId = data.deck.lineageId || data.deck.id
-  return (
-    <>
-      <DeckDetail
-        deck={data.deck}
-        cards={data.cards}
-        dueCards={dueCards}
-        onBack={() => navigate(paths.dashboard)}
-        onReviewDue={(deck) => navigate(deckStudyPath(deck.id, 'due'))}
-        onPracticeAll={(deck) => navigate(deckStudyPath(deck.id, 'practice'))}
-        onShare={openShareModal}
-        onEdit={(deck) => navigate(deckEditPath(deck.id))}
-        onPublishOnline={(deck) => navigate(onlineDeckEditPath(deck.id))}
-        onRegenerate={(deck) => navigate(deckRegeneratePath(deck.id))}
-        onDelete={() => setDeleteOpen(true)}
-        storageBadge={{
-          kind: data.deck.lineageId ? 'shared-copy' : 'local',
-          label: data.deck.lineageId ? 'Independent shared copy' : 'Offline · This browser',
-        }}
-        leaderboardSlot={(
-          <Leaderboard
-            compact
-            lineageId={lineageId}
-            deckTitle={data.deck.title}
-            onViewAll={() => navigate(deckLeaderboardPath(data.deck.id))}
-            onOpenPlayer={(player) => navigate(player.id === user.uid ? paths.profile : playerProfilePath(player.id))}
-          />
-        )}
-      />
-      <DeleteDeckDialog
-        open={deleteOpen}
-        deckTitle={data.deck.title}
-        cardCount={data.cards.length}
-        deleting={deleting}
-        deleteError={deleteError}
-        onClose={() => { if (!deleting) { setDeleteOpen(false); setDeleteError('') } }}
-        onDelete={async () => {
-          setDeleting(true)
-          setDeleteError('')
-          try {
-            await deleteLocalDeck(data.deck.id)
-            await loadLibrary()
-            navigate(paths.dashboard)
-          } catch (cause: unknown) {
-            setDeleteError(getErrorMessage(cause, 'The deck could not be deleted.'))
-            setDeleting(false)
-          }
-        }}
-      />
-    </>
-  )
+  return <Navigate to={paths.legacyDecks} replace />
 }
 
 export function DeckLeaderboardRoute() {
-  const navigate = useNavigate()
-  const { user } = useAppShell()
-  const { data, loading, error } = useLoadedDeck()
-
-  if (loading) return <RouteLoading label="Loading deck leaderboard" />
-  if (!data) return <RouteError title="Leaderboard unavailable" message={error} />
-
-  return <Leaderboard
-    lineageId={data.deck.lineageId || data.deck.id}
-    deckTitle={data.deck.title}
-    onOpenPlayer={(player) => navigate(player.id === user.uid ? paths.profile : playerProfilePath(player.id))}
-  />
+  const { deckId = '' } = useParams()
+  return <Leaderboard lineageId={deckId} />
 }
 
-interface StudyRouteProps {
-  mode: 'scheduled' | 'practice'
-  deckScoped: boolean
-}
+interface StudyRouteProps { mode: 'scheduled' | 'practice'; deckScoped: boolean }
 
 export function StudyRoute({ mode, deckScoped }: StudyRouteProps) {
   const navigate = useNavigate()
   const { deckId } = useParams()
-  const { loadLibrary } = useAppShell()
-  const [deck, setDeck] = useState<StudyDeck | null>(null)
-  const [cards, setCards] = useState<StudyCard[]>([])
+  const { user, loadLibrary } = useAppShell()
+  const [session, setSession] = useState<{ deck: StudyDeck | null; cards: StudyCard[]; saveReview: ReturnType<typeof createCloudReviewSaver> } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-
   useEffect(() => {
     let active = true
-    setLoading(true)
-    setError('')
-
-    const load = async (): Promise<void> => {
-      if (deckScoped) {
-        const loadedDeck = await getDeck(deckId || '')
-        if (!loadedDeck) throw new Error('This deck was not found in this browser.')
-        const loadedCards = mode === 'practice'
-          ? await getCardsByDeck(loadedDeck.id)
-          : await getDueCards(loadedDeck.id)
-        if (active) {
-          setDeck(loadedDeck)
-          setCards(loadedCards)
-        }
-      } else {
-        const loadedCards = await getDueCards()
-        if (active) {
-          setDeck(null)
-          setCards(loadedCards)
-        }
-      }
-    }
-
-    void load()
-      .catch((loadError: unknown) => {
-        if (active) setError(getErrorMessage(loadError, 'This study session could not be loaded.'))
-      })
-      .finally(() => {
-        if (active) setLoading(false)
-      })
-
+    setLoading(true); setError(''); setSession(null)
+    void (async () => {
+      const library = deckScoped ? null : await loadCloudLibrary(user)
+      const ids = deckScoped ? [deckId || ''] : [...new Set(library!.dueCards.map((card) => card.deckId))]
+      const loaded: Array<Awaited<ReturnType<typeof loadCloudDeck>>> = []
+      for (const id of ids) loaded.push(await loadCloudDeck(user, id))
+      const cards = loaded.flatMap((item) => item.cards).filter((card) => mode === 'practice' || card.nextReviewDate <= Date.now())
+      if (active) setSession({ deck: deckScoped ? loaded[0]?.deck ?? null : null, cards, saveReview: createCloudReviewSaver(user, loaded) })
+    })().catch((cause: unknown) => { if (active) setError(getErrorMessage(cause, 'The cloud session could not be loaded.')) })
+      .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
-  }, [deckId, deckScoped, mode])
-
-  const exitTarget = deck ? deckPath(deck.id) : paths.dashboard
-  const finish = useCallback(async (): Promise<void> => {
+  }, [deckId, deckScoped, mode, user])
+  const exitTarget = session?.deck ? onlineDeckPath(session.deck.id) : paths.dashboard
+  const finish = useCallback(async () => {
     if (mode === 'scheduled') await loadLibrary()
     navigate(exitTarget)
   }, [exitTarget, loadLibrary, mode, navigate])
-
-  if (loading) return <RouteLoading label="Loading study session" />
-  if (error) return <RouteError title="Study session unavailable" message={error} />
-
-  return (
-    <StudySession
-      cards={cards}
-      deck={deck}
-      mode={mode}
-      onExit={() => void finish()}
-      onFinished={finish}
-      onGenerateAnother={async () => {
-        if (mode === 'scheduled') await loadLibrary()
-        navigate(paths.import)
-      }}
-    />
-  )
+  if (loading) return <RouteLoading label="Loading cloud study session" />
+  if (error || !session) return <RouteError title="Study session unavailable" message={error} />
+  return <StudySession cards={session.cards} deck={session.deck} mode={mode} onSaveReview={session.saveReview}
+    onExit={() => void finish()} onFinished={finish} onGenerateAnother={() => navigate(paths.import)} />
 }

@@ -885,6 +885,25 @@ describeRules('series and completion database rules', () => {
 })
 
 describeRules('online schedule database rules', () => {
+  it('rejects schedule writes after private access is revoked', async () => {
+    const ownerDatabase = testEnvironment.authenticatedContext(OWNER_ID).database()
+    const viewerDatabase = testEnvironment.authenticatedContext(RECIPIENT_ID).database()
+    const now = Date.now()
+    await assertSucceeds(set(ref(ownerDatabase, `onlineDecks/${ONLINE_DECK_ID}`), onlineDeck('private', now)))
+    await assertSucceeds(set(ref(ownerDatabase, `onlineDeckAccess/${ONLINE_DECK_ID}/${RECIPIENT_ID}`), {
+      deckId: ONLINE_DECK_ID, uid: RECIPIENT_ID, grantedBy: OWNER_ID, grantedAt: now,
+    }))
+    await assertSucceeds(set(ref(viewerDatabase, `onlineSchedules/${RECIPIENT_ID}/${ONLINE_DECK_ID}/${ONLINE_CARD_ID}`), onlineReview()))
+    await assertSucceeds(set(ref(ownerDatabase, `onlineDeckAccess/${ONLINE_DECK_ID}/${RECIPIENT_ID}`), null))
+    const second = onlineReview(now, 'review-after-revoke')
+    second.state.scheduleRevision = 2
+    second.state.reviewCount = 2
+    second.state.lastEventId = 'review-after-revoke'
+    second.events['review-one'] = onlineReview().events['review-one']
+    second.events['review-after-revoke'].scheduleRevisionBefore = 1
+    await assertFails(set(ref(viewerDatabase, `onlineSchedules/${RECIPIENT_ID}/${ONLINE_DECK_ID}/${ONLINE_CARD_ID}`), second))
+  })
+
   it('isolates schedule paths to the authenticated uid/deck/card', async () => {
     const ownerDatabase = testEnvironment.authenticatedContext(OWNER_ID).database()
     const viewerDatabase = testEnvironment.authenticatedContext(RECIPIENT_ID).database()

@@ -3,7 +3,6 @@ import type { DragEvent, SyntheticEvent } from 'react'
 import { CheckCircle2, CircleDashed, FileText, KeyRound, Sparkles, UploadCloud, WandSparkles, X } from 'lucide-react'
 import { generateDeckFromFile } from '../lib/gemini'
 import type { GenerationProgress } from '../lib/gemini'
-import { saveDeckWithCards } from '../lib/db'
 import { getErrorMessage } from '../lib/errors'
 import {
   ACCEPTED_FILE_TYPES,
@@ -31,9 +30,12 @@ interface MagicImportProps {
 }
 
 export default function MagicImport({ apiKey, model, onOpenApiKey, onComplete, onBusyChange }: MagicImportProps) {
+  const pendingDraft = useRef<GeneratedDeck | null>(null)
+  const generating = useRef(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const dialogRef = useRef<HTMLDialogElement>(null)
   const activityIdRef = useRef(0)
+  const [hasPendingDraft, setHasPendingDraft] = useState(false)
   const [file, setFile] = useState<File | null>(null)
   const [dragActive, setDragActive] = useState(false)
   const [status, setStatus] = useState<ImportStatus>('idle')
@@ -88,6 +90,8 @@ export default function MagicImport({ apiKey, model, onOpenApiKey, onComplete, o
       return
     }
 
+    pendingDraft.current = null
+    setHasPendingDraft(false)
     setFile(selectedFile)
   }
 
@@ -102,7 +106,8 @@ export default function MagicImport({ apiKey, model, onOpenApiKey, onComplete, o
       onOpenApiKey()
       return
     }
-    if (!file) return
+    if (!file || generating.current) return
+    generating.current = true
 
     activityIdRef.current = 0
     setActivities([])
@@ -110,23 +115,22 @@ export default function MagicImport({ apiKey, model, onOpenApiKey, onComplete, o
     setError('')
 
     try {
-      const generated = await generateDeckFromFile(file, apiKey, model, handleProgress, {
+      const generated = pendingDraft.current ?? await generateDeckFromFile(file, apiKey, model, handleProgress, {
         autoRepairStudyGuide: true,
       })
       if (!generated.cards.length) throw new Error('Gemini did not find enough study material in this file.')
-
-      addActivity('Saving the deck and cards to this browser')
-      await saveDeckWithCards(
-        { title: generated.title, description: generated.description, studyGuide: generated.studyGuide },
-        generated.cards,
-      )
-      addActivity('Deck saved successfully')
-      addActivity('Refreshing your study library')
+      pendingDraft.current = generated
+      setHasPendingDraft(true)
+      addActivity('Saving a private deck to your cloud account')
       await onComplete(generated)
+      pendingDraft.current = null
+      setHasPendingDraft(false)
       setStatus('success')
     } catch (generationError: unknown) {
       setStatus('error')
-      setError(getErrorMessage(generationError, 'We could not generate this deck. Check your API key and model ID, then try again.'))
+      setError(getErrorMessage(generationError, 'We could not generate or save this deck. A generated draft stays available here for retry.'))
+    } finally {
+      generating.current = false
     }
   }
 
@@ -183,7 +187,7 @@ export default function MagicImport({ apiKey, model, onOpenApiKey, onComplete, o
         {apiKey && model && <div className="mt-5 flex items-center justify-between rounded-xl bg-success/10 px-4 py-3 text-sm"><span className="font-semibold text-success">Gemini configured · {model}</span><button type="button" onClick={onOpenApiKey} className="btn btn-ghost btn-xs">Change settings</button></div>}
         <button type="button" onClick={() => void handleGenerate()} disabled={!file || busy || status === 'success'} className="btn btn-primary mt-5 w-full gap-2 shadow-lg shadow-primary/40">
           {busy ? <span className="loading loading-spinner loading-sm" aria-hidden="true" /> : <Sparkles size={18} aria-hidden="true" />}
-          {busy ? 'Building your deck…' : !apiKey || !model ? 'Set up AI generation' : 'Generate 30-question deck'}
+          {busy ? 'Building your deck…' : hasPendingDraft ? 'Retry saving generated deck' : !apiKey || !model ? 'Set up AI generation' : 'Generate 30-question deck'}
         </button>
       </section>
 

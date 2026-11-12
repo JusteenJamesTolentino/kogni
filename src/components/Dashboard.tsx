@@ -1,4 +1,5 @@
 import { ArrowRight, Flame, Layers3, Plus, Sparkles, Target, Trophy, UsersRound } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import type { LucideIcon } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import type { StudyCard, StudyDeck } from '../types/domain'
@@ -83,7 +84,8 @@ export default function Dashboard({ decks, dueCards, loading, error, onRetry, on
         <div className="mb-4 flex items-center justify-between gap-4">
           <div>
             <h2 id="decks-title" className="text-2xl font-bold">Your decks</h2>
-            <p className="text-sm text-base-content/55">Pick up where you left off.</p>
+            <p className="text-sm text-base-content/55">Saved to your account. Internet required.</p>
+            <Link to="/legacy-decks" className="link mt-1 inline-block text-xs text-base-content/50">Recover legacy decks on this device</Link>
           </div>
           <button type="button" onClick={onImport} className="btn btn-primary btn-sm gap-2 shadow-md shadow-primary/30">
             <Plus size={15} aria-hidden="true" />

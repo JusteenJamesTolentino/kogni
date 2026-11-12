@@ -139,7 +139,6 @@ describe('AuthProvider async presence and stale auth lifecycle', () => {
     expect(useAuth().account).toBeNull()
     expect(useAuth().accountLoading).toBe(false)
     expect(mocks.startPresence).not.toHaveBeenCalled()
-    expect(mocks.setDatabaseUser).toHaveBeenLastCalledWith('')
   })
 
   it('catches presence startup failures and surfaces the error without unhandled promises', async () => {

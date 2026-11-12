@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import type { User } from 'firebase/auth'
 import ApiKeyModal from '../components/ApiKeyModal'
@@ -20,7 +20,7 @@ import {
 import { PRIVACY_VERSION } from '../lib/account'
 import { renameAccount, updateAccountPreferences } from '../lib/account'
 import { useAuth } from '../context/AuthContext'
-import { getAllDecks, getCardsByDeck, getDueCards, saveDeckCopy } from '../lib/db'
+import { copyPrivateDeck, loadCloudDeck, loadCloudLibrary } from '../lib/cloudDecks'
 import { listActivePlayers, listRecentPublicOnlineDecks } from '../lib/discovery'
 import type { ActivePlayerProjection, PublicOnlineDeckProjection } from '../types/projections'
 import { getErrorMessage } from '../lib/errors'
@@ -36,7 +36,7 @@ import {
   rotateDeckPortal,
 } from '../lib/portal'
 import type { DeckPortalRecord, PublicProfile, SharedDeckInboxItem, StudyCard, StudyDeck } from '../types/domain'
-import { deckPath, paths } from '../router/paths'
+import { onlineDeckPath, paths } from '../router/paths'
 
 const THEME_STORAGE = 'kognit_theme'
 const SIDEBAR_STORAGE = 'kognit_sidebar'
@@ -168,19 +168,26 @@ export default function AppShell({ user }: AppShellProps) {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [location.pathname])
 
+  const libraryRequest = useRef(0)
+  const libraryAbort = useRef<AbortController | null>(null)
   const loadLibrary = useCallback(async (): Promise<void> => {
+    const request = ++libraryRequest.current
+    libraryAbort.current?.abort()
+    const controller = new AbortController()
+    libraryAbort.current = controller
     setLibraryLoading(true)
     setLibraryError('')
     try {
-      const [storedDecks, storedDueCards] = await Promise.all([getAllDecks(), getDueCards()])
-      setDecks(Array.isArray(storedDecks) ? storedDecks : [])
-      setDueCards(Array.isArray(storedDueCards) ? storedDueCards : [])
+      const library = await loadCloudLibrary(user, { signal: controller.signal })
+      if (request !== libraryRequest.current || controller.signal.aborted) return
+      setDecks(library.decks)
+      setDueCards(library.dueCards)
     } catch (dataError: unknown) {
-      setLibraryError(getErrorMessage(dataError, 'Your study library could not be loaded.'))
+      if (request === libraryRequest.current && !controller.signal.aborted) setLibraryError(getErrorMessage(dataError, 'Your cloud library could not be loaded.'))
     } finally {
-      setLibraryLoading(false)
+      if (request === libraryRequest.current) setLibraryLoading(false)
     }
-  }, [])
+  }, [user])
 
   const loadCommunity = useCallback(async (): Promise<void> => {
     setProfileLoading(true)
@@ -216,7 +223,14 @@ export default function AppShell({ user }: AppShellProps) {
     }
   }, [user.uid])
 
-  useEffect(() => { void loadLibrary() }, [loadLibrary])
+  useEffect(() => {
+    setDecks([]); setDueCards([])
+    void loadLibrary()
+    return () => { ++libraryRequest.current; libraryAbort.current?.abort() }
+  }, [loadLibrary])
+  useEffect(() => {
+    if (location.pathname === paths.dashboard) void loadLibrary()
+  }, [location.pathname, loadLibrary])
   useEffect(() => {
     if (location.pathname === paths.dashboard || location.pathname === paths.community || location.pathname === paths.onlineDecks) {
       void loadDiscovery()
@@ -279,11 +293,11 @@ export default function AppShell({ user }: AppShellProps) {
     try {
       const snapshot = await getSharedDeckCopy(user, summary.deckId)
       if (!snapshot) throw new Error('The shared deck is unavailable')
-      const saved = await saveDeckCopy(snapshot, Object.values(snapshot.cards), { lineageId: snapshot.lineageId })
+      const saved = await copyPrivateDeck(user, { ...snapshot, cards: Object.values(snapshot.cards) }, `share:${summary.deckId}`)
       await dismissSharedDeckInbox(user, summary.deckId)
       await loadLibrary()
       setInbox((current) => current.filter((item) => item.sharedDeckId !== summary.deckId))
-      navigate(deckPath(saved.id))
+      navigate(onlineDeckPath(saved.id))
     } catch (importFailure: unknown) {
       setInboxError(getErrorMessage(importFailure, 'The shared deck could not be added to your library.'))
     }
@@ -299,7 +313,7 @@ export default function AppShell({ user }: AppShellProps) {
     setSharing(true)
     setShareError('')
     try {
-      const cards = await getCardsByDeck(shareDeck.id)
+      const { cards } = await loadCloudDeck(user, shareDeck.id)
       await shareDeckCopy(user, {
         deck: shareDeck,
         cards,
@@ -337,7 +351,7 @@ export default function AppShell({ user }: AppShellProps) {
     setPortalError('')
     try {
       if (action === 'create') {
-        const cards = await getCardsByDeck(shareDeck.id)
+        const { cards } = await loadCloudDeck(user, shareDeck.id)
         setPortalRecord(await createDeckPortal(
           user,
           { deck: shareDeck, cards, ownerDisplayName: account?.nickname || 'Kogni learner' },
@@ -415,7 +429,7 @@ export default function AppShell({ user }: AppShellProps) {
     openApiKeyModal: () => setApiKeyModalOpen(true),
   }
 
-  const isStudyRoute = /(^|\/)study\/(due|practice)$/.test(location.pathname)
+  const isStudyRoute = /(^|\/)study(?:\/(due|practice))?$/.test(location.pathname)
   const portalCode: PortalCodeDetails | null = portalRecord && portalRecord.status === 'active'
     ? {
         code: formatPortalCode(portalRecord.id),

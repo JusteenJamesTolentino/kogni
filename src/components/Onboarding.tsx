@@ -35,7 +35,7 @@ export default function Onboarding({ saving = false, error = '', initialNickname
             <div>
               <div className="badge badge-primary badge-outline">First-time account setup</div>
               <h1 id="onboarding-title" className="mt-3 text-3xl font-black tracking-tight">Privacy and learner identity</h1>
-              <p className="mt-2 text-base-content/60">Choose the nickname Kogni will use and acknowledge how account, public-feature, online, and local study data are handled.</p>
+              <p className="mt-2 text-base-content/60">Choose the nickname Kogni will use and acknowledge how account-backed decks, schedules, recovery data, and public features are handled.</p>
             </div>
           </div>
 
@@ -51,8 +51,9 @@ export default function Onboarding({ saving = false, error = '', initialNickname
           </label>
 
           <div className="mt-6 rounded-2xl border border-base-300 bg-base-200/40 p-4 text-sm leading-relaxed text-base-content/70">
-            <p>Decks explicitly saved offline, card schedules, and answer history are stored in this browser. Online decks, cloud progress, acknowledgements, public-feature identity, sharing, portals, leaderboards, and optional presence use Firebase.</p>
-            <p className="mt-2">Public data is shown only through the feature you enable or use. Email is not copied into public profiles. Gemini is optional; creating or regenerating AI decks requires your own Google AI Studio key/project quota, which may incur charges. Existing and shared decks remain key-free.</p>
+            <p>Normal new, manual, AI-generated, shared, and portal decks—and their schedules—are stored in Firebase for your account and require an internet connection. New decks are private until you explicitly publish them.</p>
+            <p className="mt-2">Existing IndexedDB decks remain untouched and appear only under Legacy decks on this device. Recovery requires preview and confirmation, creates a private cloud copy with a fresh schedule, and leaves the device original unchanged.</p>
+            <p className="mt-2">Theme and sidebar preferences remain in this browser; Gemini settings are browser-local and removed on sign-out. Your Gemini key stays in localStorage while signed in, and selected generation sources are not retained. Email is not copied into public profiles; discoverability and presence remain optional.</p>
             <Link to="/privacy" state={{ from: `${location.pathname}${location.search}` }} className="link link-primary mt-3 inline-block font-semibold">Read the full Privacy Notice ({PRIVACY_VERSION})</Link>
           </div>
 

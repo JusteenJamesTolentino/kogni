@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useOutletContext, useParams } from 'react-router-dom'
 import type { AppShellContextValue } from './AppShell'
-import { Cloud, Download, Edit3, Layers3, LockKeyhole, Play, RefreshCw } from 'lucide-react'
+import { Cloud, Play } from 'lucide-react'
 import ContinuationCreator from '../components/ContinuationCreator'
 import type { ContinuationCreatorProps } from '../components/ContinuationCreator'
 import OnlineDeckCatalog from '../components/OnlineDeckCatalog'
@@ -10,16 +10,11 @@ import OnlinePlayers from '../components/OnlinePlayers'
 import type { OnlinePlayersProps } from '../components/OnlinePlayers'
 import SeriesCompletion from '../components/SeriesCompletion'
 import type { SeriesCompletionProps } from '../components/SeriesCompletion'
-import { getCardsByDeck, getDeck, saveOnlineDeckOfflineSnapshot } from '../lib/db'
-import {
-  createOnlineDeck,
-  getOnlineDeckHead,
-  getOnlineDeckVersion,
-  publishOnlineDeckVersion,
-  selectOnlineDeckOfflineSnapshot,
-} from '../lib/onlineDecks'
-import type { OnlineDeckHead, OnlineDeckVersion, StudyCard, StudyDeck } from '../types/domain'
-import { deckPath, onlineDeckContinuePath, onlineDeckEditPath, onlineDeckPath, onlineDeckStudySeriesPath, paths, playerProfilePath } from '../router/paths'
+import DeckEditor from '../components/DeckEditor'
+import DeleteDeckDialog from '../components/DeleteDeckDialog'
+import { loadCloudDeck, describeCloudError, withCloudDeadline } from '../lib/cloudDecks'
+import { publishOnlineDeckVersion, updateOnlineDeckPolicy, setOnlineDeckStatus } from '../lib/onlineDecks'
+import { deckStudyPath, onlineDeckEditPath, onlineDeckPath, paths, playerProfilePath } from '../router/paths'
 import { useAuth } from '../context/AuthContext'
 
 export interface OnlineDeckIndexShellProps {
@@ -130,161 +125,94 @@ export function OnlineDeckCreatorContinuationShell(props: OnlineDeckCreatorConti
 
 export function OnlineDeckRoute() {
   const { deckId = '' } = useParams()
-  const navigate = useNavigate()
-  const { user, account } = useAuth()
-  const [head, setHead] = useState<OnlineDeckHead | null>(null)
-  const [version, setVersion] = useState<OnlineDeckVersion | null>(null)
-  const [limit, setLimit] = useState(1)
+  const { user } = useAuth()
+  const { openShareModal, loadLibrary } = useOutletContext<AppShellContextValue>()
+  const [loaded, setLoaded] = useState<Awaited<ReturnType<typeof loadCloudDeck>> | null>(null)
+  const [request, setRequest] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-
+  const [publishOpen, setPublishOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const navigate = useNavigate()
   useEffect(() => {
     let active = true
-    setLoading(true)
-    setError('')
-    void getOnlineDeckHead(deckId)
-      .then(async (nextHead) => {
-        if (!nextHead) throw new Error('Online deck unavailable')
-        const nextVersion = await getOnlineDeckVersion(deckId, nextHead.latestVersion)
-        if (!nextVersion) throw new Error('Published version unavailable')
-        if (active) {
-          setHead(nextHead)
-          setVersion(nextVersion)
-          setLimit(Math.min(nextHead.offlinePolicy.maxQuestions, nextVersion.cardCount))
-        }
-      })
-      .catch(() => { if (active) setError('This online deck is unavailable or you do not have access.') })
+    setLoaded(null); setLoading(true); setError('')
+    if (!user) return () => { active = false }
+    void loadCloudDeck(user, deckId).then((value) => { if (active) setLoaded(value) })
+      .catch((cause) => { if (active) setError(describeCloudError(cause, 'The cloud deck could not be loaded.')) })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
-  }, [deckId])
-
-  if (loading) return <main className="grid min-h-[65vh] place-items-center"><span className="loading loading-spinner loading-lg text-primary" /></main>
-  if (!head || !version) return <main className="grid min-h-[65vh] place-items-center px-4"><section className="text-center"><h1 className="text-3xl font-black">Online deck unavailable</h1><p className="mt-2 text-base-content/60">{error}</p><Link to={paths.dashboard} className="btn btn-primary mt-5">Dashboard</Link></section></main>
-
-  const owner = user?.uid === head.ownerId
-  return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
-      <section className="rounded-3xl border border-primary/20 bg-base-100 p-6 shadow-xl sm:p-9">
-        <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
-          <div><div className="badge badge-primary gap-1"><Cloud size={13} /> Live online deck</div><h1 className="mt-4 text-3xl font-black">{version.title}</h1><p className="mt-2 max-w-2xl text-base-content/60">{version.description}</p><div className="mt-4 flex flex-wrap gap-2"><span className="badge badge-outline">Version {version.version}</span><span className="badge badge-outline">{version.cardCount} questions</span><span className="badge badge-outline">{head.status}</span></div></div>
-          <div className="flex flex-wrap gap-2">
-            <Link to={onlineDeckStudySeriesPath(head.id)} className="btn btn-primary gap-2"><Play size={17} />Study 30 questions</Link>
-            {owner && <Link to={onlineDeckEditPath(head.id)} className="btn btn-outline gap-2"><Edit3 size={17} />Publish update</Link>}
-            {owner && <Link to={onlineDeckContinuePath(head.id)} className="btn btn-outline gap-2"><RefreshCw size={17} />Create next part</Link>}
-          </div>
-        </div>
-        {version.studyGuide && <div className="mt-7 whitespace-pre-wrap rounded-2xl bg-base-200/45 p-5 leading-relaxed text-base-content/75">{version.studyGuide}</div>}
-      </section>
-
-      <section className="mt-6 rounded-3xl border border-base-300 bg-base-100 p-6 shadow-sm" aria-labelledby="offline-save-title">
-        <div className="flex items-start gap-3"><Download size={22} className="text-primary" /><div><h2 id="offline-save-title" className="text-xl font-bold">Save an offline snapshot</h2><p className="mt-1 text-sm text-base-content/55">Offline copies are frozen at this version and use independent local schedules.</p></div></div>
-        {!head.offlinePolicy.allowed ? <div className="alert mt-5"><LockKeyhole size={18} /><span>The creator disabled offline saves.</span></div> : (
-          <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-end">
-            <label className="form-control max-w-52"><span className="label-text mb-2 font-semibold">Questions to save</span><input type="number" min="1" max={Math.min(head.offlinePolicy.maxQuestions, version.cardCount)} value={limit} onChange={(event) => setLimit(Number(event.target.value))} className="input input-bordered" /></label>
-            <button className="btn btn-primary gap-2" onClick={async () => {
-              if (!user) return
-              const snapshot = selectOnlineDeckOfflineSnapshot(head, version, user.uid, limit)
-              const saved = await saveOnlineDeckOfflineSnapshot(snapshot)
-              navigate(deckPath(saved.id))
-            }}><Download size={17} />Save offline</button>
-          </div>
-        )}
-      </section>
-      <p className="mt-4 text-xs text-base-content/45">Signed in as {account?.nickname}. Online content may change when the creator publishes a new version; saved offline copies do not.</p>
-    </main>
-  )
+  }, [deckId, user, request])
+  if (loading) return <main className="grid min-h-[65vh] place-items-center"><span className="loading loading-spinner loading-lg" /></main>
+  if (!loaded) return <main className="grid min-h-[65vh] place-items-center px-4"><section className="text-center" role="alert"><h1 className="text-3xl font-black">Deck unavailable</h1><p className="mt-2">{error}</p><button className="btn btn-primary mt-5" onClick={() => setRequest((value) => value + 1)}>Retry</button><Link to={paths.dashboard} className="btn btn-ghost mt-5">Dashboard</Link></section></main>
+  const { head, version, deck, cards } = loaded
+  const owner = head.ownerId === user?.uid
+  return <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
+    <section className="rounded-3xl border border-primary/20 bg-base-100 p-6 shadow-xl sm:p-9">
+      <span className="badge badge-primary gap-1"><Cloud size={13} /> Saved to your account</span>
+      <h1 className="mt-4 text-3xl font-black">{version.title}</h1><p className="mt-2 text-base-content/60">{version.description}</p>
+      <div className="mt-4 flex flex-wrap gap-2"><span className="badge badge-outline">{version.cardCount} questions</span><span className="badge badge-outline">{head.visibility}</span><span className="badge badge-outline">Version {version.version}</span></div>
+      <div className="mt-6 grid gap-2 sm:grid-cols-2">
+        <Link to={deckStudyPath(head.id, 'due')} className="btn btn-primary">Review due</Link>
+        <Link to={deckStudyPath(head.id, 'practice')} className="btn btn-outline">Learn & practice</Link>
+        {owner && <Link to={onlineDeckEditPath(head.id)} className="btn btn-outline">Edit deck</Link>}
+        {owner && <button className="btn btn-outline" onClick={() => openShareModal(deck)}>Share deck</button>}
+        {owner && head.visibility !== 'public' && <button className="btn btn-outline" onClick={() => setPublishOpen(true)}>Publish publicly</button>}
+        {owner && <button className="btn btn-ghost text-error" onClick={() => setDeleteOpen(true)}>Delete deck</button>}
+      </div>
+      {error && <p role="alert" className="mt-4 text-error">{error}</p>}
+      {publishOpen && <section className="mt-5 rounded-xl border border-warning p-4" aria-label="Confirm public publication"><h2 className="font-bold">Publish for other learners?</h2><p className="mt-2 text-sm">Your deck content will become accessible to other signed-in learners. Private is the default until you confirm.</p><button disabled={busy} className="btn btn-primary mt-3" onClick={async () => {
+        if (!user) return
+        setBusy(true); setError('')
+        try { await withCloudDeadline(updateOnlineDeckPolicy(user, head.id, { visibility: 'public', offlinePolicy: { allowed: false, maxQuestions: 0 } })); setPublishOpen(false); setRequest((value) => value + 1); await loadLibrary() }
+        catch (cause) { setError(describeCloudError(cause, 'Publication failed.')) }
+        finally { setBusy(false) }
+      }}>Confirm public publication</button><button disabled={busy} className="btn btn-ghost mt-3" onClick={() => setPublishOpen(false)}>Cancel</button></section>}
+      {version.studyGuide && <div className="mt-7 whitespace-pre-wrap rounded-2xl bg-base-200/45 p-5 leading-relaxed">{version.studyGuide}</div>}
+      <p className="mt-6 text-xs text-base-content/50">Decks and review progress use cloud storage. An internet connection is required; offline copies are no longer created.</p>
+    </section>
+    <DeleteDeckDialog open={deleteOpen} deckTitle={deck.title} cardCount={cards.length} deleting={busy} deleteError={error}
+      onClose={() => { if (!busy) setDeleteOpen(false) }} onDelete={async () => {
+        if (!user) return
+        setBusy(true); setError('')
+        try { await withCloudDeadline(setOnlineDeckStatus(user, head.id, 'deleted')); await loadLibrary(); navigate(paths.dashboard) }
+        catch (cause) { setError(describeCloudError(cause, 'Deletion failed.')); setBusy(false) }
+      }} />
+  </main>
 }
 
 export function OnlineDeckEditRoute() {
   const { deckId = '' } = useParams()
-  const navigate = useNavigate()
   const { user } = useAuth()
-  const [saving, setSaving] = useState(false)
+  const { loadLibrary } = useOutletContext<AppShellContextValue>()
+  const navigate = useNavigate()
+  const [loaded, setLoaded] = useState<Awaited<ReturnType<typeof loadCloudDeck>> | null>(null)
   const [error, setError] = useState('')
-  const [localDeck, setLocalDeck] = useState<StudyDeck | null>(null)
-  const [localCards, setLocalCards] = useState<StudyCard[]>([])
   const [loading, setLoading] = useState(true)
-
+  const [saving, setSaving] = useState(false)
   useEffect(() => {
     let active = true
-    Promise.all([getDeck(deckId), getCardsByDeck(deckId)])
-      .then(([deck, cards]) => {
-        if (active) { setLocalDeck(deck ?? null); setLocalCards(cards) }
-      })
-      .catch(() => { if (active) { setLocalDeck(null); setLocalCards([]) } })
+    setLoaded(null); setLoading(true); setError('')
+    if (!user) return () => { active = false }
+    void loadCloudDeck(user, deckId).then((value) => {
+      if (value.head.ownerId !== user.uid) throw new Error('Only the owner can edit this deck.')
+      if (active) setLoaded(value)
+    }).catch((cause) => { if (active) setError(describeCloudError(cause, 'This deck could not be loaded.')) })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
-  }, [deckId])
-
-  if (loading) {
-    return <main className="grid min-h-[65vh] place-items-center"><span className="loading loading-spinner loading-lg" /></main>
-  }
-
-  if (!localDeck || !localCards.length) {
-    return (
-      <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
-        <div className="alert alert-error"><span>The local source deck is unavailable in this browser. Open the deck from your library and try again.</span></div>
-        <Link to={paths.dashboard} className="btn btn-outline mt-5">Back to dashboard</Link>
-      </main>
-    )
-  }
-
-  const publish = async (): Promise<void> => {
-    if (!user) return
-    setSaving(true); setError('')
-    try {
-      const duplicateCardIds = localCards.map((card) => card.id).filter((id, index, all) => all.indexOf(id) !== index)
-      if (duplicateCardIds.length) throw new Error(`This deck has duplicate card IDs (${duplicateCardIds.slice(0, 3).join(', ')}). Edit the deck and save it once to regenerate IDs, then publish again.`)
-      // A never-published deck is unreadable under some older rule states; treat as new.
-      const existing = await getOnlineDeckHead(deckId).catch(() => null)
-      const inputCards = localCards.map((card) => ({ id: card.id, question: card.question, answer: card.answer, distractors: card.distractors }))
-      if (!existing) {
-        await createOnlineDeck(user, { deckId, expectedBaseVersion: 0, visibility: 'public', offlinePolicy: { allowed: true, maxQuestions: Math.max(30, Math.min(500, localCards.length)) }, title: localDeck.title, description: localDeck.description, studyGuide: localDeck.studyGuide, cards: inputCards })
-      } else {
-        await publishOnlineDeckVersion(user, deckId, { expectedBaseVersion: existing.latestVersion, title: localDeck.title, description: localDeck.description, studyGuide: localDeck.studyGuide, cards: inputCards })
-      }
-      navigate(onlineDeckPath(deckId))
-    } catch (publishError: unknown) {
-      setError(publishError instanceof Error ? publishError.message : 'Online deck could not be published.')
-      setSaving(false)
-    }
-  }
-
-  return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
-      <section className="rounded-3xl border border-base-300 bg-base-100 p-6 shadow-xl sm:p-9">
-        <div className="flex items-center gap-3"><RefreshCw className="text-primary" /><div><h1 className="text-3xl font-black">Publish online deck version</h1><p className="mt-1 text-base-content/55">Publishes the current local deck content as an immutable successor version. Public decks appear for every learner in the deck recommendations on the home page.</p></div></div>
-        {error && <div className="alert alert-error mt-5"><span>{error}</span></div>}
-
-        <section className="mt-7 rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/10 via-base-100 to-secondary/10 p-5 sm:p-7" aria-label="Publish preview">
-          <div className="flex items-center gap-2">
-            <span className="badge badge-primary badge-outline gap-1.5"><Layers3 size={13} aria-hidden="true" /> What will be published</span>
-            <span className="ml-auto text-xs font-semibold text-base-content/55">{localCards.length} cards</span>
-          </div>
-          <h2 className="mt-3 text-2xl font-black tracking-tight">{localDeck.title || 'Untitled deck'}</h2>
-          {localDeck.description && <p className="mt-2 text-sm leading-relaxed text-base-content/65">{localDeck.description}</p>}
-          {localDeck.studyGuide && (
-            <div className="mt-4 rounded-2xl border border-base-300 bg-base-200/50 p-4">
-              <p className="text-xs font-bold uppercase tracking-wide text-base-content/50">Study guide</p>
-              <p className="mt-2 max-h-40 overflow-y-auto whitespace-pre-wrap text-sm leading-relaxed text-base-content/75">{localDeck.studyGuide}</p>
-            </div>
-          )}
-          <ol className="mt-5 grid gap-3">
-            {localCards.map((card, index) => (
-              <li key={card.id || index} className="rounded-2xl border border-base-300 bg-base-100 p-4">
-                <p className="text-sm font-semibold">{index + 1}. {card.question}</p>
-                <p className="mt-1 text-sm text-success"><span className="font-bold">Answer:</span> {card.answer}</p>
-                {card.distractors.length > 0 && (
-                  <p className="mt-1 text-xs text-base-content/50"><span className="font-semibold">Distractors:</span> {card.distractors.join(' · ')}</p>
-                )}
-              </li>
-            ))}
-          </ol>
-        </section>
-
-        <button className="btn btn-primary mt-7 w-full" disabled={saving} onClick={() => void publish()}>{saving ? <span className="loading loading-spinner loading-sm" /> : 'Publish current local content'}</button>
-        <Link to={deckPath(deckId)} className="btn btn-ghost mt-3 w-full">Cancel</Link>
-      </section>
-    </main>
-  )
+  }, [deckId, user])
+  if (loading) return <main className="grid min-h-[65vh] place-items-center"><span className="loading loading-spinner loading-lg" /></main>
+  if (!loaded) return <main className="p-8"><p role="alert">{error}</p><Link to={onlineDeckPath(deckId)} className="btn mt-4">Back</Link></main>
+  return <main className="mx-auto max-w-5xl px-4 py-8"><h1 className="text-3xl font-black">Edit cloud deck</h1>
+    <DeckEditor initialDraft={{ title: loaded.version.title, description: loaded.version.description, studyGuide: loaded.version.studyGuide ?? '', cards: loaded.cards }}
+      saving={saving} saveError={error} onCancel={() => navigate(onlineDeckPath(deckId))} onSave={async (draft) => {
+        if (!user || saving) return
+        setSaving(true); setError('')
+        try {
+          await withCloudDeadline(publishOnlineDeckVersion(user, deckId, { ...draft, expectedBaseVersion: loaded.version.version }))
+          await loadLibrary(); navigate(onlineDeckPath(deckId))
+        } catch (cause) { setError(describeCloudError(cause, 'The update could not be saved.')); setSaving(false) }
+      }} />
+  </main>
 }

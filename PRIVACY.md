@@ -1,87 +1,77 @@
-# Kogni Account Privacy and Presence
+# Kogni Account and Study Data Privacy
 
 Effective version: `privacy-2026-11-10-ai-series-1`
 
-This document is a product disclosure describing how the implemented Kogni account, onboarding, nickname, discoverability, and presence features handle data. It is not legal advice and is not a substitute for a privacy policy reviewed for the jurisdictions where Kogni is offered.
+This document describes how the implemented Kogni account, online deck, study, sharing, recovery, and presence features handle data. It is a product disclosure, not legal advice or a substitute for a privacy policy reviewed for every jurisdiction where Kogni is offered.
 
 ## Private account record
 
-After a signed-in person completes onboarding, Kogni stores an owner-readable account record containing:
+After onboarding, Kogni stores an owner-readable Firebase account record containing:
 
 - the Firebase user ID;
-- the chosen nickname and its lowercase canonical form;
+- the chosen nickname and lowercase canonical form;
 - account creation and update timestamps;
-- the privacy disclosure version acknowledged, its timestamp, and acknowledgement history; and
+- the acknowledged privacy version, timestamp, and acknowledgement history; and
 - discoverability and presence preferences.
 
-Both preferences default to `false`. Authentication-provider data such as email addresses is not copied into account or public profile records by this implementation.
+Discoverability and presence default to `false`. This implementation does not copy the authentication email address into account or public profile records.
 
-## Nicknames
+## Online decks and schedules
 
-Nicknames must contain 3–24 ASCII letters, digits, or underscores. Kogni reserves the lowercase canonical nickname in a separate claim, so names are unique without regard to case. For example, `Study_User` and `study_user` are the same claimed identity.
+Normal new, manual, AI-generated, shared, and portal-imported decks are Firebase account-backed and require an internet connection. Their review schedules are also stored in Firebase for the signed-in account. Kogni no longer creates offline deck saves.
 
-Onboarding writes the nickname claim and private account atomically. Renaming atomically reserves the new claim, updates the account and any enabled public projection, and releases the former claim. Claims themselves are not readable by clients.
+New decks are private by default. A deck becomes publicly accessible or discoverable only after its owner explicitly confirms publication. Sharing and portal access expose content according to the access the owner intentionally grants; they do not make every owner deck public.
 
-## Discoverability
+Deleting an online deck creates a terminal private tombstone that ends active library, catalog, sharing, and study access. This is not a promise of immediate physical erasure: retained immutable versions, schedules, audit data, or backups may remain according to service retention and operational requirements.
 
-Discoverability is opt-in. When enabled, Kogni publishes only:
+## Legacy decks on this device
 
-- user ID;
-- nickname;
-- canonical nickname; and
-- projection update timestamp.
+Existing decks in this browser's IndexedDB are not automatically uploaded, modified, scheduled in the cloud, or deleted. They are exposed only through the explicit, read-only **Legacy decks on this device** recovery screen.
 
-No email address is included. Disabling discoverability removes the projection.
+Recovery first shows a deck preview and then requires confirmation before uploading that deck's content as a new private Firebase copy. The original IndexedDB deck and its schedule remain unchanged. The new cloud copy starts with a fresh review schedule; legacy due dates, intervals, repetitions, and answer history are not copied.
 
-## Presence
+Legacy device data can remain after sign-out and can be lost if browser site data is cleared. It is not available from another browser or device unless the user explicitly recovers it to the account first.
 
-Presence is opt-in and is tracked as opaque per-session markers. Multiple tabs or devices can each register a session. The public API aggregates these markers to `{ online: boolean }` and intentionally does not expose exact disconnect time or last-seen time.
+## Browser-local settings
 
-Firebase disconnect cleanup removes a session marker when that connection ends. Presence can therefore be briefly stale during network transitions, and it communicates availability rather than guaranteed activity.
+The theme, sidebar preference, Gemini model settings, and user-supplied Gemini API key remain local to the browser. The Gemini key is stored in `localStorage`, is not synchronized through Firebase, and can be read by same-origin scripts, extensions, shared browser profiles, or people with device access. Users should use a dedicated restricted key, control its quota, and revoke or rotate it if exposure is suspected.
 
-Disabling presence removes the user's current session markers as part of the preference update. A ready, privacy-acknowledged account is required to read another opted-in user's presence.
+Signing out removes the local Gemini key/model settings but does not automatically remove theme/sidebar preferences or existing legacy IndexedDB data. Clearing site data removes all of them from that browser but does not delete account-backed decks or schedules.
 
-## AI-generated deck series
+## Uploaded sources and optional Gemini BYOK
 
-Creators may explicitly generate a continuation part from the published series topic, study guide, and prior series questions using the creator's locally configured Gemini key and quota. Players do not trigger Gemini generation or AI charges by completing a part. Kogni does not send player ratings or private schedules for continuation generation. The creator reviews and publishes each continuation before it becomes available to learners.
+Kogni provides no shared Gemini key. AI deck creation and source-grounded regeneration require the user's own Google AI Studio key, model access, project quota, and any resulting charges. Explicit settings verification sends a key-authenticated model metadata request but uploads no source and generates no content.
 
-## Public player profiles and following
+Generation sends the selected PDF, JPEG, PNG, or WebP source from the browser to Gemini for the requested generation. Kogni does not retain the uploaded source file. Regeneration therefore requires selecting the source again. The Gemini key is never stored in Firebase or included in decks, shares, portals, activity logs, analytics, or URLs. Recipients do not use the creator's key or quota.
 
-Discoverable signed-in learners may have a Functions-owned public player projection containing only UID, canonical nickname, Community XP labeled client-reported, follower/following counts, and published-deck count. Public profiles do not include email, provider identity, acknowledgement history, local/offline decks, schedules, review history, last-seen time, raw presence sessions, devices, IP addresses, or follower identities.
+Creators may explicitly generate a continuation from disclosed published-series context using their locally configured key and quota. Players do not trigger Gemini generation or charges by completing a part, and player ratings or private schedules are not sent for continuation generation.
 
-Following is immediate and does not grant deck or presence access. Public pages show aggregate counts only; follower/following identities remain private to the account owner. Blocking is private, removes existing follows in both directions, and prevents public profile retrieval. Disabling discoverability removes the public profile and existing follow edges. Exact public deck URLs retain their separate deck-visibility behavior, and already downloaded copies cannot be retracted.
+## Nicknames, discoverability, and presence
 
-Community XP is client-reported and unverified. It is not suitable for rewards, permissions, moderation, or other authoritative decisions.
+Nicknames contain 3–24 ASCII letters, digits, or underscores and are unique without regard to case. Onboarding atomically reserves the canonical nickname and creates the private account. Renaming reserves the new claim, updates enabled projections, and releases the old claim.
 
-## Editing, regeneration, and deletion
+Discoverability is opt-in. When enabled, Kogni may publish the user ID, nickname, canonical nickname, and projection update timestamp. Disabling it removes the searchable projection.
 
-Kogni does not retain uploaded source files. Source-grounded regeneration requires the learner to select the source again and creates a new independent local deck, leaving existing progress and publications unchanged. Editing a question, answer, or distractors resets that card's local learning schedule; editing deck metadata or the study guide does not.
+Presence is separately opt-in and uses opaque per-session markers. Eligible signed-in learners receive only a coarse `{ online: boolean }`, not exact disconnect or last-seen time, IP address, device, user agent, or raw session IDs. Disconnect cleanup removes session markers, but network transitions can make presence briefly stale.
 
-Deleting a local deck removes its cards, local schedules, and snapshot provenance from that browser and revokes an active portal by default. It does not remove online published versions, direct-share snapshots, portals already imported elsewhere, or other learners' offline copies. Online deletion is a terminal private tombstone rather than immediate physical erasure; retained immutable versions and online schedules follow the service retention policy.
+## Public profiles, following, and community data
 
-## Study-guide coverage
+Discoverable profiles may show the canonical nickname, Community XP labeled client-reported, aggregate follower/following counts, published-deck count, and coarse presence. They do not show email, provider identity, acknowledgement history, private decks, private schedules, review history, follower identities, devices, IP addresses, or exact last-seen time.
 
-New verified decks require each complete answer phrase to appear naturally in the study guide after deterministic Unicode, case, whitespace, quote, and hyphen normalization. Kogni does not store an explicit question-to-answer or card-to-guide mapping. This is a syntactic coverage guarantee, not a claim that the guide proves the answer's factual accuracy. Legacy unverified decks may not provide this guarantee.
+Following is immediate but grants no deck or presence access. Blocking is private, removes follows in both directions, and prevents public profile retrieval. Community XP is client-reported and unsuitable for rewards, permissions, moderation, or other authoritative decisions.
 
-## Optional Google AI Studio BYOK
+## Access controls and user controls
 
-Kogni does not provide a shared Gemini key. AI import, source re-upload regeneration, and creator continuation generation require the user or creator's own Google AI Studio key, model access, project quota, and any resulting charges. Browsing, copying, practicing, reviewing, Community, profiles, leaderboards, and shared decks remain key-free.
+Realtime Database rules default to deny and enforce owner-only access for private account records, private decks, and per-account schedules. The owner-only `/api/decks` endpoint requires Firebase authentication, a ready account, and the current privacy acknowledgement, and returns only active deck metadata owned by the caller. Discoverability is not used to authorize access to the owner's private library.
 
-Explicit settings verification sends a key-authenticated model metadata request to Google but creates no content and uploads no source. Generation sends the selected source file or the published continuation context disclosed to the creator. A saved key remains a browser-readable localStorage value and may be accessible to same-origin scripts, extensions, shared browser profiles, or people with device access. It is never stored in Firebase or included in decks, shares, portals, activity logs, analytics, or URLs. Recipients and players never use the creator's key or quota. Users can remove settings, sign out, clear site data, or revoke/rotate a key in Google AI Studio.
-
-## Access controls and retention
-
-Realtime Database rules default to deny and provide owner-only access to private accounts. New account, public-account, nickname-claim, and presence paths enforce their contracts. Existing legacy product paths retain their prior access model until their callers are integrated with account readiness.
-
-Account acknowledgement history and timestamps remain with the private account record. Public projections are removed when discoverability is disabled. Session markers are removed on disconnect, explicit stop, or when presence is disabled.
-
-## User controls
-
-The backend contracts support:
+Implemented controls include:
 
 - choosing or renaming a nickname;
 - enabling or disabling discoverability;
-- enabling or disabling presence; and
-- reading the signed-in user's private account record.
+- enabling or disabling presence;
+- keeping new decks private or explicitly publishing them;
+- deleting an online deck to create a private tombstone;
+- reading the signed-in user's account-backed library; and
+- previewing and explicitly recovering legacy device decks as private cloud copies.
 
-Account deletion is not added by this backend slice and must be coordinated with authentication deletion and cleanup of all owned legacy data before being presented as a complete deletion control.
+Disabling discoverability removes public profile projections, and disabling presence removes active presence sessions. Historical immutable records may retain data required by their retention contract. Complete account deletion must coordinate Firebase Authentication deletion with cleanup or retention of all owned account, deck, schedule, sharing, social, and legacy data before it is presented as a complete deletion control.

@@ -11,6 +11,7 @@ const Onboarding = lazy(() => import('./components/Onboarding'))
 const PrivacyNotice = lazy(() => import('./components/PrivacyNotice'))
 const AppShell = lazy(() => import('./routes/AppShell'))
 const NotFoundRoute = lazy(() => import('./routes/NotFoundRoute'))
+const LegacyDecksRoute = lazy(() => import('./routes/LegacyDecksRoute'))
 const PortalRoute = lazy(() => import('./routes/PortalRoute'))
 const PublicPlayerRoute = lazy(() => import('./routes/PublicPlayerRoute'))
 const OnlineDeckIndexRoute = lazy(() => import('./routes/OnlineDeckRoutes').then((module) => ({ default: module.OnlineDeckIndexRoute })))
@@ -32,7 +33,7 @@ const StudyRoute = lazy(() => import('./routes/routeScreens').then((module) => (
 function AuthenticatedShell() {
   const { user } = useAuth()
   if (!user) return null
-  return <AppShell user={user} />
+  return <AppShell key={user.uid} user={user} />
 }
 
 function OnboardingRoute() {
@@ -79,6 +80,7 @@ export default function App() {
       <Route element={<ProtectedRoute />}>
         <Route element={<AuthenticatedShell />}>
           <Route index element={<DashboardRoute />} />
+          <Route path="legacy-decks" element={<LegacyDecksRoute />} />
           <Route path="import" element={<ImportRoute />} />
           <Route path="community" element={<CommunityRoute />} />
           <Route path="leaderboards" element={<GlobalLeaderboardRoute />} />

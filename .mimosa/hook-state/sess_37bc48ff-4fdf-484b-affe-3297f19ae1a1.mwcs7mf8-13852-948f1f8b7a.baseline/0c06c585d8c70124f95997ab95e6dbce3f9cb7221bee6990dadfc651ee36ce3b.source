@@ -1,0 +1,309 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const strict_1 = __importDefault(require("node:assert/strict"));
+const node_test_1 = require("node:test");
+const core_test_helpers_js_1 = require("./core-test-helpers.js");
+const social_core_js_1 = require("./social-core.js");
+const player_decks_core_js_1 = require("./player-decks-core.js");
+const discovery_core_js_1 = require("./discovery-core.js");
+const version = 'privacy-2026-11-10-ai-series-1';
+function seed() {
+    return (0, core_test_helpers_js_1.memoryDatabase)({ accounts: { alice: (0, core_test_helpers_js_1.eligibleTestAccount)('alice'), bob: (0, core_test_helpers_js_1.eligibleTestAccount)('bob') }, leaderboard: { bob: { xp: 42 } } });
+}
+function deckHead(id, ownerId = 'bob', updatedAt = 100, overrides = {}) {
+    return {
+        id, ownerId, visibility: 'public', status: 'active', latestVersion: 1,
+        title: `Deck ${id}`, description: 'Safe metadata', cardCount: 10, updatedAt,
+        ...overrides,
+    };
+}
+function seedDecks(count) {
+    const db = seed();
+    for (let index = 0; index < count; index += 1) {
+        const id = `deck-${String(index).padStart(3, '0')}`;
+        db.write(`onlineDecks/${id}`, { head: deckHead(id, 'bob', 1000 - Math.floor(index / 3)), versions: { private: true } });
+    }
+    return db;
+}
+(0, node_test_1.test)('owner summary uses canonical edges, works while private, and revalidates caller readiness', async () => {
+    const db = seed();
+    db.write('accounts/alice/preferences/discoverable', false);
+    const incoming = { followerUid: 'bob', followedUid: 'alice', createdAt: 1 };
+    const outgoing = { followerUid: 'alice', followedUid: 'bob', createdAt: 2 };
+    db.write(`playerFollowEdges/${(0, social_core_js_1.followEdgeId)('bob', 'alice')}`, incoming);
+    db.write(`playerFollowEdges/${(0, social_core_js_1.followEdgeId)('alice', 'bob')}`, outgoing);
+    db.write('playerFollowEdges/not-canonical', incoming);
+    db.write('playerFollowEdges/malformed', { ...outgoing, createdAt: -1 });
+    strict_1.default.deepEqual(await (0, social_core_js_1.getSocialSummaryService)(db.database, 'alice', version), { followerCount: 1, followingCount: 1 });
+    const original = db.database.ref.bind(db.database);
+    let accountReads = 0;
+    db.database.ref = (path) => {
+        const reference = original(path);
+        if (path === 'accounts/alice') {
+            const get = reference.get.bind(reference);
+            reference.get = async () => {
+                accountReads += 1;
+                if (accountReads === 2)
+                    db.write('accounts/alice/privacy/currentVersion', 'stale');
+                return get();
+            };
+        }
+        return reference;
+    };
+    await strict_1.default.rejects(() => (0, social_core_js_1.getSocialSummaryService)(db.database, 'alice', version), (error) => error instanceof social_core_js_1.SocialError && error.code === 'failed-precondition');
+});
+(0, node_test_1.test)('player decks filter canonical active public metadata and paginate ties without duplicates', async () => {
+    const db = seedDecks(24);
+    db.write('onlineDecks/private', { head: deckHead('private', 'bob', 2000, { visibility: 'private' }) });
+    db.write('onlineDecks/archived', { head: deckHead('archived', 'bob', 2000, { status: 'archived' }) });
+    db.write('onlineDecks/other', { head: deckHead('other', 'carol', 2000) });
+    const first = await (0, player_decks_core_js_1.listPlayerDecksService)(db.database, 'alice', 'bob', version);
+    strict_1.default.equal(first.items.length, 20);
+    strict_1.default.equal(first.hasMore, true);
+    strict_1.default.ok(first.nextCursor);
+    strict_1.default.ok(first.items.every((item) => Object.keys(item).sort().join(',') === 'cardCount,description,id,latestVersion,ownerId,ownerNickname,ownerNicknameCanonical,title,titleCanonical,updatedAt'));
+    for (let index = 1; index < first.items.length; index += 1) {
+        const previous = first.items[index - 1];
+        const current = first.items[index];
+        strict_1.default.ok(previous.updatedAt > current.updatedAt || (previous.updatedAt === current.updatedAt && previous.id < current.id));
+    }
+    const second = await (0, player_decks_core_js_1.listPlayerDecksService)(db.database, 'alice', 'bob', version, first.nextCursor);
+    strict_1.default.equal(second.items.length, 4);
+    strict_1.default.equal(second.hasMore, false);
+    strict_1.default.equal(second.nextCursor, undefined);
+    strict_1.default.equal(new Set([...first.items, ...second.items].map((item) => item.id)).size, 24);
+    await strict_1.default.rejects(() => (0, player_decks_core_js_1.listPlayerDecksService)(db.database, 'alice', 'bob', version, 'bad'), social_core_js_1.SocialError);
+    await strict_1.default.rejects(() => (0, player_decks_core_js_1.listPlayerDecksService)(db.database, 'alice', 'bob', version, (0, player_decks_core_js_1.encodePlayerDeckCursor)({ updatedAt: 1, id: 'bad/id' })), social_core_js_1.SocialError);
+});
+(0, node_test_1.test)('player deck listing enforces privacy, both block directions and bounded owner work', async () => {
+    for (const path of ['accounts/bob/preferences/discoverable', 'accounts/bob/privacy/currentVersion', 'playerBlocks/alice/bob', 'playerBlocks/bob/alice']) {
+        const db = seedDecks(1);
+        db.write(path, path.endsWith('discoverable') ? false : path.endsWith('currentVersion') ? 'stale' : 1);
+        await strict_1.default.rejects(() => (0, player_decks_core_js_1.listPlayerDecksService)(db.database, 'alice', 'bob', version), (error) => error instanceof social_core_js_1.SocialError && error.code === 'not-found');
+    }
+    const overflow = seedDecks(player_decks_core_js_1.PLAYER_DECK_MAX_OWNER_RECORDS + 1);
+    await strict_1.default.rejects(() => (0, player_decks_core_js_1.listPlayerDecksService)(overflow.database, 'alice', 'bob', version), (error) => error instanceof social_core_js_1.SocialError && error.code === 'failed-precondition');
+});
+(0, node_test_1.test)('player deck response boundary refills deletion and fails closed on changed metadata', async () => {
+    const refill = seedDecks(22);
+    const original = refill.database.ref.bind(refill.database);
+    refill.database.ref = (path) => {
+        const reference = original(path);
+        if (path === 'onlineDecks/deck-005/head') {
+            const get = reference.get.bind(reference);
+            reference.get = async () => {
+                refill.write('onlineDecks/deck-005/head/visibility', 'private');
+                return get();
+            };
+        }
+        return reference;
+    };
+    const page = await (0, player_decks_core_js_1.listPlayerDecksService)(refill.database, 'alice', 'bob', version);
+    strict_1.default.equal(page.items.length, 20);
+    strict_1.default.equal(page.hasMore, true);
+    strict_1.default.ok(page.items.every((item) => item.id !== 'deck-005'));
+    const mutation = seedDecks(22);
+    const mutationOriginal = mutation.database.ref.bind(mutation.database);
+    mutation.database.ref = (path) => {
+        const reference = mutationOriginal(path);
+        if (path === 'onlineDecks/deck-000/head') {
+            const get = reference.get.bind(reference);
+            reference.get = async () => {
+                mutation.write('onlineDecks/deck-000/head/title', 'Changed');
+                return get();
+            };
+        }
+        return reference;
+    };
+    await strict_1.default.rejects(() => (0, player_decks_core_js_1.listPlayerDecksService)(mutation.database, 'alice', 'bob', version), (error) => error instanceof social_core_js_1.SocialError && error.code === 'failed-precondition');
+});
+(0, node_test_1.test)('player deck listing revalidates caller and target at final response boundary', async () => {
+    for (const target of ['accounts/alice', 'accounts/bob']) {
+        const db = seedDecks(1);
+        const original = db.database.ref.bind(db.database);
+        let reads = 0;
+        db.database.ref = (path) => {
+            const reference = original(path);
+            if (path === target) {
+                const get = reference.get.bind(reference);
+                reference.get = async () => {
+                    reads += 1;
+                    if (reads >= (target.endsWith('alice') ? 2 : 3))
+                        db.write(`${target}/privacy/currentVersion`, 'stale');
+                    return get();
+                };
+            }
+            return reference;
+        };
+        await strict_1.default.rejects(() => (0, player_decks_core_js_1.listPlayerDecksService)(db.database, 'alice', 'bob', version), social_core_js_1.SocialError);
+    }
+});
+(0, node_test_1.test)('core rejects invalid/path/control UIDs before any database reads', async () => {
+    const db = seed();
+    for (const uid of ['', 'a/b', 'a\u0000b', 'a\nb', '.', 1])
+        strict_1.default.throws(() => (0, social_core_js_1.requireTargetUid)({ uid }), social_core_js_1.SocialError);
+    strict_1.default.throws(() => (0, social_core_js_1.requireTargetUid)({ uid: 'bob', extra: true }), social_core_js_1.SocialError);
+    await strict_1.default.rejects(() => (0, social_core_js_1.followPlayerService)(db.database, 'alice', 'a/b', version), social_core_js_1.SocialError);
+    strict_1.default.equal(db.reads.length, 0);
+});
+(0, node_test_1.test)('canonical follow is idempotent and reconciles counts synchronously; unfollow repairs orphan projections', async () => {
+    const db = seed();
+    const id = (0, social_core_js_1.followEdgeId)('alice', 'bob');
+    await (0, social_core_js_1.followPlayerService)(db.database, 'alice', 'bob', version, 10);
+    await (0, social_core_js_1.followPlayerService)(db.database, 'alice', 'bob', version, 20);
+    strict_1.default.deepEqual(db.read(`playerFollowEdges/${id}`), { followerUid: 'alice', followedUid: 'bob', createdAt: 10 });
+    strict_1.default.equal(db.read('playerFollowing/alice/bob/edgeId'), id);
+    strict_1.default.equal(db.read('publicPlayerProfiles/alice/followingCount'), 1);
+    strict_1.default.equal(db.read('publicPlayerProfiles/bob/followerCount'), 1);
+    db.write('onlineDecks/public/head', { ownerId: 'bob', visibility: 'public', status: 'active' });
+    db.write('onlineDecks/private/head', { ownerId: 'bob', visibility: 'private', status: 'active' });
+    await (0, social_core_js_1.followPlayerService)(db.database, 'bob', 'alice', version, 30);
+    const profile = await (0, social_core_js_1.getPlayerProfileService)(db.database, 'alice', 'bob', version);
+    strict_1.default.equal(profile.profile.communityXp, 42);
+    strict_1.default.equal(profile.profile.xpTrust, 'client-reported');
+    strict_1.default.equal(profile.profile.publishedDeckCount, 1);
+    strict_1.default.deepEqual(profile.social, { following: true, followedBy: true });
+    await (0, social_core_js_1.unfollowPlayerService)(db.database, 'alice', 'bob', version);
+    db.write('playerFollowing/alice/bob', { stale: true });
+    db.write('playerFollowers/bob/alice', { stale: true });
+    await (0, social_core_js_1.unfollowPlayerService)(db.database, 'alice', 'bob', version);
+    strict_1.default.equal(db.read('playerFollowing/alice/bob'), null);
+    strict_1.default.equal(db.read('playerFollowers/bob/alice'), null);
+    strict_1.default.equal(db.read('publicPlayerProfiles/bob/followerCount'), 0);
+});
+(0, node_test_1.test)('follow/profile gate current caller, target privacy and both block directions', async () => {
+    for (const path of ['accounts/bob/preferences/discoverable', 'accounts/bob/privacy/currentVersion', 'playerBlocks/alice/bob', 'playerBlocks/bob/alice']) {
+        const db = seed();
+        db.write(path, path.endsWith('discoverable') ? false : path.endsWith('currentVersion') ? 'stale' : 1);
+        await strict_1.default.rejects(() => (0, social_core_js_1.followPlayerService)(db.database, 'alice', 'bob', version), (e) => e instanceof social_core_js_1.SocialError && e.code === 'not-found');
+        await strict_1.default.rejects(() => (0, social_core_js_1.getPlayerProfileService)(db.database, 'alice', 'bob', version), (e) => e instanceof social_core_js_1.SocialError && e.code === 'not-found');
+        strict_1.default.equal(db.read(`playerFollowEdges/${(0, social_core_js_1.followEdgeId)('alice', 'bob')}`), null);
+    }
+    const db = seed();
+    db.write('accounts/alice/privacy/currentVersion', 'stale');
+    await strict_1.default.rejects(() => (0, social_core_js_1.unfollowPlayerService)(db.database, 'alice', 'bob', version), (e) => e instanceof social_core_js_1.SocialError && e.code === 'failed-precondition');
+});
+(0, node_test_1.test)('presence uses true markers, both target opt-ins and privacy; unavailable/private/blocked look offline', async () => {
+    const db = seed();
+    for (const marker of [null, {}, { tab: false }, { tab: 1 }, { tab: 'true' }]) {
+        db.write('presenceSessions/bob', marker);
+        strict_1.default.deepEqual(await (0, discovery_core_js_1.getPlayerPresenceService)(db.database, 'alice', 'bob', version), { online: false });
+    }
+    db.write('presenceSessions/bob', { first: false, second: true });
+    strict_1.default.deepEqual(await (0, discovery_core_js_1.getPlayerPresenceService)(db.database, 'alice', 'bob', version), { online: true });
+    for (const path of ['accounts/bob/preferences/presence', 'accounts/bob/preferences/discoverable', 'accounts/bob/privacy/currentVersion', 'playerBlocks/bob/alice', 'playerBlocks/alice/bob']) {
+        const isolated = seed();
+        isolated.write('presenceSessions/bob', { tab: true });
+        isolated.write(path, path.includes('preferences') ? false : path.includes('currentVersion') ? 'stale' : 1);
+        strict_1.default.deepEqual(await (0, discovery_core_js_1.getPlayerPresenceService)(isolated.database, 'alice', 'bob', version), { online: false });
+    }
+    strict_1.default.deepEqual(await (0, discovery_core_js_1.getPlayerPresenceService)(db.database, 'alice', 'missing', version), { online: false });
+});
+function discoverySeed(count, invalidPrefix = 0) {
+    const db = seed();
+    for (let index = 0; index < count + invalidPrefix; index += 1) {
+        const uid = `p${String(index).padStart(4, '0')}`;
+        db.write(`accounts/${uid}`, (0, core_test_helpers_js_1.eligibleTestAccount)(uid));
+        db.write(`presenceSessions/${uid}`, { tab: index >= invalidPrefix });
+    }
+    return db;
+}
+(0, node_test_1.test)('online gets a real 21st eligible sentinel, keyset continuation, bounded candidates and exact account reads', async () => {
+    const exactly = discoverySeed(20, 120);
+    const lastPage = await (0, discovery_core_js_1.listOnlinePlayersService)(exactly.database, 'alice', version);
+    strict_1.default.equal(lastPage.items.length, 20);
+    strict_1.default.equal(lastPage.hasMore, false);
+    const more = discoverySeed(21, 120);
+    const page = await (0, discovery_core_js_1.listOnlinePlayersService)(more.database, 'alice', version);
+    strict_1.default.equal(page.items.length, 20);
+    strict_1.default.equal(page.hasMore, true);
+    const next = await (0, discovery_core_js_1.listOnlinePlayersService)(more.database, 'alice', version, page.nextCursor);
+    strict_1.default.equal(next.items.length, 1);
+    strict_1.default.equal(next.hasMore, false);
+    strict_1.default.notEqual(next.items[0]?.uid, page.items[19]?.uid);
+    strict_1.default.ok(more.reads.every(({ path }) => path !== 'accounts' && path !== ''));
+    const presenceReads = more.reads.filter(({ path }) => path === 'presenceSessions');
+    strict_1.default.ok(presenceReads.every(({ limit }) => limit === discovery_core_js_1.PRESENCE_BATCH_SIZE));
+    strict_1.default.ok(presenceReads.some(({ after }) => after !== undefined));
+});
+(0, node_test_1.test)('online excludes caller/blocks/private/stale/opted-out accounts and rejects ineligible callers', async () => {
+    const db = seed();
+    db.write('presenceSessions/alice', { tab: true });
+    db.write('presenceSessions/bob', { tab: true });
+    db.write('playerBlocks/bob/alice', 1);
+    strict_1.default.deepEqual(await (0, discovery_core_js_1.listOnlinePlayersService)(db.database, 'alice', version), { items: [], hasMore: false });
+    db.write('playerBlocks/bob/alice', null);
+    db.write('accounts/bob/preferences/presence', false);
+    strict_1.default.deepEqual(await (0, discovery_core_js_1.listOnlinePlayersService)(db.database, 'alice', version), { items: [], hasMore: false });
+    db.write('accounts/alice/privacy/currentVersion', 'stale');
+    await strict_1.default.rejects(() => (0, discovery_core_js_1.listOnlinePlayersService)(db.database, 'alice', version), social_core_js_1.SocialError);
+});
+(0, node_test_1.test)('online revalidates selected candidates and refills after an opt-out/block race', async () => {
+    const db = discoverySeed(23);
+    const original = db.database.ref.bind(db.database);
+    let reads = 0;
+    db.database.ref = (path) => {
+        const reference = original(path);
+        if (path === 'accounts/p0000') {
+            const get = reference.get.bind(reference);
+            reference.get = async () => {
+                reads += 1;
+                if (reads === 2) {
+                    db.write('accounts/p0000/preferences/discoverable', false);
+                    db.write('playerBlocks/p0001/alice', 1);
+                }
+                return get();
+            };
+        }
+        return reference;
+    };
+    const page = await (0, discovery_core_js_1.listOnlinePlayersService)(db.database, 'alice', version);
+    strict_1.default.equal(page.items.length, 20);
+    strict_1.default.equal(page.hasMore, true);
+    strict_1.default.ok(page.items.every((player) => player.uid !== 'p0000' && player.uid !== 'p0001'));
+});
+(0, node_test_1.test)('exactly-full presence batches still revalidate when the next candidate batch is empty', async () => {
+    const db = discoverySeed(20, 80);
+    const original = db.database.ref.bind(db.database);
+    let presenceReads = 0;
+    db.database.ref = (path) => {
+        const reference = original(path);
+        if (path === 'presenceSessions') {
+            const orderByKey = reference.orderByKey.bind(reference);
+            reference.orderByKey = () => {
+                const query = orderByKey();
+                const startAfter = query.startAfter.bind(query);
+                query.startAfter = (cursor) => {
+                    const after = startAfter(cursor);
+                    const limitToFirst = after.limitToFirst.bind(after);
+                    after.limitToFirst = (limit) => {
+                        const bounded = limitToFirst(limit);
+                        const get = bounded.get.bind(bounded);
+                        bounded.get = async () => {
+                            presenceReads += 1;
+                            db.write('accounts/p0080/preferences/discoverable', false);
+                            return get();
+                        };
+                        return bounded;
+                    };
+                    return after;
+                };
+                return query;
+            };
+        }
+        return reference;
+    };
+    const page = await (0, discovery_core_js_1.listOnlinePlayersService)(db.database, 'alice', version);
+    strict_1.default.equal(presenceReads, 1);
+    strict_1.default.equal(page.items.length, 19);
+    strict_1.default.equal(page.hasMore, false);
+    strict_1.default.ok(page.items.every((player) => player.uid !== 'p0080'));
+});
+(0, node_test_1.test)('scan cap fails closed instead of fabricating a hasMore sentinel', async () => {
+    const db = discoverySeed(0, 1001);
+    await strict_1.default.rejects(() => (0, discovery_core_js_1.listOnlinePlayersService)(db.database, 'alice', version), (e) => e instanceof social_core_js_1.SocialError && e.code === 'failed-precondition');
+});
+//# sourceMappingURL=server-core.test.js.map

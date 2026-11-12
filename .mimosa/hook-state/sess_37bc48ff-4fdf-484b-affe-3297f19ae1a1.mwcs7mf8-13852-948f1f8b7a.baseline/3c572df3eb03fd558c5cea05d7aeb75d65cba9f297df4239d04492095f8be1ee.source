@@ -1,0 +1,27 @@
+export interface CoreSnapshot {
+  readonly key: string | null
+  val(): unknown
+  exists(): boolean
+  numChildren(): number
+  forEach(action: (child: CoreSnapshot) => boolean | void): boolean
+}
+
+export interface CoreQuery {
+  get(): Promise<CoreSnapshot>
+  orderByChild(path: string): CoreQuery
+  orderByKey(): CoreQuery
+  equalTo(value: string): CoreQuery
+  startAfter(value: string): CoreQuery
+  limitToFirst(limit: number): CoreQuery
+}
+
+export interface CoreReference extends CoreQuery {
+  set(value: unknown): Promise<void>
+  remove(): Promise<void>
+  update(values: Record<string, unknown>): Promise<void>
+  transaction(update: (current: unknown) => unknown): Promise<{ snapshot: CoreSnapshot; committed: boolean }>
+}
+
+export interface CoreDatabase {
+  ref(path?: string): CoreReference
+}

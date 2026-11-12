@@ -1,0 +1,174 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+const { runTransactionMock, refMock, updateMock, getMock } = vi.hoisted(() => ({
+  runTransactionMock: vi.fn(),
+  refMock: vi.fn((_database: unknown, path?: string) => path ?? ''),
+  updateMock: vi.fn(),
+  getMock: vi.fn(),
+}))
+
+vi.mock('firebase/database', () => ({ ref: refMock, runTransaction: runTransactionMock, update: updateMock, get: getMock }))
+vi.mock('../../src/lib/firebase', () => ({ database: {} }))
+
+import {
+  appendDeckSeriesPart,
+  buildSeriesPartPublishUpdates,
+  createDeckSeries,
+  publishReviewedSeriesDraft,
+  recordOnlinePartRating,
+  validateContinuationQuestions,
+} from '../../src/lib/deckSeries'
+
+const owner = { uid: 'owner-one' } as never
+
+function transactionResult(committed: boolean, value: unknown) {
+  return { committed, snapshot: { val: () => value } }
+}
+
+beforeEach(() => {
+  updateMock.mockReset()
+  getMock.mockReset()
+  runTransactionMock.mockReset()
+  refMock.mockClear()
+})
+
+describe('deck series', () => {
+  it('creates an owner series rooted at part one with exactly 30 cards', async () => {
+    runTransactionMock.mockImplementation(async (_path, updater) => {
+      const value = updater(null)
+      return transactionResult(true, value)
+    })
+
+    const series = await createDeckSeries(owner, {
+      seriesId: 'series-one', topic: 'Biology', rootDeckId: 'deck-one', cardCount: 30, now: 100,
+    })
+
+    expect(series).toMatchObject({
+      ownerId: 'owner-one', rootDeckId: 'deck-one', latestDeckId: 'deck-one', latestPartNumber: 1,
+    })
+    expect(series.parts['1']).toMatchObject({ deckId: 'deck-one', partNumber: 1 })
+    await expect(createDeckSeries(owner, {
+      seriesId: 'series-two', topic: 'Biology', rootDeckId: 'deck-two', cardCount: 29,
+    })).rejects.toThrow('exactly 30')
+  })
+
+  it('builds owner atomic publish linkage for a separate online deck', () => {
+    const deck = {
+      head: {
+        id: 'deck-two', ownerId: 'owner-one', visibility: 'private' as const, status: 'active' as const,
+        latestVersion: 1, title: 'Part 2', description: '', cardCount: 30,
+        offlinePolicy: { allowed: true, maxQuestions: 30 }, createdAt: 200, updatedAt: 200,
+        seriesId: 'series-one', partNumber: 2,
+      },
+      versions: {},
+    }
+    const updates = buildSeriesPartPublishUpdates(owner, {
+      seriesId: 'series-one', expectedLatestPartNumber: 1, deck,
+    })
+    expect(updates).toMatchObject({
+      'onlineDecks/deck-two': deck,
+      'deckSeries/series-one/latestDeckId': 'deck-two',
+      'deckSeries/series-one/latestPartNumber': 2,
+      'deckSeries/series-one/parts/2': { deckId: 'deck-two', partNumber: 2 },
+    })
+  })
+
+  it('rejects duplicate prior questions before continuation publication', () => {
+    const cards = Array.from({ length: 30 }, (_, index) => ({
+      id: `card-${index + 1}`, question: `Question ${index + 1}`, answer: `Answer ${index + 1}`, distractors: [],
+    }))
+    expect(() => validateContinuationQuestions([
+      { seriesId: 'series-one', partNumber: 1, deckId: 'deck-one', cardId: 'old', question: ' question 2 ' },
+    ], { title: 'Part 2', cards })).toThrow('duplicates a prior')
+  })
+
+  it('publishes reviewed part one with one atomic root update', async () => {
+    const cards = Array.from({ length: 30 }, (_, index) => ({
+      id: `card-${index + 1}`, question: `Question ${index + 1}`, answer: `Answer ${index + 1}`, distractors: [],
+    }))
+    updateMock.mockResolvedValue(undefined)
+    getMock.mockResolvedValue({ val: () => ({
+      id: 'series-new', ownerId: 'owner-one', topic: 'Chemistry', rootDeckId: 'deck-new', latestDeckId: 'deck-new',
+      latestPartNumber: 1, createdAt: 500, updatedAt: 500,
+      parts: { '1': { seriesId: 'series-new', partNumber: 1, deckId: 'deck-new', ownerId: 'owner-one', createdAt: 500 } },
+    }) })
+
+    const result = await publishReviewedSeriesDraft(owner, {
+      seriesId: 'series-new', topic: 'Chemistry', expectedLatestPartNumber: 0, deckId: 'deck-new',
+      content: { title: 'Chemistry Part 1', cards }, visibility: 'public',
+      offlinePolicy: { allowed: true, maxQuestions: 30 }, now: 500,
+    })
+
+    expect(updateMock).toHaveBeenCalledTimes(1)
+    expect(updateMock.mock.calls[0][1]).toMatchObject({
+      'onlineDecks/deck-new': { head: { seriesId: 'series-new', partNumber: 1, cardCount: 30 } },
+      'deckSeries/series-new': { latestPartNumber: 1, latestDeckId: 'deck-new' },
+    })
+    expect(result.series.latestPartNumber).toBe(1)
+  })
+
+  it('rejects a stale append transaction without replacing recorded parts', async () => {
+    const current = {
+      id: 'series-one', ownerId: 'owner-one', topic: 'Biology', rootDeckId: 'deck-one',
+      latestDeckId: 'deck-three', latestPartNumber: 3, createdAt: 100, updatedAt: 300,
+      parts: {
+        '1': { seriesId: 'series-one', partNumber: 1, deckId: 'deck-one', ownerId: 'owner-one', createdAt: 100 },
+        '2': { seriesId: 'series-one', partNumber: 2, deckId: 'deck-two', ownerId: 'owner-one', createdAt: 200 },
+        '3': { seriesId: 'series-one', partNumber: 3, deckId: 'deck-three', ownerId: 'owner-one', createdAt: 300 },
+      },
+    }
+    runTransactionMock.mockImplementation(async (_path, updater) => {
+      const value = updater(current)
+      return transactionResult(value !== undefined, value ?? current)
+    })
+    await expect(appendDeckSeriesPart(owner, 'series-one', {
+      expectedLatestPartNumber: 2, deckId: 'deck-four', cardCount: 30, now: 400,
+    })).rejects.toThrow('Stale latest part')
+    expect(current.parts['2'].deckId).toBe('deck-two')
+  })
+
+  it('appends only the monotonic successor with a separate deck id', async () => {
+    const current = {
+      id: 'series-one', ownerId: 'owner-one', topic: 'Biology', rootDeckId: 'deck-one',
+      latestDeckId: 'deck-one', latestPartNumber: 1, createdAt: 100, updatedAt: 100,
+      parts: { '1': { seriesId: 'series-one', partNumber: 1, deckId: 'deck-one', ownerId: 'owner-one', createdAt: 100 } },
+    }
+    runTransactionMock.mockImplementation(async (_path, updater) => {
+      const value = updater(current)
+      return transactionResult(value !== undefined, value ?? current)
+    })
+
+    const series = await appendDeckSeriesPart(owner, 'series-one', {
+      expectedLatestPartNumber: 1, deckId: 'deck-two', cardCount: 30, now: 200,
+    })
+    expect(series.latestPartNumber).toBe(2)
+    expect(series.parts['2']).toMatchObject({ deckId: 'deck-two', partNumber: 2 })
+  })
+})
+
+describe('online part progress', () => {
+  it('counts distinct rated card ids, completes only at 30, and is idempotent', async () => {
+    let stored: unknown = null
+    runTransactionMock.mockImplementation(async (_path, updater) => {
+      const next = updater(stored)
+      if (next === undefined) return transactionResult(false, stored)
+      stored = next
+      return transactionResult(true, stored)
+    })
+
+    for (let index = 1; index <= 30; index += 1) {
+      const result = await recordOnlinePartRating(owner, {
+        seriesId: 'series-one', partNumber: 1, deckId: 'deck-one', cardId: `card-${index}`, now: 100 + index,
+      })
+      expect(result.progress.complete).toBe(index === 30)
+      expect(result.progress.ratedCount).toBe(index)
+    }
+
+    const duplicate = await recordOnlinePartRating(owner, {
+      seriesId: 'series-one', partNumber: 1, deckId: 'deck-one', cardId: 'card-30', now: 500,
+    })
+    expect(duplicate).toMatchObject({ applied: false, reason: 'duplicate' })
+    expect(duplicate.progress.ratedCount).toBe(30)
+    expect(duplicate.progress.completedAt).toBe(130)
+  })
+})

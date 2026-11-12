@@ -1,0 +1,74 @@
+{
+  "schemaVersion": "mimosa-finding-ledger-batch/v1",
+  "batchId": "stop-20261112T003733945Z-10044-bf851bf94338",
+  "runId": "20261112T003733945Z-10044-bf851bf94338",
+  "runStatus": "completed",
+  "coverage": {
+    "status": "complete",
+    "reasons": []
+  },
+  "source": {
+    "component": "zcode-hook",
+    "operationId": "Stop"
+  },
+  "revision": "5b6ed6eb8f8dca0246396a511f9e969cfb36864c",
+  "diffHash": "be8089b1c9f95801ee058ee8a774b9bd2ad6db38f55ad2dcb47d4178bbee35f9",
+  "rulesVersion": "unavailable",
+  "sessionHash": "cd95ed41352a8975433361874269812e703e06befc9e3c7784355b3b6a36c983",
+  "reportRef": ".mimosa/reports/task-review-sess_9e4942c2-93e7-4683-8b4c-6b169cc723d8-20261112T003733945Z-10044-bf851bf94338.json",
+  "events": [],
+  "observedFindingIds": [],
+  "verifiedFiles": [
+    {
+      "file": "src/components/MagicImport.tsx",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "test/lib/onlineDecks.test.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "test/lib/database.rules.test.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "functions/src/owner-decks-core.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/components/PrivacyNotice.tsx",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/components/Onboarding.tsx",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "app/api/_tests/routes.test.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "functions/src/owner-decks-core.test.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/routes/routeScreens.tsx",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/lib/cloudDecks.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    }
+  ],
+  "recordedAt": "2026-11-12T00:37:34.552Z"
+}

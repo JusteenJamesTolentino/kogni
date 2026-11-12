@@ -1,0 +1,21 @@
+export declare const getPlayerProfile: import("firebase-functions/v2/https").CallableFunction<unknown, Promise<import("./social-core.js").PlayerProfileResult>, unknown>;
+export declare const followPlayer: import("firebase-functions/v2/https").CallableFunction<unknown, Promise<import("./social-core.js").FollowResult>, unknown>;
+export declare const unfollowPlayer: import("firebase-functions/v2/https").CallableFunction<unknown, Promise<import("./social-core.js").FollowResult>, unknown>;
+export declare const blockPlayer: import("firebase-functions/v2/https").CallableFunction<unknown, Promise<import("./social-core.js").BlockResult>, unknown>;
+export declare const unblockPlayer: import("firebase-functions/v2/https").CallableFunction<unknown, Promise<import("./social-core.js").BlockResult>, unknown>;
+export declare const reconcilePresenceProjection: import("firebase-functions").CloudFunction<import("firebase-functions/v2/database").DatabaseEvent<import("firebase-functions").Change<import("firebase-functions/v2/database").DataSnapshot>, {
+    uid: string;
+    sessionId: string;
+}>>;
+export declare const reconcileAccountProjections: import("firebase-functions").CloudFunction<import("firebase-functions/v2/database").DatabaseEvent<import("firebase-functions").Change<import("firebase-functions/v2/database").DataSnapshot>, {
+    uid: string;
+}>>;
+export declare const reconcileOnlineDeckProjection: import("firebase-functions").CloudFunction<import("firebase-functions/v2/database").DatabaseEvent<import("firebase-functions").Change<import("firebase-functions/v2/database").DataSnapshot>, {
+    deckId: string;
+}>>;
+export declare const reconcileLeaderboardPlayerProfile: import("firebase-functions").CloudFunction<import("firebase-functions/v2/database").DatabaseEvent<import("firebase-functions").Change<import("firebase-functions/v2/database").DataSnapshot>, {
+    uid: string;
+}>>;
+export declare const reconcilePlayerFollowEdge: import("firebase-functions").CloudFunction<import("firebase-functions/v2/database").DatabaseEvent<import("firebase-functions").Change<import("firebase-functions/v2/database").DataSnapshot>, {
+    edgeId: string;
+}>>;

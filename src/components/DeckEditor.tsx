@@ -155,7 +155,7 @@ function validateDraft(draft: DeckEditorDraft, minimumCards: number): DraftError
   if (title) count += 1
   if (draft.description.length > DECK_EDITOR_LIMITS.description) count += 1
   if (draft.studyGuide.length > DECK_EDITOR_LIMITS.studyGuide) count += 1
-  const uncoveredAnswers = findUncoveredAnswers(draft.studyGuide, draft.cards)
+  const uncoveredAnswers = draft.studyGuide.trim() ? findUncoveredAnswers(draft.studyGuide, draft.cards) : []
   if (uncoveredAnswers.length > 0) count += 1
   if (draft.cards.length < minimumCards) count += 1
 
@@ -196,7 +196,7 @@ export default function DeckEditor({
   const dirty = currentSignature !== baselineSignature
   const errors = useMemo(() => validateDraft(draft, minimumCards), [draft, minimumCards])
   const uncoveredAnswers = useMemo(
-    () => findUncoveredAnswers(draft.studyGuide, draft.cards),
+    () => draft.studyGuide.trim() ? findUncoveredAnswers(draft.studyGuide, draft.cards) : [],
     [draft.cards, draft.studyGuide],
   )
   const changes = useMemo(() => summarizeDeckDraftChanges(baseline, draft), [baseline, draft])
@@ -285,6 +285,7 @@ export default function DeckEditor({
   }
 
   const handleSave = async (): Promise<void> => {
+    if (saving) return
     setAttemptedSave(true)
     if (errors.count > 0) {
       setExpandedCards((current) => {
@@ -331,7 +332,7 @@ export default function DeckEditor({
           <section className="rounded-3xl border border-base-300 bg-base-100 p-5 shadow-lg sm:p-7" aria-labelledby={titleId}>
             <div className="flex items-start gap-3">
               <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-primary/10 text-primary"><FileText size={21} aria-hidden="true" /></div>
-              <div><p className="text-sm font-semibold text-primary">Local {deckLabel} draft</p><h1 id={titleId} className="text-2xl font-black tracking-tight sm:text-3xl">Edit deck</h1></div>
+              <div><p className="text-sm font-semibold text-primary">{deckLabel} draft · Cloud save</p><h1 id={titleId} className="text-2xl font-black tracking-tight sm:text-3xl">Edit deck</h1></div>
             </div>
 
             <div className="mt-6 grid gap-5">

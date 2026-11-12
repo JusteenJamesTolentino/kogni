@@ -14,6 +14,7 @@ vi.mock('../../../src/lib/firebase-admin', () => ({
 import { GET as online } from '../players/online/route'
 import { GET as profile } from '../players/[uid]/route'
 import { GET as decks } from '../players/[uid]/decks/route'
+import { GET as ownerDecks } from '../decks/route'
 import { GET as summary } from '../players/me/social-summary/route'
 import { GET as presence } from '../players/[uid]/presence/route'
 import { POST as follow } from '../social/follow/route'
@@ -69,6 +70,36 @@ describe('server route contracts with in-memory database', () => {
     expect(JSON.stringify(page)).not.toContain('cards')
     const next = await decks(request(`/api/players/bob/decks?cursor=${encodeURIComponent(page.nextCursor)}`), ctx('bob'))
     expect(await next.json()).toMatchObject({ items: [expect.objectContaining({ id: 'deck-20' })], hasMore: false })
+  })
+
+  it('lists private owner decks without requiring discoverability and rejects malformed owner metadata', async () => {
+    memory.write('accounts/alice/preferences/discoverable', false)
+    for (let index = 0; index < 21; index += 1) {
+      const id = `mine-${String(index).padStart(2, '0')}`
+      memory.write(`onlineDecks/${id}`, { head: {
+        id, ownerId: 'alice', visibility: index === 0 ? 'private' : 'unlisted', status: 'active', latestVersion: 1,
+        title: `Mine ${index}`, description: 'Owner only', cardCount: 1,
+        offlinePolicy: { allowed: false, maxQuestions: 0 }, createdAt: 1, updatedAt: 100 - Math.floor(index / 2),
+      }, versions: { 1: { cards: { secret: true } } } })
+    }
+    memory.write('onlineDecks/other', { head: {
+      id: 'other', ownerId: 'bob', visibility: 'public', status: 'active', latestVersion: 1,
+      title: 'Other', description: '', cardCount: 1, offlinePolicy: { allowed: false, maxQuestions: 0 }, createdAt: 1, updatedAt: 500,
+    } })
+    const response = await ownerDecks(request('/api/decks'))
+    expect(response.status).toBe(200)
+    const page = await response.json() as { items: Record<string, unknown>[]; hasMore: boolean; nextCursor: string }
+    expect(page.items).toHaveLength(20)
+    expect(page.items.every((head) => head.ownerId === 'alice')).toBe(true)
+    expect(page.items.some((head) => head.visibility === 'private')).toBe(true)
+    expect(JSON.stringify(page)).not.toContain('versions')
+    const next = await ownerDecks(request(`/api/decks?cursor=${encodeURIComponent(page.nextCursor)}`))
+    expect(await next.json()).toMatchObject({ items: [expect.objectContaining({ id: 'mine-20' })], hasMore: false })
+
+    memory.write('onlineDecks/bad', { head: { id: 'bad', ownerId: 'alice', visibility: 'private', status: 'active', updatedAt: 999 } })
+    const invalid = await ownerDecks(request('/api/decks'))
+    expect(invalid.status).toBe(503)
+    expect(await invalid.json()).toEqual({ error: 'Player service is unavailable.' })
   })
 
   it('sanitizes summary/deck auth, input, privacy and block failures', async () => {

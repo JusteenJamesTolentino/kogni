@@ -1,5 +1,5 @@
 import type { User } from 'firebase/auth'
-import { ref, runTransaction } from 'firebase/database'
+import { get, ref, runTransaction } from 'firebase/database'
 import type { TransactionResult } from 'firebase/database'
 import { database } from './firebase'
 import { isRecord } from './errors'
@@ -95,6 +95,35 @@ export interface RecordOnlineReviewInput {
   repetition: unknown
   easinessFactor: unknown
   nextReviewDate: unknown
+}
+
+export async function getOnlineSchedules(user: User): Promise<Record<string, Record<string, OnlineCardScheduleState>>> {
+  const owner = requireUser(user)
+  const snapshot = await get(ref(database, `onlineSchedules/${owner.uid}`))
+  const result: Record<string, Record<string, OnlineCardScheduleState>> = {}
+  snapshot.forEach((deck) => {
+    if (!deck.key) return
+    const states: Record<string, OnlineCardScheduleState> = {}
+    deck.forEach((card) => {
+      const state = readState(card.child('state').val())
+      if (!state || state.deckId !== deck.key || state.cardId !== card.key) throw new Error('Your saved review progress is invalid.')
+      states[state.cardId] = state
+    })
+    result[deck.key] = states
+  })
+  return result
+}
+
+export async function getOnlineDeckSchedules(user: User, deckId: string): Promise<Record<string, OnlineCardScheduleState>> {
+  const owner = requireUser(user)
+  const snapshot = await get(ref(database, `onlineSchedules/${owner.uid}/${requireKey(deckId, 'deckId')}`))
+  const result: Record<string, OnlineCardScheduleState> = {}
+  snapshot.forEach((card) => {
+    const state = readState(card.child('state').val())
+    if (!state || state.deckId !== deckId || state.cardId !== card.key) throw new Error('Your saved review progress is invalid.')
+    result[state.cardId] = state
+  })
+  return result
 }
 
 function readState(value: unknown): OnlineCardScheduleState | null {

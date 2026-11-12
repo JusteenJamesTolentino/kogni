@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useOutletContext, useParams } from 'react-router-dom'
 import PortalPreview from '../components/PortalPreview'
-import { saveDeckCopy } from '../lib/db'
+import { copyPrivateDeck } from '../lib/cloudDecks'
 import { lookupDeckPortal, normalizePortalCode, PORTAL_INVALID_MESSAGE } from '../lib/portal'
 import type { DeckPortalRecord } from '../types/domain'
-import { deckPath, paths } from '../router/paths'
+import { onlineDeckPath, paths } from '../router/paths'
 import type { AppShellContextValue } from './AppShell'
 
 export default function PortalRoute() {
@@ -43,13 +43,9 @@ export default function PortalRoute() {
     setAdding(true)
     setError('')
     try {
-      const saved = await saveDeckCopy(
-        portal.snapshot,
-        Object.values(portal.snapshot.cards),
-        { lineageId: portal.snapshot.lineageId },
-      )
+      const saved = await copyPrivateDeck(user, { ...portal.snapshot, cards: Object.values(portal.snapshot.cards) }, `portal:${portal.id}`)
       await loadLibrary()
-      navigate(deckPath(saved.id), { replace: true })
+      navigate(onlineDeckPath(saved.id), { replace: true })
     } catch {
       setError('This deck could not be added to your library. Please try again.')
       setAdding(false)
