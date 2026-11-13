@@ -129,10 +129,21 @@ Magic Import requires a Google AI Studio key and exact model ID configured by th
 
 Uploaded PDF, JPEG, PNG, or WebP source files are used for the generation request and are not retained by Kogni. Recipients do not use the creator's Gemini key or quota.
 
+### Avatar uploads (Cloudflare R2)
+
+Profile photos are stored in Cloudflare R2. All Kogni objects live under the `kogni/` bucket prefix (`kogni/avatars/<uid>/<token>.<ext>`); nothing is ever written outside it. The flow is browser → presigned PUT → commit:
+
+1. `POST /api/uploads/avatar` with `{ contentType, sizeBytes }` (Bearer ID token required) validates JPEG/PNG/WebP and the 2 MB cap, then returns a short-lived presigned `uploadUrl` scoped to `kogni/avatars/<uid>/`.
+2. The browser PUTs the file directly to R2 — no file bytes transit the Kogni server.
+3. `POST /api/uploads/avatar/commit` with `{ key }` re-verifies the key belongs to the caller's scope, confirms the object exists, records `{ url, path, updatedAt }` on `accounts/<uid>/avatar`, and **deletes the replaced avatar object** so storage stays flat (best-effort; a failed delete leaves at most one orphan).
+
+The client never supplies the public URL — it is derived from the verified key against `R2_PUBLIC_URL`. Server configuration uses `R2_ENDPOINT`, `R2_BUCKET_NAME`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, and `R2_PUBLIC_URL` (server-only environment).
+
 ## Error Handling & Edge Cases
 
 - Saving, loading, editing, reviewing, sharing, portal copying, and public publishing require connectivity. The application reports a connection error instead of falling back to IndexedDB.
 - A timed-out cloud write may still complete. Retry by reloading the account library before attempting to create duplicate content.
+- Avatar uploads abort cleanly before any write if the file type or size is rejected. If the presigned PUT succeeds but the commit fails, the uploaded object is orphaned in `kogni/avatars/<uid>/` and the next successful replacement may not delete it (the commit only deletes the previously recorded avatar path).
 - New decks remain private unless the owner completes explicit public-publication confirmation.
 - Legacy recovery never mutates or deletes the IndexedDB source. If copying fails, the device deck and its schedule remain intact.
 - A recovered cloud copy intentionally receives a fresh schedule; legacy due dates, intervals, repetitions, and answer history are not uploaded.

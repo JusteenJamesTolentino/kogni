@@ -413,6 +413,13 @@ export interface AccountPrivacyRecord {
 }
 
 /** Owner-private account state. Authentication provider data such as email is excluded. */
+/** Uploaded profile avatar object in cloud storage; `path` is the storage key used for replace-deletes. */
+export interface AccountAvatar {
+  url: string
+  path: string
+  updatedAt: number
+}
+
 export interface AccountRecord {
   uid: string
   status: 'ready'
@@ -422,6 +429,7 @@ export interface AccountRecord {
   updatedAt: DatabaseTimestamp
   privacy: AccountPrivacyRecord
   preferences: AccountPreferences
+  avatar?: AccountAvatar
 }
 
 /** Deliberately small projection readable by other ready accounts. */

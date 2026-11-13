@@ -9,6 +9,8 @@ import Leaderboard from '../components/Leaderboard'
 import MagicImport from '../components/MagicImport'
 import Profile from '../components/Profile'
 import StudySession from '../components/StudySession'
+import AvatarUploadDialog from '../components/AvatarUploadDialog'
+import { useAuth } from '../context/AuthContext'
 import { getSocialSummary } from '../lib/social'
 import type { SocialSummary } from '../lib/social'
 import { createCloudReviewSaver, createPrivateDeck, loadCloudDeck, loadCloudLibrary, newCloudDeckId } from '../lib/cloudDecks'
@@ -257,11 +259,14 @@ export function CommunityRoute() {
 
 export function ProfileRoute() {
   const { user, account, decks, dueCards } = useAppShell()
+  const { refreshAccount } = useAuth()
   const [socialSummary, setSocialSummary] = useState<SocialSummary | null>(null)
   const [socialLoading, setSocialLoading] = useState(true)
   const [socialError, setSocialError] = useState('')
   const [socialRequest, setSocialRequest] = useState(0)
   const [xp, setXp] = useState(0)
+  const [avatarOpen, setAvatarOpen] = useState(false)
+  const [avatarError, setAvatarError] = useState('')
   const totalCards = decks.reduce((sum, deck) => sum + deck.cardCount, 0)
 
   // The cloud leaderboard is the single XP ledger; the old localStorage mirror is gone.
@@ -285,23 +290,38 @@ export function ProfileRoute() {
   }, [socialRequest, user.uid])
 
   const socialValue = (value: number | undefined) => socialLoading ? 'Loading…' : socialError ? '—' : value ?? '—'
+  const avatarUrl = account.avatar?.url || user.photoURL || ''
 
-  return <Profile
-    nickname={account.nickname}
-    avatarUrl={user.photoURL}
-    publicPresence={account.preferences.presence ? 'online' : 'hidden'}
-    stats={[
-      { id: 'followers', label: 'Followers', value: socialValue(socialSummary?.followerCount), helpText: socialLoading ? 'Loading social count' : undefined },
-      { id: 'following', label: 'Following', value: socialValue(socialSummary?.followingCount), helpText: socialLoading ? 'Loading social count' : undefined },
-      { id: 'decks', label: 'Cloud decks', value: decks.length, helpText: 'Saved to your account' },
-      { id: 'cards', label: 'Cards', value: totalCards },
-      { id: 'due', label: 'Due reviews', value: dueCards.length },
-      { id: 'xp', label: 'Learning XP', value: xp },
-    ]}
-    socialError={socialError}
-    onRetrySocial={() => setSocialRequest((request) => request + 1)}
-    onEditAvatar={undefined}
-  />
+  return (
+    <>
+      <Profile
+        nickname={account.nickname}
+        avatarUrl={avatarUrl}
+        avatarAlt={`${account.nickname}'s avatar`}
+        publicPresence={account.preferences.presence ? 'online' : 'hidden'}
+        stats={[
+          { id: 'followers', label: 'Followers', value: socialValue(socialSummary?.followerCount), helpText: socialLoading ? 'Loading social count' : undefined },
+          { id: 'following', label: 'Following', value: socialValue(socialSummary?.followingCount), helpText: socialLoading ? 'Loading social count' : undefined },
+          { id: 'decks', label: 'Cloud decks', value: decks.length, helpText: 'Saved to your account' },
+          { id: 'cards', label: 'Cards', value: totalCards },
+          { id: 'due', label: 'Due reviews', value: dueCards.length },
+          { id: 'xp', label: 'Learning XP', value: xp },
+        ]}
+        socialError={socialError}
+        onRetrySocial={() => setSocialRequest((request) => request + 1)}
+        onEditAvatar={() => setAvatarOpen(true)}
+        error={avatarError}
+      />
+      <AvatarUploadDialog
+        open={avatarOpen}
+        user={user}
+        currentAvatarUrl={avatarUrl}
+        nickname={account.nickname}
+        onSaved={() => { setAvatarOpen(false); setAvatarError(''); void refreshAccount() }}
+        onClose={() => setAvatarOpen(false)}
+      />
+    </>
+  )
 }
 
 export function GlobalLeaderboardRoute() {
