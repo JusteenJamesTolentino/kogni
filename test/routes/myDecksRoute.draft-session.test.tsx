@@ -75,6 +75,8 @@ function renderDecks(initialPath = '/decks') {
       <Routes>
         <Route element={<Outlet context={stubContext()} />}>
           <Route path="/decks" element={<MyDecksRoute />} />
+          {/* Successful saves navigate to the deck page; swallow it without stderr noise. */}
+          <Route path="*" element={null} />
         </Route>
       </Routes>
     </MemoryRouter>,
