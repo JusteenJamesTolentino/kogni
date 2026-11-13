@@ -1,9 +1,9 @@
 import 'server-only'
 import { DeleteObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
-import { AVATAR_CONTENT_TYPES, buildAvatarKey, MAX_AVATAR_BYTES } from './r2-keys'
+import { AVATAR_CACHE_CONTROL, AVATAR_CONTENT_TYPES, buildAvatarKey, MAX_AVATAR_BYTES } from './r2-keys'
 
-export { AVATAR_CONTENT_TYPES, buildAvatarKey, isOwnedAvatarKey, KOGNI_PREFIX, MAX_AVATAR_BYTES } from './r2-keys'
+export { AVATAR_CACHE_CONTROL, AVATAR_CONTENT_TYPES, buildAvatarKey, isOwnedAvatarKey, KOGNI_PREFIX, MAX_AVATAR_BYTES } from './r2-keys'
 
 const PRESIGN_EXPIRY_SECONDS = 600
 
@@ -67,14 +67,14 @@ export async function presignAvatarUpload(uid: string, contentType: string, size
   }
   const { client, bucket } = r2()
   const key = buildAvatarKey(uid, contentType)
-  // Only Content-Type and Content-Length are pinned: every signed header must be sent
-  // verbatim by the browser. Cache-Control can be added once cloudflare.cors.json
-  // (which allowlists it) has been applied to the bucket — see README "Bucket CORS".
+  // Content-Type, Content-Length, and Cache-Control are pinned: every signed header must
+  // be sent verbatim by the browser, and cloudflare.cors.json allowlists all three.
   const uploadUrl = await getSignedUrl(client, new PutObjectCommand({
     Bucket: bucket,
     Key: key,
     ContentType: contentType,
     ContentLength: sizeBytes,
+    CacheControl: AVATAR_CACHE_CONTROL,
   }), { expiresIn: PRESIGN_EXPIRY_SECONDS })
   return { key, uploadUrl, publicUrl: publicUrlForKey(key), expiresIn: PRESIGN_EXPIRY_SECONDS }
 }

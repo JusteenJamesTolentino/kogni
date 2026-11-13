@@ -5,6 +5,8 @@
  */
 export const KOGNI_PREFIX = 'kogni/'
 export const MAX_AVATAR_BYTES = 2 * 1024 * 1024
+/** Signed onto every avatar presign; the browser PUT must send it verbatim. */
+export const AVATAR_CACHE_CONTROL = 'public, max-age=31536000, immutable'
 export const AVATAR_CONTENT_TYPES: Readonly<Record<string, string>> = Object.freeze({
   'image/jpeg': 'jpg',
   'image/png': 'png',

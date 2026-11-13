@@ -2,6 +2,9 @@ import type { User } from 'firebase/auth'
 import { authenticatedRequest, ApiRequestError } from './vercel-api'
 import { isRecord } from './errors'
 
+// Must match the presign signature exactly; cloudflare.cors.json allowlists this header.
+export const AVATAR_CACHE_CONTROL = 'public, max-age=31536000, immutable'
+
 /** Client-side mirror of the server avatar constraints, for instant feedback before upload. */
 export const MAX_AVATAR_BYTES = 2 * 1024 * 1024
 export const AVATAR_CONTENT_TYPES: readonly string[] = ['image/jpeg', 'image/png', 'image/webp']
@@ -64,7 +67,7 @@ export async function uploadAvatar(user: User, file: File, signal?: AbortSignal)
   const putResponse = await fetch(presign.uploadUrl, {
     method: 'PUT',
     body: file,
-    headers: { 'content-type': file.type },
+    headers: { 'content-type': file.type, 'cache-control': AVATAR_CACHE_CONTROL },
     signal,
   })
   if (!putResponse.ok) {
