@@ -1,6 +1,8 @@
 import { ArrowRight, Flame, Layers3, Sparkles, Target, Trophy, UsersRound } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
+import { subscribeToMyLeaderboardRecord } from '../lib/leaderboard'
 import type { StudyCard, StudyDeck } from '../types/domain'
 import type { ActivePlayerProjection, PublicOnlineDeckProjection } from '../types/projections'
 
@@ -46,8 +48,14 @@ export default function Dashboard({ decks, dueCards, error, onRetry, onStudy, su
   const displayName = user?.displayName?.split(' ')[0] || 'learner'
   const totalCards = decks.reduce((total, deck) => total + deck.cardCount, 0)
   const dueCount = dueCards.length
-  const streak = Number(localStorage.getItem('kognit_streak') || 0)
-  const xp = Number(localStorage.getItem(`kognit_xp_${user?.uid}`) || 0)
+  // XP and streak live in the single cloud ledger that reviews already write to.
+  const [record, setRecord] = useState<{ xp: number; streakDays: number } | null>(null)
+  useEffect(() => {
+    if (!user?.uid) return
+    return subscribeToMyLeaderboardRecord(user.uid, (value) => setRecord(value ? { xp: value.xp, streakDays: value.streakDays ?? 0 } : { xp: 0, streakDays: 0 }))
+  }, [user?.uid])
+  const streak = record?.streakDays ?? 0
+  const xp = record?.xp ?? 0
 
   return (
     <main className="mx-auto w-full max-w-[100rem] px-4 py-7 sm:px-6 sm:py-10 lg:px-8">

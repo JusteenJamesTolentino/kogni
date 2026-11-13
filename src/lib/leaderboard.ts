@@ -147,6 +147,7 @@ function nextLeaderboardRecord(
   current: unknown,
   user: User,
   xpAwarded: number,
+  reviewedAt: number = Date.now(),
 ): LeaderboardRecord {
   const currentRecord = isRecord(current) ? current : {}
   return {
@@ -154,7 +155,32 @@ function nextLeaderboardRecord(
     xp: readNonNegativeSafeInteger(currentRecord, 'xp') + xpAwarded,
     reviews: readNonNegativeSafeInteger(currentRecord, 'reviews') + 1,
     lastReviewAt: serverTimestamp(),
+    streakDays: computeNextStreakDays(currentRecord, reviewedAt),
+    lastReviewDay: localDayKey(reviewedAt),
   }
+}
+
+/** Local-calendar day (YYYY-MM-DD) shifted by whole days from the given timestamp. */
+export function localDayKey(timestamp: number, dayOffset = 0): string {
+  const date = new Date(timestamp)
+  date.setDate(date.getDate() + dayOffset)
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${date.getFullYear()}-${month}-${day}`
+}
+
+/**
+ * Any review extends the streak: same-day reviews keep it, a yesterday review grows it
+ * by one, anything older resets it to one. Date arithmetic (not raw ms subtraction)
+ * keeps the yesterday check correct across DST shifts.
+ */
+export function computeNextStreakDays(currentRecord: unknown, reviewedAt: number): number {
+  const record = isRecord(currentRecord) ? currentRecord : {}
+  const previousStreak = Math.max(1, readNonNegativeSafeInteger(record, 'streakDays'))
+  const lastDay = typeof record.lastReviewDay === 'string' ? record.lastReviewDay : ''
+  if (lastDay === localDayKey(reviewedAt)) return previousStreak
+  if (lastDay === localDayKey(reviewedAt, -1)) return previousStreak + 1
+  return 1
 }
 
 function rankedEntries(snapshot: DataSnapshot): RankedLeaderboardEntry[] {
@@ -244,7 +270,7 @@ export async function recordScheduledReview(
     }
 
     const globalSnapshot = await get(ref(database, `leaderboard/${authenticatedUser.uid}`))
-    const globalRecord = nextLeaderboardRecord(globalSnapshot.val(), authenticatedUser, xpAwarded)
+    const globalRecord = nextLeaderboardRecord(globalSnapshot.val(), authenticatedUser, xpAwarded, reviewedAt)
     const updates: Record<string, unknown> = {
       [`reviewEvents/${authenticatedUser.uid}/${eventId}`]: {
         uid: authenticatedUser.uid,
@@ -353,4 +379,21 @@ export function subscribeToDeckLeaderboard(
 ): Unsubscribe {
   const normalizedLineageId = requireScopeId(lineageId, 'lineageId')
   return subscribeToLeaderboardPath(`deckLeaderboards/${normalizedLineageId}`, callback, error)
+}
+
+/** Live cloud record (XP, streak) for one user; null while the user has no reviews yet. */
+export function subscribeToMyLeaderboardRecord(
+  uid: unknown,
+  callback: (record: LeaderboardRecord | null) => void,
+  error?: (error: Error) => void,
+): Unsubscribe {
+  const normalizedUid = requireScopeId(uid, 'uid')
+  return onValue(
+    ref(database, `leaderboard/${normalizedUid}`),
+    (snapshot) => {
+      const value: unknown = snapshot.val()
+      callback(isLeaderboardRecord(value) ? value : null)
+    },
+    typeof error === 'function' ? error : undefined,
+  )
 }

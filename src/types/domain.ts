@@ -122,6 +122,9 @@ export interface LeaderboardRecord {
   xp: number
   reviews: number
   lastReviewAt: number | object
+  /** Consecutive local-calendar days with at least one review; maintained on every XP award. */
+  streakDays?: number
+  lastReviewDay?: string
 }
 
 export interface RankedLeaderboardEntry extends LeaderboardRecord {

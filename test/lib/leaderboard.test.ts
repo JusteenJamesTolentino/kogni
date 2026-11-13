@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
+  computeNextStreakDays,
   getLevelFromXp,
   getLevelProgress,
   getReviewXp,
+  localDayKey,
   parseRankedLeaderboardEntries,
 } from '../../src/lib/leaderboard'
 
@@ -22,6 +24,39 @@ describe('leaderboard helpers', () => {
     expect(() => getReviewXp('2.5')).toThrow(RangeError)
     expect(getLevelFromXp(-200)).toBe(1)
     expect(getLevelProgress(Number.NaN)).toEqual({ level: 1, current: 0, required: 100 })
+  })
+})
+
+describe('day streak computation', () => {
+  // Fixed to a noon timestamp so local-day arithmetic never straddles midnight.
+  const noon = new Date('2026-06-15T12:00:00').getTime()
+
+  it('formats local calendar days with offsets', () => {
+    expect(localDayKey(noon)).toBe('2026-06-15')
+    expect(localDayKey(noon, -1)).toBe('2026-06-14')
+  })
+
+  it('keeps the streak on same-day reviews', () => {
+    expect(computeNextStreakDays({ streakDays: 4, lastReviewDay: '2026-06-15' }, noon)).toBe(4)
+  })
+
+  it('grows the streak for yesterday reviews', () => {
+    expect(computeNextStreakDays({ streakDays: 4, lastReviewDay: '2026-06-14' }, noon)).toBe(5)
+  })
+
+  it('resets the streak after a gap of two or more days', () => {
+    expect(computeNextStreakDays({ streakDays: 9, lastReviewDay: '2026-06-12' }, noon)).toBe(1)
+  })
+
+  it('starts at one without prior history or malformed fields', () => {
+    expect(computeNextStreakDays(null, noon)).toBe(1)
+    expect(computeNextStreakDays({}, noon)).toBe(1)
+    expect(computeNextStreakDays({ streakDays: -3, lastReviewDay: 42 }, noon)).toBe(1)
+  })
+
+  it('handles month boundaries when stepping back one day', () => {
+    const juneFirstNoon = new Date('2026-06-01T12:00:00').getTime()
+    expect(computeNextStreakDays({ streakDays: 7, lastReviewDay: '2026-05-31' }, juneFirstNoon)).toBe(8)
   })
 })
 

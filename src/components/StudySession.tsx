@@ -110,15 +110,10 @@ export default function StudySession({ cards, deck, mode, onExit, onFinished, on
 
         try {
           if (user) {
+            // The cloud leaderboard is the only XP ledger; Dashboard/Profile read it live.
             const award = await awardReviewXp(user, eventId, quality, deck?.lineageId || deck?.id)
             const earnedXp = award?.awarded ? Number(award.xpAwarded || 0) : 0
-            if (earnedXp > 0) {
-              setSessionXp((previous) => previous + earnedXp)
-              localStorage.setItem(
-                `kognit_xp_${user.uid}`,
-                String(Number(localStorage.getItem(`kognit_xp_${user.uid}`) || 0) + earnedXp),
-              )
-            }
+            if (earnedXp > 0) setSessionXp((previous) => previous + earnedXp)
           }
         } catch {
           // Saving study progress is more important than optional leaderboard XP

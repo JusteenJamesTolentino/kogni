@@ -12,6 +12,7 @@ import StudySession from '../components/StudySession'
 import { getSocialSummary } from '../lib/social'
 import type { SocialSummary } from '../lib/social'
 import { createCloudReviewSaver, createPrivateDeck, loadCloudDeck, loadCloudLibrary, newCloudDeckId } from '../lib/cloudDecks'
+import { subscribeToMyLeaderboardRecord } from '../lib/leaderboard'
 import { getErrorMessage } from '../lib/errors'
 import { shuffle } from '../lib/shuffle'
 import type { StudyCard, StudyDeck } from '../types/domain'
@@ -260,8 +261,11 @@ export function ProfileRoute() {
   const [socialLoading, setSocialLoading] = useState(true)
   const [socialError, setSocialError] = useState('')
   const [socialRequest, setSocialRequest] = useState(0)
+  const [xp, setXp] = useState(0)
   const totalCards = decks.reduce((sum, deck) => sum + deck.cardCount, 0)
-  const xp = Number(localStorage.getItem(`kognit_xp_${user.uid}`) || 0)
+
+  // The cloud leaderboard is the single XP ledger; the old localStorage mirror is gone.
+  useEffect(() => subscribeToMyLeaderboardRecord(user.uid, (record) => setXp(record?.xp ?? 0)), [user.uid])
 
   useEffect(() => {
     const controller = new AbortController()
