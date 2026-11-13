@@ -30,3 +30,6 @@ firebase-debug.log
 *.njsproj
 *.sln
 *.sw?
+
+# ZCode / Mimosa plugin session state
+.mimosa/
