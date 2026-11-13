@@ -79,9 +79,17 @@ export function MyDecksRoute() {
   const [searchParams, setSearchParams] = useSearchParams()
   const { decks, dueCards, libraryLoading, libraryError, loadLibrary, apiKey, geminiModel, openApiKeyModal, setImportBusy, user } = useAppShell()
   const createMode = parseCreateDeckMode(searchParams.get('create'))
-  const [saveId] = useState(newCloudDeckId)
+  const [saveId, setSaveId] = useState(newCloudDeckId)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  // Fresh drafts need a fresh deck ID: saveId stays stable while the SAME draft is retried
+  // (createPrivateDeck resumes an interrupted save by content hash), but leaving creation and
+  // re-entering — or switching manual↔ai — starts a new draft that must not inherit an ID
+  // whose earlier save may have landed server-side after a client timeout.
+  useEffect(() => {
+    setSaveId(newCloudDeckId())
+  }, [createMode])
 
   const setCreateMode = (mode: CreateDeckMode | null): void => {
     setSearchParams(mode ? { create: mode } : {}, { replace: true })

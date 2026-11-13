@@ -192,6 +192,9 @@ export default function DeckEditor({
   const [draft, setDraft] = useState(() => cloneDraft(initialDraft))
   const [attemptedSave, setAttemptedSave] = useState(false)
   const [expandedCards, setExpandedCards] = useState<Set<string>>(() => new Set(initialDraft.cards.map((card) => card.id)))
+  // Cards whose validation errors are shown before any save attempt — currently only verbatim
+  // copies, whose duplicate question/distractors are guaranteed by construction.
+  const [proactiveHintCards, setProactiveHintCards] = useState<Set<string>>(() => new Set())
   const firstErrorRef = useRef<HTMLDivElement>(null)
   const editorRootRef = useRef<HTMLElement>(null)
   const baselineSignature = useMemo(() => draftSignature(baseline), [baseline])
@@ -215,6 +218,7 @@ export default function DeckEditor({
     setDraft(cloneDraft(next))
     setAttemptedSave(false)
     setExpandedCards(new Set(next.cards.map((card) => card.id)))
+    setProactiveHintCards(new Set())
   }
 
   useEffect(() => {
@@ -271,6 +275,9 @@ export default function DeckEditor({
       return { ...current, cards }
     })
     setExpandedCards((current) => new Set(current).add(copy.id))
+    // The copy repeats the source verbatim, so its duplicate-question/distractor errors exist
+    // immediately — surface them now instead of waiting for a failed save.
+    setProactiveHintCards((current) => new Set(current).add(copy.id))
     window.setTimeout(() => document.getElementById(`question-${copy.id}`)?.focus(), 0)
   }
 
@@ -317,7 +324,8 @@ export default function DeckEditor({
     await onSave(normalized, changes)
   }
 
-  const showError = (value?: string): string | undefined => attemptedSave ? value : undefined
+  const showError = (value?: string, cardId?: string): string | undefined =>
+    attemptedSave || (cardId !== undefined && proactiveHintCards.has(cardId)) ? value : undefined
 
   return (
     <main ref={editorRootRef} className="mx-auto w-full max-w-6xl px-4 py-5 pb-28 sm:px-6 sm:py-7 lg:px-8">
@@ -390,8 +398,8 @@ export default function DeckEditor({
 
                     {expanded && (
                       <div id={`card-fields-${card.id}`} className="space-y-3 p-3 sm:p-4">
-                        <EditorField label="Question" value={card.question} limit={DECK_EDITOR_LIMITS.question} inputId={`question-${card.id}`} error={showError(cardErrors?.question)} onChange={(value) => updateCard(card.id, (current) => ({ ...current, question: value }))} multiline />
-                        <EditorField label="Answer" value={card.answer} limit={DECK_EDITOR_LIMITS.answer} inputId={`answer-${card.id}`} error={showError(cardErrors?.answer)} onChange={(value) => updateCard(card.id, (current) => ({ ...current, answer: value }))} multiline />
+                        <EditorField label="Question" value={card.question} limit={DECK_EDITOR_LIMITS.question} inputId={`question-${card.id}`} error={showError(cardErrors?.question, card.id)} onChange={(value) => updateCard(card.id, (current) => ({ ...current, question: value }))} multiline />
+                        <EditorField label="Answer" value={card.answer} limit={DECK_EDITOR_LIMITS.answer} inputId={`answer-${card.id}`} error={showError(cardErrors?.answer, card.id)} onChange={(value) => updateCard(card.id, (current) => ({ ...current, answer: value }))} multiline />
 
                         <fieldset>
                           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -400,7 +408,7 @@ export default function DeckEditor({
                           </div>
                           <div className="mt-2 space-y-2">
                             {card.distractors.map((distractor, distractorIndex) => {
-                              const error = showError(cardErrors?.distractors[distractorIndex])
+                              const error = showError(cardErrors?.distractors[distractorIndex], card.id)
                               const errorId = `distractor-error-${card.id}-${distractorIndex}`
                               const countId = `distractor-count-${card.id}-${distractorIndex}`
                               return (
