@@ -1,4 +1,4 @@
-import { Home, Layers3, PanelLeftClose, PanelLeftOpen, Trophy, UserRound, Users, X } from 'lucide-react'
+import { Home, Layers3, PanelLeftClose, PanelLeftOpen, Trophy, Users, X } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import KogniLogo from './KogniLogo'
@@ -18,7 +18,6 @@ const sideNavItems: SideNavItem[] = [
   decksNavItem,
   { to: paths.community, label: 'Community', icon: Users },
   { to: paths.leaderboards, label: 'Leaderboard', icon: Trophy },
-  { to: paths.profile, label: 'Profile', icon: UserRound },
 ]
 
 const isItemActive = (pathname: string, item: SideNavItem): boolean => {

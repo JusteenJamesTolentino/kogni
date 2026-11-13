@@ -131,7 +131,7 @@ export default function Navbar({ onOpenApiKey, theme, onToggleTheme, searchQuery
                     Account settings
                   </button>
                 )}
-                <Link to="/profile" className="btn btn-ghost btn-sm w-full justify-start gap-2 lg:hidden">
+                <Link to={paths.profile} className="btn btn-ghost btn-sm w-full justify-start gap-2">
                   <UserRound size={16} aria-hidden="true" />
                   Profile
                 </Link>
