@@ -1,0 +1,13 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.expectedPrivacyVersion = expectedPrivacyVersion;
+const params_1 = require("firebase-functions/params");
+/** Non-secret deploy parameter. Firebase CLI prompts on deploy when no value is supplied. */
+const privacyVersion = (0, params_1.defineString)('KOGNIT_PRIVACY_VERSION', {
+    default: 'privacy-2026-11-10-ai-series-1',
+    description: 'Current privacy acknowledgement version accepted by trusted projections',
+});
+function expectedPrivacyVersion() {
+    return privacyVersion.value();
+}
+//# sourceMappingURL=config.js.map

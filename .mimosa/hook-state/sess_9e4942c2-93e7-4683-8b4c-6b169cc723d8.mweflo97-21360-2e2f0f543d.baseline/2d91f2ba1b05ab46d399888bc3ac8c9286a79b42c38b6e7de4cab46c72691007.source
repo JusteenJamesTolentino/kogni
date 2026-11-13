@@ -1,0 +1,15 @@
+import type { CoreDatabase } from './database-core';
+import { type ActivePlayerProjection } from './projections';
+export declare const ONLINE_PAGE_SIZE = 20;
+export declare const PRESENCE_BATCH_SIZE = 100;
+export declare const PRESENCE_CANDIDATE_LIMIT = 1000;
+export interface OnlinePlayerPage {
+    items: ActivePlayerProjection[];
+    hasMore: boolean;
+    nextCursor?: string;
+}
+/** Keyset-scan presence candidates, never the accounts tree or trigger-owned projections. */
+export declare function listOnlinePlayersService(database: CoreDatabase, actorUid: string, expectedPrivacyVersion: string, after?: string): Promise<OnlinePlayerPage>;
+export declare function getPlayerPresenceService(database: CoreDatabase, actorUid: string, targetUid: string, expectedPrivacyVersion: string): Promise<{
+    online: boolean;
+}>;

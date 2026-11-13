@@ -1,0 +1,29 @@
+import type { CoreDatabase } from './database-core';
+interface OwnerDeckHead {
+    id: string;
+    ownerId: string;
+    visibility: 'private' | 'unlisted' | 'public';
+    status: 'active' | 'archived' | 'deleted';
+    latestVersion: number;
+    title: string;
+    description: string;
+    cardCount: number;
+    offlinePolicy: {
+        allowed: boolean;
+        maxQuestions: number;
+    };
+    createdAt: number;
+    updatedAt: number;
+    seriesId?: string;
+    partNumber?: number;
+    archivedAt?: number;
+    deletedAt?: number;
+}
+/** Canonical owner-only metadata; public discoverability is deliberately irrelevant. */
+export interface OwnerDeckPage {
+    items: OwnerDeckHead[];
+    hasMore: boolean;
+    nextCursor?: string;
+}
+export declare function listOwnerDecksService(database: CoreDatabase, uid: string, privacyVersion: string, cursorValue?: unknown): Promise<OwnerDeckPage>;
+export {};

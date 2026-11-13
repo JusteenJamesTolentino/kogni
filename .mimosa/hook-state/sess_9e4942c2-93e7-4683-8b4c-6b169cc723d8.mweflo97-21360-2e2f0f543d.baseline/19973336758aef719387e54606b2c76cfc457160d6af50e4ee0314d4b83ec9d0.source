@@ -1,0 +1,42 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const strict_1 = __importDefault(require("node:assert/strict"));
+const node_test_1 = __importDefault(require("node:test"));
+const core_test_helpers_js_1 = require("./core-test-helpers.js");
+const owner_decks_core_js_1 = require("./owner-decks-core.js");
+const privacyVersion = 'privacy-current';
+function head(id, ownerId = 'owner', updatedAt = 1) {
+    return {
+        id, ownerId, visibility: 'private', status: 'active', latestVersion: 1,
+        title: id, description: '', cardCount: 1, offlinePolicy: { allowed: false, maxQuestions: 0 },
+        createdAt: 1, updatedAt,
+    };
+}
+(0, node_test_1.default)('owner library includes private decks without discoverability and excludes other owners', async () => {
+    const account = (0, core_test_helpers_js_1.eligibleTestAccount)('owner', privacyVersion);
+    account.preferences.discoverable = false;
+    const memory = (0, core_test_helpers_js_1.memoryDatabase)({ accounts: { owner: account }, onlineDecks: {
+            mine: { head: head('mine') }, other: { head: head('other', 'other') }, archived: { head: { ...head('archived'), status: 'archived' } },
+        } });
+    const page = await (0, owner_decks_core_js_1.listOwnerDecksService)(memory.database, 'owner', privacyVersion);
+    strict_1.default.deepEqual(page, { items: [head('mine')], hasMore: false });
+});
+(0, node_test_1.default)('owner library keyset pagination is stable and malformed owned metadata fails closed', async () => {
+    const decks = {};
+    for (let index = 0; index < 21; index += 1) {
+        const id = `deck-${String(index).padStart(2, '0')}`;
+        decks[id] = { head: head(id, 'owner', 100 - Math.floor(index / 2)) };
+    }
+    const memory = (0, core_test_helpers_js_1.memoryDatabase)({ accounts: { owner: (0, core_test_helpers_js_1.eligibleTestAccount)('owner', privacyVersion) }, onlineDecks: decks });
+    const first = await (0, owner_decks_core_js_1.listOwnerDecksService)(memory.database, 'owner', privacyVersion);
+    strict_1.default.equal(first.items.length, 20);
+    strict_1.default.equal(first.hasMore, true);
+    const second = await (0, owner_decks_core_js_1.listOwnerDecksService)(memory.database, 'owner', privacyVersion, first.nextCursor);
+    strict_1.default.deepEqual(second.items.map((item) => item.id), ['deck-20']);
+    memory.write('onlineDecks/bad', { head: { id: 'bad', ownerId: 'owner', visibility: 'private', status: 'active', updatedAt: 999 } });
+    await strict_1.default.rejects(() => (0, owner_decks_core_js_1.listOwnerDecksService)(memory.database, 'owner', privacyVersion), /invalid metadata/);
+});
+//# sourceMappingURL=owner-decks-core.test.js.map

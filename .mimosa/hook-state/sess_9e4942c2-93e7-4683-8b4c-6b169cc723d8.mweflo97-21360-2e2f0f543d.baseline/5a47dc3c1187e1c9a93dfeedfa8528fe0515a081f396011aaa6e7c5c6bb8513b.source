@@ -1,0 +1,49 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.listOwnerDecksService = listOwnerDecksService;
+const social_core_1 = require("./social-core");
+const player_decks_core_1 = require("./player-decks-core");
+const projections_1 = require("./projections");
+const MAX_OWNER_DECKS = 500;
+const PAGE_SIZE = 20;
+function isOwnerDeckHead(value) {
+    return (0, projections_1.isPlainRecord)(value) && typeof value.id === 'string' && typeof value.ownerId === 'string' &&
+        (value.visibility === 'private' || value.visibility === 'unlisted' || value.visibility === 'public') &&
+        (value.status === 'active' || value.status === 'archived' || value.status === 'deleted') &&
+        Number.isSafeInteger(value.latestVersion) && typeof value.latestVersion === 'number' && value.latestVersion >= 1 &&
+        typeof value.title === 'string' && typeof value.description === 'string' &&
+        Number.isSafeInteger(value.cardCount) && typeof value.cardCount === 'number' && value.cardCount >= 1 && value.cardCount <= 500 &&
+        (0, projections_1.isPlainRecord)(value.offlinePolicy) && typeof value.offlinePolicy.allowed === 'boolean' &&
+        Number.isSafeInteger(value.offlinePolicy.maxQuestions) && typeof value.offlinePolicy.maxQuestions === 'number' &&
+        typeof value.createdAt === 'number' && Number.isFinite(value.createdAt) && value.createdAt >= 0 &&
+        typeof value.updatedAt === 'number' && Number.isFinite(value.updatedAt) && value.updatedAt >= 0 &&
+        ((value.seriesId === undefined && value.partNumber === undefined) ||
+            (typeof value.seriesId === 'string' && Number.isSafeInteger(value.partNumber) && typeof value.partNumber === 'number' && value.partNumber >= 1));
+}
+async function listOwnerDecksService(database, uid, privacyVersion, cursorValue) {
+    await (0, social_core_1.requireCurrentCaller)(database, uid, privacyVersion);
+    const cursor = (0, player_decks_core_1.parsePlayerDeckCursor)(cursorValue);
+    const snapshot = await database.ref('onlineDecks').orderByChild('head/ownerId').equalTo(uid).limitToFirst(MAX_OWNER_DECKS + 1).get();
+    if (snapshot.numChildren() > MAX_OWNER_DECKS)
+        throw new social_core_1.SocialError('failed-precondition', 'Your library exceeds the supported listing limit.');
+    const heads = [];
+    snapshot.forEach((child) => {
+        const record = child.val();
+        const head = (0, projections_1.isPlainRecord)(record) ? record.head : null;
+        if (!(0, projections_1.isPlainRecord)(head) || head.ownerId !== uid)
+            return;
+        if (!isOwnerDeckHead(head) || head.id !== child.key) {
+            throw new social_core_1.SocialError('failed-precondition', 'Your library contains invalid metadata.');
+        }
+        if (head.status === 'active')
+            heads.push(head);
+    });
+    heads.sort((a, b) => b.updatedAt - a.updatedAt || a.id.localeCompare(b.id));
+    const eligible = cursor ? heads.filter((head) => head.updatedAt < cursor.updatedAt || (head.updatedAt === cursor.updatedAt && head.id.localeCompare(cursor.id) > 0)) : heads;
+    const items = eligible.slice(0, PAGE_SIZE);
+    await (0, social_core_1.requireCurrentCaller)(database, uid, privacyVersion);
+    const last = items.at(-1);
+    const hasMore = eligible.length > PAGE_SIZE;
+    return { items, hasMore, ...(hasMore && last ? { nextCursor: (0, player_decks_core_1.encodePlayerDeckCursor)(last) } : {}) };
+}
+//# sourceMappingURL=owner-decks-core.js.map

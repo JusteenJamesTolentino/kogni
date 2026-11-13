@@ -1,0 +1,118 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.PRESENCE_CANDIDATE_LIMIT = exports.PRESENCE_BATCH_SIZE = exports.ONLINE_PAGE_SIZE = void 0;
+exports.listOnlinePlayersService = listOnlinePlayersService;
+exports.getPlayerPresenceService = getPlayerPresenceService;
+const projections_1 = require("./projections");
+const social_core_1 = require("./social-core");
+exports.ONLINE_PAGE_SIZE = 20;
+exports.PRESENCE_BATCH_SIZE = 100;
+exports.PRESENCE_CANDIDATE_LIMIT = 1000;
+async function revalidatePlayers(database, actorUid, version, players) {
+    const current = await Promise.all(players.map(async (player) => {
+        const [account, presence, blocked] = await Promise.all([
+            database.ref(`accounts/${player.uid}`).get(),
+            database.ref(`presenceSessions/${player.uid}`).get(),
+            (0, social_core_1.readBlockState)(database, actorUid, player.uid),
+        ]);
+        return blocked ? null : (0, projections_1.buildActivePlayerProjection)(account.val(), player.uid, presence.val(), version);
+    }));
+    return current.filter((player) => player !== null);
+}
+/** Keyset-scan presence candidates, never the accounts tree or trigger-owned projections. */
+async function listOnlinePlayersService(database, actorUid, expectedPrivacyVersion, after) {
+    if (after !== undefined)
+        (0, social_core_1.requireTargetUid)({ uid: after });
+    await (0, social_core_1.requireCurrentCaller)(database, actorUid, expectedPrivacyVersion);
+    const eligible = [];
+    let cursor = after;
+    let exhausted = false;
+    let scanned = 0;
+    while (eligible.length <= exports.ONLINE_PAGE_SIZE && scanned < exports.PRESENCE_CANDIDATE_LIMIT) {
+        let query = database.ref('presenceSessions').orderByKey();
+        if (cursor !== undefined)
+            query = query.startAfter(cursor);
+        const snapshot = await query.limitToFirst(exports.PRESENCE_BATCH_SIZE).get();
+        const candidates = [];
+        snapshot.forEach((child) => {
+            if (child.key !== null)
+                candidates.push({ uid: child.key, presence: child.val() });
+        });
+        if (candidates.length === 0) {
+            exhausted = true;
+            eligible.splice(0, eligible.length, ...await revalidatePlayers(database, actorUid, expectedPrivacyVersion, eligible));
+            break;
+        }
+        // Small concurrent windows cap account/block reads even for a dense candidate batch.
+        for (let offset = 0; offset < candidates.length && eligible.length <= exports.ONLINE_PAGE_SIZE; offset += 10) {
+            const window = candidates.slice(offset, offset + 10);
+            const results = await Promise.all(window.map(async ({ uid, presence }) => {
+                try {
+                    (0, social_core_1.requireTargetUid)({ uid });
+                }
+                catch {
+                    return null;
+                }
+                if (uid === actorUid)
+                    return null;
+                const [account, blocked] = await Promise.all([
+                    database.ref(`accounts/${uid}`).get(),
+                    (0, social_core_1.readBlockState)(database, actorUid, uid),
+                ]);
+                if (blocked)
+                    return null;
+                return (0, projections_1.buildActivePlayerProjection)(account.val(), uid, presence, expectedPrivacyVersion);
+            }));
+            for (let index = 0; index < window.length; index += 1) {
+                const candidate = window[index];
+                if (!candidate)
+                    continue;
+                scanned += 1;
+                cursor = candidate.uid;
+                const player = results[index];
+                if (player)
+                    eligible.push(player);
+                if (eligible.length > exports.ONLINE_PAGE_SIZE)
+                    break;
+            }
+        }
+        const consumedAll = cursor === candidates[candidates.length - 1]?.uid;
+        exhausted = consumedAll && candidates.length < exports.PRESENCE_BATCH_SIZE;
+        if (eligible.length > exports.ONLINE_PAGE_SIZE || exhausted || scanned >= exports.PRESENCE_CANDIDATE_LIMIT) {
+            eligible.splice(0, eligible.length, ...await revalidatePlayers(database, actorUid, expectedPrivacyVersion, eligible));
+            if (eligible.length > exports.ONLINE_PAGE_SIZE || exhausted)
+                break;
+            // If privacy/block/presence changed, resume after the last consumed candidate to refill.
+        }
+    }
+    await (0, social_core_1.requireCurrentCaller)(database, actorUid, expectedPrivacyVersion);
+    // A scan cap is not evidence of another eligible player. Do not invent hasMore.
+    if (eligible.length <= exports.ONLINE_PAGE_SIZE && !exhausted) {
+        throw new social_core_1.SocialError('failed-precondition', social_core_1.SOCIAL_SERVICE_UNAVAILABLE_MESSAGE);
+    }
+    const items = eligible.slice(0, exports.ONLINE_PAGE_SIZE);
+    const hasMore = eligible.length > exports.ONLINE_PAGE_SIZE;
+    const last = items[items.length - 1];
+    return { items, hasMore, ...(hasMore && last ? { nextCursor: last.uid } : {}) };
+}
+async function getPlayerPresenceService(database, actorUid, targetUid, expectedPrivacyVersion) {
+    (0, social_core_1.requireTargetUid)({ uid: targetUid });
+    await (0, social_core_1.requireCurrentCaller)(database, actorUid, expectedPrivacyVersion);
+    const [account, presence, blocked] = await Promise.all([
+        database.ref(`accounts/${targetUid}`).get(),
+        database.ref(`presenceSessions/${targetUid}`).get(),
+        (0, social_core_1.readBlockState)(database, actorUid, targetUid),
+    ]);
+    if (blocked || !(0, projections_1.buildActivePlayerProjection)(account.val(), targetUid, presence.val(), expectedPrivacyVersion)) {
+        return { online: false };
+    }
+    // Recheck privacy and blocks at the response boundary after the asynchronous reads.
+    const [latest, latestPresence, latestBlocked] = await Promise.all([
+        database.ref(`accounts/${targetUid}`).get(),
+        database.ref(`presenceSessions/${targetUid}`).get(),
+        (0, social_core_1.readBlockState)(database, actorUid, targetUid),
+        (0, social_core_1.requireCurrentCaller)(database, actorUid, expectedPrivacyVersion),
+    ]);
+    return { online: Boolean(!latestBlocked && (0, projections_1.buildActivePlayerProjection)(latest.val(), targetUid, latestPresence.val(), expectedPrivacyVersion)) };
+}
+//# sourceMappingURL=discovery-core.js.map

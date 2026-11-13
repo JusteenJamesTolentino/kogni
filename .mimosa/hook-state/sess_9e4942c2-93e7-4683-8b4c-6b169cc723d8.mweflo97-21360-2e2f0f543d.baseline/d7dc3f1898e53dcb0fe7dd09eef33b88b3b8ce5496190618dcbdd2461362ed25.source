@@ -1,0 +1,30 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const strict_1 = __importDefault(require("node:assert/strict"));
+const node_test_1 = require("node:test");
+const https_1 = require("firebase-functions/v2/https");
+const social_js_1 = require("./social.js");
+const core_test_helpers_js_1 = require("./core-test-helpers.js");
+const version = 'privacy-2026-11-10-ai-series-1';
+function isCode(code) {
+    return (error) => error instanceof https_1.HttpsError && error.code === code;
+}
+(0, node_test_1.test)('legacy validation/service exports retain HttpsError compatibility', async () => {
+    strict_1.default.throws(() => (0, social_js_1.requireTargetUid)({ uid: 'bad/path' }), isCode('invalid-argument'));
+    const db = (0, core_test_helpers_js_1.memoryDatabase)({ accounts: { alice: (0, core_test_helpers_js_1.eligibleTestAccount)('alice'), bob: (0, core_test_helpers_js_1.eligibleTestAccount)('bob') } });
+    await strict_1.default.rejects(() => (0, social_js_1.followPlayerService)(db.database, 'alice', 'alice', version), isCode('invalid-argument'));
+    db.write('playerBlocks/bob/alice', 1);
+    await strict_1.default.rejects(() => (0, social_js_1.followPlayerService)(db.database, 'alice', 'bob', version), isCode('not-found'));
+});
+(0, node_test_1.test)('callable adapter authenticates and validates before running shared service', async () => {
+    const db = (0, core_test_helpers_js_1.memoryDatabase)({ accounts: { alice: (0, core_test_helpers_js_1.eligibleTestAccount)('alice'), bob: (0, core_test_helpers_js_1.eligibleTestAccount)('bob') } });
+    const handlers = (0, social_js_1.createSocialCallableHandlers)(db.database, () => version);
+    await strict_1.default.rejects(() => handlers.followPlayer({ data: { uid: 'bob' } }), isCode('unauthenticated'));
+    await strict_1.default.rejects(() => handlers.followPlayer({ auth: { uid: 'alice' }, data: null }), isCode('invalid-argument'));
+    strict_1.default.equal(db.reads.length, 0);
+    strict_1.default.deepEqual(await handlers.followPlayer({ auth: { uid: 'alice' }, data: { uid: 'bob' } }), { targetUid: 'bob', following: true });
+});
+//# sourceMappingURL=social-adapter.test.js.map

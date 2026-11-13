@@ -1,0 +1,518 @@
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+import type { User } from 'firebase/auth'
+import ApiKeyModal from '../components/ApiKeyModal'
+import Navbar from '../components/Navbar'
+import SideNav, { MobileNavDrawer } from '../components/SideNav'
+import PublicProfileModal from '../components/PublicProfileModal'
+import type { PublicProfileDraft } from '../components/PublicProfileModal'
+import ShareDeckModal from '../components/ShareDeckModal'
+import type { PortalCodeAction, PortalCodeDetails } from '../components/PortalCodePanel'
+import type { CommunityProfile, CommunitySearchResult, SharedDeckSummary } from '../components/Community'
+import {
+  discoverPublicProfiles,
+  dismissSharedDeckInbox,
+  getPublicProfile,
+  getSharedDeckCopy,
+  getSharedDeckInbox,
+  shareDeckCopy,
+} from '../lib/community'
+import { PRIVACY_VERSION } from '../lib/account'
+import { renameAccount, updateAccountPreferences } from '../lib/account'
+import { useAuth } from '../context/AuthContext'
+import { copyPrivateDeck, loadCloudDeck, loadCloudLibrary } from '../lib/cloudDecks'
+import { listActivePlayers, listRecentPublicOnlineDecks } from '../lib/discovery'
+import type { ActivePlayerProjection, PublicOnlineDeckProjection } from '../types/projections'
+import { getErrorMessage } from '../lib/errors'
+import { GEMINI_API_KEY_STORAGE, GEMINI_MODEL_STORAGE } from '../lib/geminiSettings'
+import type { GeminiSettings } from '../lib/geminiSettings'
+import {
+  createDeckPortal,
+  formatPortalCode,
+  getDeckPortalCode,
+  lookupDeckPortal,
+  renewDeckPortal,
+  revokeDeckPortal,
+  rotateDeckPortal,
+} from '../lib/portal'
+import type { DeckPortalRecord, PublicProfile, SharedDeckInboxItem, StudyCard, StudyDeck } from '../types/domain'
+import { onlineDeckPath, paths } from '../router/paths'
+
+const THEME_STORAGE = 'kognit_theme'
+const SIDEBAR_STORAGE = 'kognit_sidebar'
+type Theme = 'light' | 'dark'
+
+function getInitialTheme(): Theme {
+  const saved = localStorage.getItem(THEME_STORAGE)
+  if (saved === 'light' || saved === 'dark') return saved
+  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+}
+
+/** Expanded by default; only a saved user preference collapses the rail. */
+function getInitialSidebarCollapsed(): boolean {
+  return localStorage.getItem(SIDEBAR_STORAGE) === 'collapsed'
+}
+
+function toSearchResult(profile: PublicProfile): CommunitySearchResult {
+  return { id: profile.uid, displayName: profile.displayName, photoURL: profile.photoURL }
+}
+
+function toInboxSummary(item: SharedDeckInboxItem): SharedDeckSummary {
+  return {
+    id: item.id,
+    deckId: item.sharedDeckId,
+    deckTitle: item.title,
+    senderId: item.ownerId,
+    senderDisplayName: item.senderDisplayName,
+    description: item.description,
+    cardCount: item.cardCount,
+    sharedAt: typeof item.createdAt === 'number' ? item.createdAt : undefined,
+  }
+}
+
+export interface AppShellContextValue {
+  user: User
+  account: NonNullable<ReturnType<typeof useAuth>['account']>
+  decks: StudyDeck[]
+  dueCards: StudyCard[]
+  libraryLoading: boolean
+  libraryError: string
+  apiKey: string
+  geminiModel: string
+  importBusy: boolean
+  communityProfile: CommunityProfile
+  profile: PublicProfile | null
+  profileLoading: boolean
+  profileSaving: boolean
+  profileError: string
+  searchQuery: string
+  searchResults: CommunitySearchResult[]
+  searchLoading: boolean
+  searchError: string
+  inbox: SharedDeckSummary[]
+  inboxLoading: boolean
+  inboxError: string
+  activePlayers: ActivePlayerProjection[]
+  publicOnlineDecks: PublicOnlineDeckProjection[]
+  discoveryLoading: boolean
+  discoveryError: string
+  loadLibrary: () => Promise<void>
+  loadCommunity: () => Promise<void>
+  setImportBusy: (busy: boolean) => void
+  setSearchQuery: (query: string) => void
+  runSearch: (query: string) => Promise<void>
+  openProfileModal: () => void
+  setDiscoverability: (isDiscoverable: boolean) => Promise<void>
+  setPresenceVisibility: (visible: boolean) => Promise<void>
+  importSharedDeck: (summary: SharedDeckSummary) => Promise<void>
+  dismissSharedDeck: (summary: SharedDeckSummary) => Promise<void>
+  openShareModal: (deck: StudyDeck) => void
+  openApiKeyModal: () => void
+}
+
+interface AppShellProps {
+  user: User
+}
+
+export default function AppShell({ user }: AppShellProps) {
+  const { account, refreshAccount } = useAuth()
+  const location = useLocation()
+  const navigate = useNavigate()
+  const [decks, setDecks] = useState<StudyDeck[]>([])
+  const [dueCards, setDueCards] = useState<StudyCard[]>([])
+  const [libraryLoading, setLibraryLoading] = useState(true)
+  const [libraryError, setLibraryError] = useState('')
+  const [apiKey, setApiKey] = useState('')
+  const [geminiModel, setGeminiModel] = useState('')
+  const [apiKeyModalOpen, setApiKeyModalOpen] = useState(false)
+  const [importBusy, setImportBusy] = useState(false)
+  const [theme, setTheme] = useState<Theme>(getInitialTheme)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(getInitialSidebarCollapsed)
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
+
+  const [profile, setProfile] = useState<PublicProfile | null>(null)
+  const [profileLoading, setProfileLoading] = useState(false)
+  const [profileSaving, setProfileSaving] = useState(false)
+  const [profileError, setProfileError] = useState('')
+  const [profileModalOpen, setProfileModalOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<PublicProfile[]>([])
+  const [searchLoading, setSearchLoading] = useState(false)
+  const [searchError, setSearchError] = useState('')
+  const [inbox, setInbox] = useState<SharedDeckInboxItem[]>([])
+  const [inboxLoading, setInboxLoading] = useState(false)
+  const [inboxError, setInboxError] = useState('')
+  const [activePlayers, setActivePlayers] = useState<ActivePlayerProjection[]>([])
+  const [publicOnlineDecks, setPublicOnlineDecks] = useState<PublicOnlineDeckProjection[]>([])
+  const [discoveryLoading, setDiscoveryLoading] = useState(false)
+  const [discoveryError, setDiscoveryError] = useState('')
+  const [shareDeck, setShareDeck] = useState<StudyDeck | null>(null)
+  const [sharing, setSharing] = useState(false)
+  const [shareError, setShareError] = useState('')
+  const [portalRecord, setPortalRecord] = useState<DeckPortalRecord | null>(null)
+  const [portalBusyAction, setPortalBusyAction] = useState<PortalCodeAction | null>(null)
+  const [portalError, setPortalError] = useState('')
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    document.documentElement.style.colorScheme = theme
+    localStorage.setItem(THEME_STORAGE, theme)
+  }, [theme])
+
+  useEffect(() => {
+    setApiKey(localStorage.getItem(GEMINI_API_KEY_STORAGE) || '')
+    setGeminiModel(localStorage.getItem(GEMINI_MODEL_STORAGE) || '')
+  }, [user.uid])
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [location.pathname])
+
+  const libraryRequest = useRef(0)
+  const libraryAbort = useRef<AbortController | null>(null)
+  const loadLibrary = useCallback(async (): Promise<void> => {
+    const request = ++libraryRequest.current
+    libraryAbort.current?.abort()
+    const controller = new AbortController()
+    libraryAbort.current = controller
+    setLibraryLoading(true)
+    setLibraryError('')
+    try {
+      const library = await loadCloudLibrary(user, { signal: controller.signal })
+      if (request !== libraryRequest.current || controller.signal.aborted) return
+      setDecks(library.decks)
+      setDueCards(library.dueCards)
+    } catch (dataError: unknown) {
+      if (request === libraryRequest.current && !controller.signal.aborted) setLibraryError(getErrorMessage(dataError, 'Your cloud library could not be loaded.'))
+    } finally {
+      if (request === libraryRequest.current) setLibraryLoading(false)
+    }
+  }, [user])
+
+  const loadCommunity = useCallback(async (): Promise<void> => {
+    setProfileLoading(true)
+    setInboxLoading(true)
+    setProfileError('')
+    setInboxError('')
+    const [profileResult, inboxResult] = await Promise.allSettled([
+      getPublicProfile(user),
+      getSharedDeckInbox(user),
+    ])
+    if (profileResult.status === 'fulfilled') setProfile(profileResult.value)
+    else setProfileError(getErrorMessage(profileResult.reason, 'Your public profile could not be loaded.'))
+    if (inboxResult.status === 'fulfilled') setInbox(inboxResult.value)
+    else setInboxError(getErrorMessage(inboxResult.reason, 'Shared decks could not be loaded.'))
+    setProfileLoading(false)
+    setInboxLoading(false)
+  }, [user])
+
+  const loadDiscovery = useCallback(async (): Promise<void> => {
+    setDiscoveryLoading(true)
+    setDiscoveryError('')
+    try {
+      const [playersPage, decksPage] = await Promise.all([
+        listActivePlayers(),
+        listRecentPublicOnlineDecks(),
+      ])
+      setActivePlayers(playersPage.items.filter((player) => player.uid !== user.uid))
+      setPublicOnlineDecks(decksPage.items)
+    } catch (discoveryFailure: unknown) {
+      setDiscoveryError(getErrorMessage(discoveryFailure, 'Online players and published decks could not be loaded.'))
+    } finally {
+      setDiscoveryLoading(false)
+    }
+  }, [user.uid])
+
+  useEffect(() => {
+    setDecks([]); setDueCards([])
+    void loadLibrary()
+    return () => { ++libraryRequest.current; libraryAbort.current?.abort() }
+  }, [loadLibrary])
+  useEffect(() => {
+    if (location.pathname === paths.dashboard) void loadLibrary()
+  }, [location.pathname, loadLibrary])
+  useEffect(() => {
+    if (location.pathname === paths.dashboard || location.pathname === paths.community || location.pathname === paths.onlineDecks) {
+      void loadDiscovery()
+    }
+  }, [loadDiscovery, location.pathname])
+  useEffect(() => { if (location.pathname === paths.community) void loadCommunity() }, [loadCommunity, location.pathname])
+
+  const handleSaveGeminiSettings = ({ apiKey: value, model }: GeminiSettings): void => {
+    localStorage.setItem(GEMINI_API_KEY_STORAGE, value)
+    localStorage.setItem(GEMINI_MODEL_STORAGE, model)
+    setApiKey(value)
+    setGeminiModel(model)
+    setApiKeyModalOpen(false)
+  }
+
+  const handleRemoveGeminiSettings = (): void => {
+    localStorage.removeItem(GEMINI_API_KEY_STORAGE)
+    localStorage.removeItem(GEMINI_MODEL_STORAGE)
+    setApiKey('')
+    setGeminiModel('')
+    setApiKeyModalOpen(false)
+  }
+
+  const runSearch = async (query: string): Promise<void> => {
+    setSearchQuery(query)
+    if (!query.trim()) {
+      setSearchResults([])
+      return
+    }
+    setSearchLoading(true)
+    setSearchError('')
+    try {
+      const results = await discoverPublicProfiles(query)
+      setSearchResults(results.filter((result) => result.uid !== user.uid))
+    } catch (searchFailure: unknown) {
+      setSearchError(getErrorMessage(searchFailure, 'Learner search is unavailable.'))
+    } finally {
+      setSearchLoading(false)
+    }
+  }
+
+  const saveProfile = async (draft: PublicProfileDraft): Promise<void> => {
+    setProfileSaving(true)
+    setProfileError('')
+    try {
+      if (draft.displayName.trim() !== account?.nickname) {
+        await renameAccount(user, draft.displayName)
+      }
+      await updateAccountPreferences(user, { discoverable: draft.isDiscoverable })
+      await refreshAccount()
+      setProfileModalOpen(false)
+    } catch (profileFailure: unknown) {
+      setProfileError(getErrorMessage(profileFailure, 'Your profile could not be saved.'))
+    } finally {
+      setProfileSaving(false)
+    }
+  }
+
+  const importSharedDeck = async (summary: SharedDeckSummary): Promise<void> => {
+    try {
+      const snapshot = await getSharedDeckCopy(user, summary.deckId)
+      if (!snapshot) throw new Error('The shared deck is unavailable')
+      const saved = await copyPrivateDeck(user, { ...snapshot, cards: Object.values(snapshot.cards) }, `share:${summary.deckId}`)
+      await dismissSharedDeckInbox(user, summary.deckId)
+      await loadLibrary()
+      setInbox((current) => current.filter((item) => item.sharedDeckId !== summary.deckId))
+      navigate(onlineDeckPath(saved.id))
+    } catch (importFailure: unknown) {
+      setInboxError(getErrorMessage(importFailure, 'The shared deck could not be added to your library.'))
+    }
+  }
+
+  const dismissSharedDeck = async (summary: SharedDeckSummary): Promise<void> => {
+    await dismissSharedDeckInbox(user, summary.deckId)
+    setInbox((current) => current.filter((entry) => entry.sharedDeckId !== summary.deckId))
+  }
+
+  const shareWithRecipient = async (recipient: CommunitySearchResult): Promise<void> => {
+    if (!shareDeck) return
+    setSharing(true)
+    setShareError('')
+    try {
+      const { cards } = await loadCloudDeck(user, shareDeck.id)
+      await shareDeckCopy(user, {
+        deck: shareDeck,
+        cards,
+        recipientId: recipient.id,
+        senderDisplayName: account?.nickname || 'Kogni learner',
+      })
+      setShareDeck(null)
+    } catch (shareFailure: unknown) {
+      setShareError(getErrorMessage(shareFailure, 'This deck could not be shared.'))
+    } finally {
+      setSharing(false)
+    }
+  }
+
+  const openShareModal = async (deck: StudyDeck): Promise<void> => {
+    setShareDeck(deck)
+    setPortalError('')
+    setPortalRecord(null)
+    try {
+      const code = await getDeckPortalCode(user, deck.id)
+      if (!code) return
+      const result = await lookupDeckPortal(user, code)
+      if (result.ok && result.portal.ownerId === user.uid) setPortalRecord(result.portal)
+    } catch (portalFailure: unknown) {
+      setPortalError(getErrorMessage(portalFailure, 'Portal settings could not be loaded.'))
+    }
+  }
+
+  const runPortalAction = async (
+    action: Exclude<PortalCodeAction, 'copy'>,
+    expiresInDays?: number,
+  ): Promise<void> => {
+    if (!shareDeck) return
+    setPortalBusyAction(action)
+    setPortalError('')
+    try {
+      if (action === 'create') {
+        const { cards } = await loadCloudDeck(user, shareDeck.id)
+        setPortalRecord(await createDeckPortal(
+          user,
+          { deck: shareDeck, cards, ownerDisplayName: account?.nickname || 'Kogni learner' },
+          { expiresInDays },
+        ))
+      } else if (action === 'renew' && portalRecord) {
+        setPortalRecord(await renewDeckPortal(user, portalRecord.id, { expiresInDays }))
+      } else if (action === 'revoke' && portalRecord) {
+        await revokeDeckPortal(user, portalRecord.id)
+        setPortalRecord(null)
+      } else if (action === 'rotate' && portalRecord) {
+        setPortalRecord(await rotateDeckPortal(user, portalRecord.id, { expiresInDays }))
+      }
+    } catch (portalFailure: unknown) {
+      setPortalError(getErrorMessage(portalFailure, 'The portal code could not be updated.'))
+    } finally {
+      setPortalBusyAction(null)
+    }
+  }
+
+  const communityProfile: CommunityProfile = profile
+    ? { displayName: profile.displayName, isDiscoverable: true, photoURL: profile.photoURL }
+    : { displayName: user.displayName || '', isDiscoverable: false, photoURL: user.photoURL }
+
+  const setDiscoverability = async (isDiscoverable: boolean): Promise<void> => {
+    await updateAccountPreferences(user, { discoverable: isDiscoverable })
+    await refreshAccount()
+    await loadCommunity()
+  }
+
+  const setPresenceVisibility = async (visible: boolean): Promise<void> => {
+    await updateAccountPreferences(user, { presence: visible })
+    await refreshAccount()
+  }
+
+  if (!account) return null
+
+  const context: AppShellContextValue = {
+    user,
+    account,
+    decks,
+    dueCards,
+    libraryLoading,
+    libraryError,
+    apiKey,
+    geminiModel,
+    importBusy,
+    communityProfile,
+    profile,
+    profileLoading,
+    profileSaving,
+    profileError,
+    searchQuery,
+    searchResults: searchResults.map(toSearchResult),
+    searchLoading,
+    searchError,
+    inbox: inbox.map(toInboxSummary),
+    inboxLoading,
+    inboxError,
+    activePlayers,
+    publicOnlineDecks,
+    discoveryLoading,
+    discoveryError,
+    loadLibrary,
+    loadCommunity,
+    setImportBusy,
+    setSearchQuery,
+    runSearch,
+    openProfileModal: () => setProfileModalOpen(true),
+    setDiscoverability,
+    setPresenceVisibility,
+    importSharedDeck,
+    dismissSharedDeck,
+    openShareModal,
+    openApiKeyModal: () => setApiKeyModalOpen(true),
+  }
+
+  const isStudyRoute = /(^|\/)study(?:\/(due|practice))?$/.test(location.pathname)
+  const portalCode: PortalCodeDetails | null = portalRecord && portalRecord.status === 'active'
+    ? {
+        code: formatPortalCode(portalRecord.id),
+        expiresAt: portalRecord.expiresAt,
+        createdAt: portalRecord.createdAt,
+      }
+    : null
+
+  const toggleSidebar = (): void => {
+    const next = !sidebarCollapsed
+    setSidebarCollapsed(next)
+    localStorage.setItem(SIDEBAR_STORAGE, next ? 'collapsed' : 'expanded')
+  }
+
+  const shellPadding = isStudyRoute ? '' : sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-60'
+
+  return (
+    <div className={`min-h-screen bg-base-200/35 text-base-content transition-[padding] duration-200 ${shellPadding}`}>
+      {!isStudyRoute && (
+        <>
+          <SideNav collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
+          <MobileNavDrawer open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
+          <Navbar
+            onOpenApiKey={() => setApiKeyModalOpen(true)}
+            theme={theme}
+            onToggleTheme={() => setTheme((previous) => previous === 'dark' ? 'light' : 'dark')}
+            searchQuery={searchQuery}
+            searchResults={context.searchResults}
+            searchLoading={searchLoading}
+            onSearch={runSearch}
+            onOpenSidebar={() => setMobileNavOpen(true)}
+            onOpenAccountSettings={() => setProfileModalOpen(true)}
+          />
+        </>
+      )}
+
+      <Outlet context={context} />
+
+      <PublicProfileModal
+        open={profileModalOpen}
+        displayName={account.nickname}
+        isDiscoverable={account.preferences.discoverable}
+        saving={profileSaving}
+        error={profileError}
+        presenceVisible={account.preferences.presence}
+        privacyAcknowledged={account.privacy.currentVersion === PRIVACY_VERSION}
+        privacyHref={paths.privacy}
+        onSave={saveProfile}
+        onPresenceChange={setPresenceVisibility}
+        onPrivacyAcknowledgementChange={async () => undefined}
+        onClose={() => setProfileModalOpen(false)}
+      />
+      <ShareDeckModal
+        open={Boolean(shareDeck)}
+        deck={shareDeck}
+        searchQuery={searchQuery}
+        searchResults={context.searchResults}
+        searchLoading={searchLoading}
+        searchError={searchError}
+        sharing={sharing}
+        shareError={shareError}
+        portalCode={portalCode}
+        portalBusyAction={portalBusyAction}
+        portalError={portalError}
+        onSearchQueryChange={setSearchQuery}
+        onSearchSubmit={runSearch}
+        onShare={shareWithRecipient}
+        onCreatePortalCode={(days) => runPortalAction('create', days)}
+        onRenewPortalCode={(days) => runPortalAction('renew', days)}
+        onRevokePortalCode={() => runPortalAction('revoke')}
+        onRotatePortalCode={(days) => runPortalAction('rotate', days)}
+        onCopyPortalCode={(code) => navigator.clipboard.writeText(code)}
+        onClose={() => { setShareDeck(null); setPortalRecord(null); setPortalError('') }}
+      />
+      <ApiKeyModal
+        open={apiKeyModalOpen}
+        currentKey={apiKey}
+        currentModel={geminiModel}
+        onSave={handleSaveGeminiSettings}
+        onRemove={handleRemoveGeminiSettings}
+        onClose={() => setApiKeyModalOpen(false)}
+        canClose
+      />
+    </div>
+  )
+}

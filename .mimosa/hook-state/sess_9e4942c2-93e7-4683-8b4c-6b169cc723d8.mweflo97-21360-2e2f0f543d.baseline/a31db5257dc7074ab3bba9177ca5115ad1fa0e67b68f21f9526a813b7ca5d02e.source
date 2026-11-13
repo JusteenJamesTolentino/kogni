@@ -1,0 +1,52 @@
+export interface ActivePlayerProjection {
+    uid: string;
+    nickname: string;
+    nicknameCanonical: string;
+}
+export interface PublicOnlineDeckProjection {
+    id: string;
+    ownerId: string;
+    ownerNickname: string;
+    ownerNicknameCanonical: string;
+    title: string;
+    titleCanonical: string;
+    description: string;
+    cardCount: number;
+    latestVersion: number;
+    updatedAt: number;
+}
+export interface OnlineDeckHeadSource {
+    id: string;
+    ownerId: string;
+    visibility: string;
+    status: string;
+    latestVersion: number;
+    title: string;
+    description: string;
+    cardCount: number;
+    updatedAt: number;
+}
+export interface OnlineDeckProjectionRemoval {
+    catalogDeckId: string;
+    ownerDeckIds: string[];
+}
+/** Tombstones never retain discovery entries, including stale owner-index rows. */
+export declare function buildOnlineDeckProjectionRemoval(deckId: string, currentOwnerId: string | null, previousOwnerId: string | null): OnlineDeckProjectionRemoval;
+export interface AccountSource {
+    uid: string;
+    status: string;
+    nickname: string;
+    nicknameCanonical: string;
+    privacy: {
+        currentVersion: string;
+        acknowledgements?: Record<string, unknown>;
+    };
+    preferences: {
+        discoverable: boolean;
+        presence: boolean;
+    };
+}
+export declare function isPlainRecord(value: unknown): value is Record<string, unknown>;
+export declare function readEligibleAccount(value: unknown, uid: string, expectedPrivacyVersion: string): AccountSource | null;
+export declare function buildActivePlayerProjection(accountValue: unknown, uid: string, presenceValue: unknown, expectedPrivacyVersion: string): ActivePlayerProjection | null;
+export declare function buildPublicOnlineDeckProjection(headValue: unknown, deckId: string, ownerAccountValue: unknown, expectedPrivacyVersion: string): PublicOnlineDeckProjection | null;

@@ -1,0 +1,44 @@
+import { describe, expect, it } from 'vitest'
+import {
+  createAuthRedirectState,
+  deckLeaderboardPath,
+  deckPath,
+  deckStudyPath,
+  getSafeRedirectTarget,
+  normalizePortalCode,
+  portalPath,
+} from '../../src/router/paths'
+
+describe('route path helpers', () => {
+  it('encodes deck ids and portal codes', () => {
+    expect(deckPath('deck/one')).toBe('/decks/deck%2Fone')
+    expect(deckLeaderboardPath('deck one')).toBe('/decks/deck%20one/leaderboard')
+    expect(deckStudyPath('deck one', 'practice')).toBe('/decks/deck%20one/study/practice')
+    expect(normalizePortalCode(' ab-cd ')).toBe('AB-CD')
+    expect(portalPath(' ab/cd ')).toBe('/portal/AB%2FCD')
+  })
+})
+
+describe('auth redirect validation', () => {
+  it('preserves valid internal deep links', () => {
+    expect(getSafeRedirectTarget('/decks/deck-1/study/due?source=mail#card')).toBe('/decks/deck-1/study/due?source=mail#card')
+    expect(createAuthRedirectState('/community', '?tab=inbox', '#shared')).toEqual({
+      from: '/community?tab=inbox#shared',
+    })
+  })
+
+  it.each([
+    'https://attacker.example/decks/1',
+    '//attacker.example/decks/1',
+    '/\\attacker.example/decks/1',
+    '\\attacker.example\\decks\\1',
+    'decks/1',
+    '/sign-in',
+    '/sign-in?from=/community',
+    '/community\nnext',
+    null,
+    undefined,
+  ])('rejects unsafe redirect %j', (value) => {
+    expect(getSafeRedirectTarget(value)).toBe('/')
+  })
+})

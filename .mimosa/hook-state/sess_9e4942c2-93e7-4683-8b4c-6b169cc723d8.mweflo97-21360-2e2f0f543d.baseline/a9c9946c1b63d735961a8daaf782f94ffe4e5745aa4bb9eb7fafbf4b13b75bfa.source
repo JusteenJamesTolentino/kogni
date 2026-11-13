@@ -1,0 +1,18 @@
+import type { Database } from 'firebase-admin/database';
+import { type CallableRequest } from 'firebase-functions/v2/https';
+import * as core from './social-core.js';
+export { XP_TRUST, SOCIAL_UNAVAILABLE_MESSAGE, SOCIAL_SERVICE_UNAVAILABLE_MESSAGE, SocialUnavailableError, followEdgeId, isFollowEdge, isPublicPlayerProfile, buildPublicPlayerProfile, reconcilePublicPlayerProfile, reconcileFollowProjection, cleanupPrivatePlayer, } from './social-core.js';
+export type { PublicPlayerProfile, FollowEdge, PlayerProfileResult, FollowResult, BlockResult } from './social-core.js';
+export declare function requireTargetUid(data: unknown): string;
+export declare const followPlayerService: (database: import("./database-core.js").CoreDatabase, actorUid: string, targetUid: string, expectedPrivacyVersion: string, now?: number | undefined) => Promise<core.FollowResult>;
+export declare const unfollowPlayerService: (database: import("./database-core.js").CoreDatabase, actorUid: string, targetUid: string, expectedPrivacyVersion: string) => Promise<core.FollowResult>;
+export declare const blockPlayerService: (database: import("./database-core.js").CoreDatabase, actorUid: string, targetUid: string, expectedPrivacyVersion: string, now?: number | undefined) => Promise<core.BlockResult>;
+export declare const unblockPlayerService: (database: import("./database-core.js").CoreDatabase, actorUid: string, targetUid: string, expectedPrivacyVersion: string) => Promise<core.BlockResult>;
+export declare const getPlayerProfileService: (database: import("./database-core.js").CoreDatabase, actorUid: string, targetUid: string, expectedPrivacyVersion: string) => Promise<core.PlayerProfileResult>;
+export declare function createSocialCallableHandlers(database: Database, privacyVersion: () => string): {
+    getPlayerProfile: (request: CallableRequest<unknown>) => Promise<core.PlayerProfileResult>;
+    followPlayer: (request: CallableRequest<unknown>) => Promise<core.FollowResult>;
+    unfollowPlayer: (request: CallableRequest<unknown>) => Promise<core.FollowResult>;
+    blockPlayer: (request: CallableRequest<unknown>) => Promise<core.BlockResult>;
+    unblockPlayer: (request: CallableRequest<unknown>) => Promise<core.BlockResult>;
+};

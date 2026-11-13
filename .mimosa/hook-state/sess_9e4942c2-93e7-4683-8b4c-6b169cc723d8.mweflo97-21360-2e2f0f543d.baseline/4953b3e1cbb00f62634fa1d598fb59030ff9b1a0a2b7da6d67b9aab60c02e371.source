@@ -1,0 +1,98 @@
+"use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.getPlayerProfileService = exports.unblockPlayerService = exports.blockPlayerService = exports.unfollowPlayerService = exports.followPlayerService = exports.cleanupPrivatePlayer = exports.reconcileFollowProjection = exports.reconcilePublicPlayerProfile = exports.buildPublicPlayerProfile = exports.isPublicPlayerProfile = exports.isFollowEdge = exports.followEdgeId = exports.SocialUnavailableError = exports.SOCIAL_SERVICE_UNAVAILABLE_MESSAGE = exports.SOCIAL_UNAVAILABLE_MESSAGE = exports.XP_TRUST = void 0;
+exports.requireTargetUid = requireTargetUid;
+exports.createSocialCallableHandlers = createSocialCallableHandlers;
+const https_1 = require("firebase-functions/v2/https");
+const core = __importStar(require("./social-core.js"));
+var social_core_js_1 = require("./social-core.js");
+Object.defineProperty(exports, "XP_TRUST", { enumerable: true, get: function () { return social_core_js_1.XP_TRUST; } });
+Object.defineProperty(exports, "SOCIAL_UNAVAILABLE_MESSAGE", { enumerable: true, get: function () { return social_core_js_1.SOCIAL_UNAVAILABLE_MESSAGE; } });
+Object.defineProperty(exports, "SOCIAL_SERVICE_UNAVAILABLE_MESSAGE", { enumerable: true, get: function () { return social_core_js_1.SOCIAL_SERVICE_UNAVAILABLE_MESSAGE; } });
+Object.defineProperty(exports, "SocialUnavailableError", { enumerable: true, get: function () { return social_core_js_1.SocialUnavailableError; } });
+Object.defineProperty(exports, "followEdgeId", { enumerable: true, get: function () { return social_core_js_1.followEdgeId; } });
+Object.defineProperty(exports, "isFollowEdge", { enumerable: true, get: function () { return social_core_js_1.isFollowEdge; } });
+Object.defineProperty(exports, "isPublicPlayerProfile", { enumerable: true, get: function () { return social_core_js_1.isPublicPlayerProfile; } });
+Object.defineProperty(exports, "buildPublicPlayerProfile", { enumerable: true, get: function () { return social_core_js_1.buildPublicPlayerProfile; } });
+Object.defineProperty(exports, "reconcilePublicPlayerProfile", { enumerable: true, get: function () { return social_core_js_1.reconcilePublicPlayerProfile; } });
+Object.defineProperty(exports, "reconcileFollowProjection", { enumerable: true, get: function () { return social_core_js_1.reconcileFollowProjection; } });
+Object.defineProperty(exports, "cleanupPrivatePlayer", { enumerable: true, get: function () { return social_core_js_1.cleanupPrivatePlayer; } });
+function translateError(error) {
+    if (error instanceof core.SocialError)
+        throw new https_1.HttpsError(error.code, error.message);
+    throw error;
+}
+function callableCompatible(operation) {
+    return async (...args) => {
+        try {
+            return await operation(...args);
+        }
+        catch (error) {
+            return translateError(error);
+        }
+    };
+}
+function requireTargetUid(data) {
+    try {
+        return core.requireTargetUid(data);
+    }
+    catch (error) {
+        return translateError(error);
+    }
+}
+// Keep direct service exports compatible with callers that expect HttpsError.
+exports.followPlayerService = callableCompatible(core.followPlayerService);
+exports.unfollowPlayerService = callableCompatible(core.unfollowPlayerService);
+exports.blockPlayerService = callableCompatible(core.blockPlayerService);
+exports.unblockPlayerService = callableCompatible(core.unblockPlayerService);
+exports.getPlayerProfileService = callableCompatible(core.getPlayerProfileService);
+function requireAuth(request) {
+    const uid = request.auth?.uid;
+    if (typeof uid !== 'string' || !core.UID_PATTERN.test(uid)) {
+        throw new https_1.HttpsError('unauthenticated', 'Authentication is required.');
+    }
+    return uid;
+}
+function createSocialCallableHandlers(database, privacyVersion) {
+    return {
+        getPlayerProfile: async (request) => (0, exports.getPlayerProfileService)(database, requireAuth(request), requireTargetUid(request.data), privacyVersion()),
+        followPlayer: async (request) => (0, exports.followPlayerService)(database, requireAuth(request), requireTargetUid(request.data), privacyVersion()),
+        unfollowPlayer: async (request) => (0, exports.unfollowPlayerService)(database, requireAuth(request), requireTargetUid(request.data), privacyVersion()),
+        blockPlayer: async (request) => (0, exports.blockPlayerService)(database, requireAuth(request), requireTargetUid(request.data), privacyVersion()),
+        unblockPlayer: async (request) => (0, exports.unblockPlayerService)(database, requireAuth(request), requireTargetUid(request.data), privacyVersion()),
+    };
+}
+//# sourceMappingURL=social.js.map
