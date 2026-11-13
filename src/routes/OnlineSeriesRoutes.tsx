@@ -3,11 +3,12 @@ import { useNavigate, useParams } from 'react-router-dom'
 import ContinuationCreator from '../components/ContinuationCreator'
 import StudySession from '../components/StudySession'
 import { useAuth } from '../context/AuthContext'
-import { createDeckSeries, recordOnlinePartRating } from '../lib/deckSeries'
+import { createDeckSeries, publishReviewedSeriesDraft, recordOnlinePartRating } from '../lib/deckSeries'
 import { generateDeckContinuation } from '../lib/gemini'
 import { getOnlineDeckHead, getOnlineDeckVersion } from '../lib/onlineDecks'
 import { get, ref } from 'firebase/database'
 import { database } from '../lib/firebase'
+import { newCloudDeckId } from '../lib/cloudDecks'
 import type { DeckSeries, GeneratedDeck, OnlineDeckHead, OnlineDeckVersion, StudyCard, StudyDeck } from '../types/domain'
 import { onlineDeckPath } from '../router/paths'
 
@@ -126,10 +127,31 @@ export function OnlineDeckContinuationRoute() {
       } catch (cause: unknown) { setError(cause instanceof Error ? cause.message : 'Continuation generation failed'); setStatus('ready') }
     }}
     onPublishDraft={async () => {
-      if (!draft) return
+      if (!draft || !user) return
       setStatus('publishing')
-      setError('Publishing integration requires creator review and a new local draft deck ID before series linkage.')
-      setStatus('review')
+      setError('')
+      try {
+        // publishReviewedSeriesDraft atomically creates the next online deck and advances
+        // the series (30 cards, duplicate-question guard enforced server-side).
+        const result = await publishReviewedSeriesDraft(user, {
+          seriesId: series.id,
+          expectedLatestPartNumber: series.latestPartNumber,
+          deckId: newCloudDeckId(),
+          content: {
+            title: draft.title,
+            description: draft.description,
+            studyGuide: draft.studyGuide,
+            cards: draft.cards.map((card, index) => ({ id: `card_${index}`, question: card.question, answer: card.answer, distractors: card.distractors })),
+          },
+          visibility: head.visibility,
+          offlinePolicy: head.offlinePolicy,
+        })
+        setStatus('published')
+        navigate(onlineDeckPath(result.deck.head.id))
+      } catch (cause: unknown) {
+        setError(cause instanceof Error ? cause.message : 'The continuation could not be published.')
+        setStatus('review')
+      }
     }}
     onCancel={() => navigate(onlineDeckPath(deckId))}
   />

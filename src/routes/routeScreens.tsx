@@ -311,7 +311,10 @@ export function GlobalLeaderboardRoute() {
 }
 
 export function DeckRoute() {
-  return <Navigate to={paths.legacyDecks} replace />
+  const { deckId = '' } = useParams()
+  // Cloud decks live under /online-decks; stale /decks/:id bookmarks and shared links
+  // resolve to the real deck page instead of the legacy recovery list.
+  return deckId ? <Navigate to={onlineDeckPath(deckId)} replace /> : <Navigate to={paths.legacyDecks} replace />
 }
 
 export function DeckLeaderboardRoute() {
@@ -334,8 +337,8 @@ export function StudyRoute({ mode, deckScoped }: StudyRouteProps) {
     void (async () => {
       const library = deckScoped ? null : await loadCloudLibrary(user)
       const ids = deckScoped ? [deckId || ''] : [...new Set(library!.dueCards.map((card) => card.deckId))]
-      const loaded: Array<Awaited<ReturnType<typeof loadCloudDeck>>> = []
-      for (const id of ids) loaded.push(await loadCloudDeck(user, id))
+      // Load due decks concurrently; a slow deck no longer delays the whole session start.
+      const loaded = await Promise.all(ids.map((id) => loadCloudDeck(user, id)))
       const cards = loaded
         .flatMap((item) => item.cards)
         .filter((card) => mode === 'practice' || card.nextReviewDate <= Date.now())

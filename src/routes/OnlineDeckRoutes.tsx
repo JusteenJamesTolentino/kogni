@@ -155,6 +155,7 @@ export function OnlineDeckRoute() {
       <div className="mt-4 flex flex-wrap gap-2"><span className="badge badge-outline">{version.cardCount} questions</span><span className="badge badge-outline">{head.visibility}</span><span className="badge badge-outline">Version {version.version}</span></div>
       <div className="mt-6 grid gap-2 sm:grid-cols-2">
         <Link to={deckStudyPath(head.id, 'due')} className="btn btn-primary">Review due</Link>
+        <Link to={deckStudyPath(head.id, 'practice')} className="btn btn-outline">Practice all cards</Link>
         {owner && <Link to={onlineDeckEditPath(head.id)} className="btn btn-outline">Edit deck</Link>}
         {owner && <button className="btn btn-outline" onClick={() => openShareModal(deck)}>Share deck</button>}
         {owner && head.visibility !== 'public' && <button className="btn btn-outline" onClick={() => setPublishOpen(true)}>Publish publicly</button>}

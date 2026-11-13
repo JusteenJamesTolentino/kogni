@@ -1,4 +1,4 @@
-import { Home, Layers3, PanelLeftClose, PanelLeftOpen, Trophy, Users, X } from 'lucide-react'
+import { BookOpen, CircleUserRound, GraduationCap, Home, Layers3, PanelLeftClose, PanelLeftOpen, Trophy, Users, X } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import KogniLogo from './KogniLogo'
@@ -11,13 +11,14 @@ interface SideNavItem {
   end?: boolean
 }
 
-const decksNavItem: SideNavItem = { to: paths.myDecks, label: 'My decks', icon: Layers3 }
-
 const sideNavItems: SideNavItem[] = [
   { to: paths.dashboard, label: 'Dashboard', icon: Home, end: true },
-  decksNavItem,
+  { to: paths.myDecks, label: 'My decks', icon: Layers3 },
+  { to: paths.onlineDecks, label: 'Online decks', icon: BookOpen },
+  { to: paths.studyDue, label: 'Study due', icon: GraduationCap },
   { to: paths.community, label: 'Community', icon: Users },
   { to: paths.leaderboards, label: 'Leaderboard', icon: Trophy },
+  { to: paths.profile, label: 'Profile', icon: CircleUserRound },
 ]
 
 const isItemActive = (pathname: string, item: SideNavItem): boolean => {
