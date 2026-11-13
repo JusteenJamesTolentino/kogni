@@ -4,7 +4,15 @@ import '../src/index.css'
 export const metadata: Metadata = {
   title: 'Kogni — Learn once. Remember longer.',
   description: 'AI-powered active recall and spaced repetition',
-  icons: { icon: '/favicon.svg' },
+  icons: {
+    icon: '/kogni-logo.png',
+    apple: '/apple-icon.png',
+  },
+  openGraph: {
+    title: 'Kogni — Learn once. Remember longer.',
+    description: 'AI-powered active recall and spaced repetition',
+    images: ['/kogni-logo.png'],
+  },
 }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

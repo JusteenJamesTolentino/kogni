@@ -1,6 +1,7 @@
-import { BrainCircuit, Home, Layers3, PanelLeftClose, PanelLeftOpen, Trophy, UserRound, Users, X } from 'lucide-react'
+import { Home, Layers3, PanelLeftClose, PanelLeftOpen, Trophy, UserRound, Users, X } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
+import KogniLogo from './KogniLogo'
 import { paths } from '../router/paths'
 
 interface SideNavItem {
@@ -10,7 +11,7 @@ interface SideNavItem {
   end?: boolean
 }
 
-const decksNavItem: SideNavItem = { to: paths.import, label: 'Decks', icon: Layers3 }
+const decksNavItem: SideNavItem = { to: paths.myDecks, label: 'My decks', icon: Layers3 }
 
 const sideNavItems: SideNavItem[] = [
   { to: paths.dashboard, label: 'Dashboard', icon: Home, end: true },
@@ -94,9 +95,7 @@ export function MobileNavDrawer({ open, onClose }: MobileNavDrawerProps) {
         aria-hidden={!open}
       >
         <div className="flex h-16 shrink-0 items-center gap-2 border-b border-base-300/70 px-3">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-primary-content shadow-lg shadow-primary/20">
-            <BrainCircuit size={21} aria-hidden="true" />
-          </span>
+          <KogniLogo size={36} className="shadow-lg shadow-primary/20" />
           <span className="flex-1 text-lg font-black tracking-tight">Kogni</span>
           <button type="button" onClick={onClose} className="btn btn-ghost btn-square btn-sm" aria-label="Close navigation">
             <X size={18} aria-hidden="true" />

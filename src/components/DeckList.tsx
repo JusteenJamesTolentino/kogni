@@ -88,18 +88,17 @@ export default function DeckList({
                   {relatedDue > 0 && <span className="badge badge-secondary badge-sm">{relatedDue} due</span>}
                 </div>
               </div>
-              <div>
-                <h3 className="mt-3 line-clamp-2 text-lg font-bold">{deck.title || 'Untitled deck'}</h3>
-                <p className="mt-1 line-clamp-2 min-h-10 text-sm text-base-content/55">{deck.description || 'A focused collection ready for review.'}</p>
-              </div>
-              <div className="mt-2 flex items-center gap-4 text-xs text-base-content/55">
+              {/* Fixed two-line reserves keep meta rows and action buttons aligned across cards. */}
+              <h3 className="mt-3 line-clamp-2 min-h-14 text-lg font-bold leading-7">{deck.title || 'Untitled deck'}</h3>
+              <p className="mt-1 line-clamp-2 min-h-10 text-sm text-base-content/55">{deck.description || 'A focused collection ready for review.'}</p>
+              <div className="mt-3 flex items-center gap-4 text-xs text-base-content/55">
                 <span className="inline-flex items-center gap-1"><Layers3 size={14} aria-hidden="true" /> {deck.cardCount} cards</span>
                 {deck.createdAt > 0 && <span className="inline-flex items-center gap-1"><Clock3 size={14} aria-hidden="true" /> Ready to browse</span>}
               </div>
-              <div className={`card-actions mt-2 grid ${reviewDue && relatedDue > 0 ? 'grid-cols-[1fr_auto]' : 'grid-cols-1'} gap-2`}>
+              <div className={`card-actions mt-auto grid w-full pt-4 ${reviewDue && relatedDue > 0 ? 'grid-cols-[1fr_auto]' : 'grid-cols-1'} gap-2`}>
                 <button type="button" onClick={() => void onOpenDeck(deck)} className="btn btn-primary btn-sm min-w-0 gap-2">
                   Open deck
-                  <ChevronRight size={15} className="ml-auto" aria-hidden="true" />
+                  <ChevronRight size={15} aria-hidden="true" />
                 </button>
                 {reviewDue && relatedDue > 0 && (
                   <button

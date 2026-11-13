@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { ArrowLeft, BookOpenText, Brain, Check, Eye, Sparkles, X } from 'lucide-react'
 import { awardReviewXp } from '../lib/leaderboard'
 import { getErrorMessage } from '../lib/errors'
+import { shuffle } from '../lib/shuffle'
 import { useAuth } from '../context/AuthContext'
 import type { StudyCard, StudyDeck } from '../types/domain'
 
@@ -91,14 +92,8 @@ export default function StudySession({ cards, deck, mode, onExit, onFinished, on
   const card = cards[index]
   const choices = useMemo<string[]>(() => {
     if (!card || card.distractors.length === 0) return []
-    const answer = getAnswer(card)
-    const seed = Array.from(card.id).reduce(
-      (total, character) => total + character.charCodeAt(0),
-      0,
-    )
-    const options = [answer, ...card.distractors]
-    const offset = seed % options.length
-    return [...options.slice(offset), ...options.slice(0, offset)]
+    // The correct answer is always included; order is shuffled per card and stable while shown.
+    return shuffle([getAnswer(card), ...card.distractors.filter(Boolean)])
   }, [card])
   const progress = cards.length ? ((index + (revealed ? 0.5 : 0)) / cards.length) * 100 : 0
 
@@ -389,15 +384,29 @@ export default function StudySession({ cards, deck, mode, onExit, onFinished, on
             <AnimatePresence>
               {revealed && (
                 <motion.div initial={shouldReduceMotion ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={shouldReduceMotion ? { duration: 0 } : undefined} className="mt-5 rounded-2xl border border-base-300 bg-base-100 p-4 sm:p-5">
-                  <p className="mb-3 text-center text-sm font-semibold">{isPractice ? 'How did that feel?' : 'How well did you know it?'}</p>
-                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
-                    {ratings.map((rating) => (
-                      <button key={rating.quality} type="button" onClick={() => void handleRate(rating.quality)} disabled={saving} className={`btn h-auto min-h-14 flex-col gap-0 px-1 py-2 ${rating.className} btn-outline`} aria-label={`Rate ${rating.quality}: ${rating.label}, ${rating.hint}`}>
-                        <span className="text-sm font-bold">{rating.label}</span><span className="text-[0.6rem] font-normal opacity-70">{rating.quality} · {rating.hint}</span>
+                  {choices.length > 0 ? (
+                    // A picked choice already shows correct/wrong, so skip the self-rating step:
+                    // record it (correct → good, wrong → needs review) and move straight on.
+                    <div className="flex flex-col items-center gap-2">
+                      <button type="button" onClick={() => void handleRate(choiceCorrect ? 4 : 1)} disabled={saving} className="btn btn-primary min-w-44 gap-2">
+                        {saving && <span className="loading loading-spinner loading-sm" aria-hidden="true" />}
+                        Next question
                       </button>
-                    ))}
-                  </div>
-                  {saving && !isPractice && <div className="mt-3 flex items-center justify-center gap-2 text-xs text-base-content/55"><span className="loading loading-spinner loading-xs" /> Saving progress…</div>}
+                      {saving && !isPractice && <p className="text-xs text-base-content/55">Saving progress…</p>}
+                    </div>
+                  ) : (
+                    <>
+                      <p className="mb-3 text-center text-sm font-semibold">{isPractice ? 'How did that feel?' : 'How well did you know it?'}</p>
+                      <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+                        {ratings.map((rating) => (
+                          <button key={rating.quality} type="button" onClick={() => void handleRate(rating.quality)} disabled={saving} className={`btn h-auto min-h-14 flex-col gap-0 px-1 py-2 ${rating.className} btn-outline`} aria-label={`Rate ${rating.quality}: ${rating.label}, ${rating.hint}`}>
+                            <span className="text-sm font-bold">{rating.label}</span><span className="text-[0.6rem] font-normal opacity-70">{rating.quality} · {rating.hint}</span>
+                          </button>
+                        ))}
+                      </div>
+                      {saving && !isPractice && <div className="mt-3 flex items-center justify-center gap-2 text-xs text-base-content/55"><span className="loading loading-spinner loading-xs" /> Saving progress…</div>}
+                    </>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>

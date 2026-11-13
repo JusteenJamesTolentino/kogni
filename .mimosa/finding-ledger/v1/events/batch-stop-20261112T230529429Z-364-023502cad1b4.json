@@ -1,0 +1,41 @@
+{
+  "schemaVersion": "mimosa-finding-ledger-batch/v1",
+  "batchId": "stop-20261112T230529429Z-364-023502cad1b4",
+  "runId": "20261112T230529429Z-364-023502cad1b4",
+  "runStatus": "completed",
+  "coverage": {
+    "status": "complete",
+    "reasons": []
+  },
+  "source": {
+    "component": "zcode-hook",
+    "operationId": "Stop"
+  },
+  "revision": "5ea0b52b70b899b8fb2e1b02fbf9826694cac2f0",
+  "diffHash": "7fd73ad93dcd6ca4c2709a6a000b6c3520bd47cd289b5fe8841de5a310418097",
+  "rulesVersion": "unavailable",
+  "sessionHash": "cd95ed41352a8975433361874269812e703e06befc9e3c7784355b3b6a36c983",
+  "reportRef": ".mimosa/reports/task-review-sess_9e4942c2-93e7-4683-8b4c-6b169cc723d8-20261112T230529429Z-364-023502cad1b4.json",
+  "events": [],
+  "observedFindingIds": [
+    "mimosa-3cdaf986e4d2c44fc7369ae5"
+  ],
+  "verifiedFiles": [
+    {
+      "file": "src/components/DeckList.tsx",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/components/DeckEditor.tsx",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/routes/routeScreens.tsx",
+      "direct": "complete",
+      "projectContext": "partial"
+    }
+  ],
+  "recordedAt": "2026-11-12T23:05:30.095Z"
+}

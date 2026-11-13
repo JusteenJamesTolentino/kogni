@@ -1,10 +1,8 @@
-import { ArrowRight, Flame, Layers3, Plus, Sparkles, Target, Trophy, UsersRound } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { ArrowRight, Flame, Layers3, Sparkles, Target, Trophy, UsersRound } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import type { StudyCard, StudyDeck } from '../types/domain'
 import type { ActivePlayerProjection, PublicOnlineDeckProjection } from '../types/projections'
-import DeckList from './DeckList'
 
 interface StatCardProps {
   icon: LucideIcon
@@ -17,13 +15,9 @@ interface StatCardProps {
 interface DashboardProps {
   decks: StudyDeck[]
   dueCards: StudyCard[]
-  loading: boolean
   error: string
   onRetry: () => void | Promise<void>
   onStudy: (deck: StudyDeck | null) => void | Promise<void>
-  onOpenDeck: (deck: StudyDeck) => void
-  onImport: () => void
-  onBrowseShared: () => void
   suggestedUsers: ActivePlayerProjection[]
   suggestedDecks: PublicOnlineDeckProjection[]
   onOpenUser: (uid: string) => void
@@ -31,17 +25,23 @@ interface DashboardProps {
 }
 
 function StatCard({ icon: Icon, label, value, help, tone }: StatCardProps) {
+  // Plain flex layout: daisyUI's .stat absolutely positions .stat-figure on small
+  // screens, which made the icon overlap the value on narrow viewports.
   return (
-    <div className="stat rounded-2xl border border-base-300 bg-base-100 p-4 shadow-sm sm:p-5">
-      <div className={`stat-figure rounded-xl p-2.5 ${tone}`}><Icon size={22} aria-hidden="true" /></div>
-      <div className="stat-title text-xs font-semibold uppercase tracking-wider">{label}</div>
-      <div className="stat-value text-2xl sm:text-3xl">{value}</div>
-      <div className="stat-desc mt-1">{help}</div>
+    <div className="flex items-center gap-3 rounded-2xl border border-base-300 bg-base-100 p-4 shadow-sm sm:gap-4 sm:p-5">
+      <div className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl sm:h-12 sm:w-12 ${tone}`}>
+        <Icon size={20} aria-hidden="true" />
+      </div>
+      <div className="min-w-0">
+        <div className="truncate text-xs font-semibold uppercase tracking-wider text-base-content/55">{label}</div>
+        <div className="text-2xl font-black leading-tight tabular-nums sm:text-3xl">{value}</div>
+        <div className="mt-0.5 truncate text-xs text-base-content/55">{help}</div>
+      </div>
     </div>
   )
 }
 
-export default function Dashboard({ decks, dueCards, loading, error, onRetry, onStudy, onOpenDeck, onImport, onBrowseShared, suggestedUsers, suggestedDecks, onOpenUser, onOpenSuggestedDeck }: DashboardProps) {
+export default function Dashboard({ decks, dueCards, error, onRetry, onStudy, suggestedUsers, suggestedDecks, onOpenUser, onOpenSuggestedDeck }: DashboardProps) {
   const { user } = useAuth()
   const displayName = user?.displayName?.split(' ')[0] || 'learner'
   const totalCards = decks.reduce((total, deck) => total + deck.cardCount, 0)
@@ -78,21 +78,6 @@ export default function Dashboard({ decks, dueCards, loading, error, onRetry, on
         <StatCard icon={Layers3} label="Total cards" value={totalCards} help={`Across ${decks.length} ${decks.length === 1 ? 'deck' : 'decks'}`} tone="bg-secondary/10 text-secondary" />
         <StatCard icon={Flame} label="Day streak" value={streak} help="Keep the rhythm" tone="bg-warning/15 text-warning" />
         <StatCard icon={Trophy} label="Learning XP" value={xp} help="Earned from reviews" tone="bg-success/10 text-success" />
-      </section>
-
-      <section id="decks" className="mt-9 scroll-mt-24" aria-labelledby="decks-title">
-        <div className="mb-4 flex items-center justify-between gap-4">
-          <div>
-            <h2 id="decks-title" className="text-2xl font-bold">Your decks</h2>
-            <p className="text-sm text-base-content/55">Saved to your account. Internet required.</p>
-            <Link to="/legacy-decks" className="link mt-1 inline-block text-xs text-base-content/50">Recover legacy decks on this device</Link>
-          </div>
-          <button type="button" onClick={onImport} className="btn btn-primary btn-sm gap-2 shadow-md shadow-primary/30">
-            <Plus size={15} aria-hidden="true" />
-            <span>Magic import</span>
-          </button>
-        </div>
-        <DeckList decks={decks} dueCards={dueCards} loading={loading} onReviewDue={onStudy} onOpenDeck={onOpenDeck} onImport={onImport} onBrowseShared={onBrowseShared} />
       </section>
 
       {(suggestedUsers.length > 0 || suggestedDecks.length > 0) && (

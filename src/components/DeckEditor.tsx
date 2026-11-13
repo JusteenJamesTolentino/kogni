@@ -57,6 +57,8 @@ export interface DeckEditorLeaveContext {
 export interface DeckEditorProps {
   initialDraft: DeckEditorDraft
   deckLabel?: string
+  /** Page heading; defaults to "Edit deck" for the edit flow. */
+  heading?: string
   saving?: boolean
   saveError?: string
   onSave: (draft: DeckEditorDraft, context: DeckEditorSaveContext) => void | Promise<void>
@@ -170,6 +172,7 @@ function CharacterCount({ value, limit, id }: { value: string; limit: number; id
 export default function DeckEditor({
   initialDraft,
   deckLabel = 'deck',
+  heading = 'Edit deck',
   saving = false,
   saveError = '',
   onSave,
@@ -317,7 +320,7 @@ export default function DeckEditor({
   const showError = (value?: string): string | undefined => attemptedSave ? value : undefined
 
   return (
-    <main ref={editorRootRef} className="mx-auto w-full max-w-[100rem] px-4 py-6 pb-28 sm:px-6 sm:py-9 sm:pb-32 lg:px-8">
+    <main ref={editorRootRef} className="mx-auto w-full max-w-6xl px-4 py-5 pb-28 sm:px-6 sm:py-7 lg:px-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <button type="button" onClick={() => void requestCancel()} className="btn btn-ghost btn-sm -ml-2 gap-2" disabled={saving}>
           <ArrowLeft size={17} aria-hidden="true" /> Back
@@ -327,15 +330,15 @@ export default function DeckEditor({
         </span>
       </div>
 
-      <div className="mt-4 grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
-        <div className="min-w-0 space-y-6">
-          <section className="rounded-3xl border border-base-300 bg-base-100 p-5 shadow-lg sm:p-7" aria-labelledby={titleId}>
+      <div className="mt-4 grid gap-5 lg:grid-cols-[minmax(0,1fr)_16rem]">
+        <div className="min-w-0 space-y-4">
+          <section className="rounded-2xl border border-base-300 bg-base-100 p-4 shadow-lg sm:p-5" aria-labelledby={titleId}>
             <div className="flex items-start gap-3">
-              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-primary/10 text-primary"><FileText size={21} aria-hidden="true" /></div>
-              <div><p className="text-sm font-semibold text-primary">{deckLabel} draft · Cloud save</p><h1 id={titleId} className="text-2xl font-black tracking-tight sm:text-3xl">Edit deck</h1></div>
+              <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary"><FileText size={18} aria-hidden="true" /></div>
+              <div><p className="text-sm font-semibold text-primary">{deckLabel} draft · Cloud save</p><h1 id={titleId} className="text-xl font-black tracking-tight sm:text-2xl">{heading}</h1></div>
             </div>
 
-            <div className="mt-6 grid gap-5">
+            <div className="mt-4 grid gap-3">
               <label className="form-control">
                 <span className="label pb-1"><span className="label-text font-semibold">Title</span><CharacterCount id={titleCountId} value={draft.title} limit={DECK_EDITOR_LIMITS.title} /></span>
                 <input value={draft.title} onChange={(event) => updateMetadata('title', event.target.value)} className={`input input-bordered w-full ${showError(errors.title) ? 'input-error' : ''}`} maxLength={DECK_EDITOR_LIMITS.title + 1} aria-invalid={Boolean(showError(errors.title))} aria-describedby={`${titleCountId}${showError(errors.title) ? ` ${titleErrorId}` : ''}`} />
@@ -344,13 +347,13 @@ export default function DeckEditor({
 
               <label className="form-control">
                 <span className="label pb-1"><span className="label-text font-semibold">Description</span><CharacterCount id={descriptionCountId} value={draft.description} limit={DECK_EDITOR_LIMITS.description} /></span>
-                <textarea value={draft.description} onChange={(event) => updateMetadata('description', event.target.value)} className={`textarea textarea-bordered min-h-24 ${attemptedSave && metadataLengthErrors.description ? 'textarea-error' : ''}`} aria-invalid={Boolean(attemptedSave && metadataLengthErrors.description)} aria-describedby={descriptionCountId} />
+                <textarea value={draft.description} onChange={(event) => updateMetadata('description', event.target.value)} className={`textarea textarea-bordered min-h-20 ${attemptedSave && metadataLengthErrors.description ? 'textarea-error' : ''}`} aria-invalid={Boolean(attemptedSave && metadataLengthErrors.description)} aria-describedby={descriptionCountId} />
                 {attemptedSave && metadataLengthErrors.description && <span className="mt-1 text-xs font-semibold text-error" role="alert">{metadataLengthErrors.description}</span>}
               </label>
 
               <label className="form-control">
                 <span className="label pb-1"><span className="label-text font-semibold">Study guide</span><CharacterCount id={guideCountId} value={draft.studyGuide} limit={DECK_EDITOR_LIMITS.studyGuide} /></span>
-                <textarea value={draft.studyGuide} onChange={(event) => updateMetadata('studyGuide', event.target.value)} className={`textarea textarea-bordered min-h-48 leading-relaxed ${attemptedSave && metadataLengthErrors.studyGuide ? 'textarea-error' : ''}`} aria-invalid={Boolean(attemptedSave && metadataLengthErrors.studyGuide)} aria-describedby={guideCountId} />
+                <textarea value={draft.studyGuide} onChange={(event) => updateMetadata('studyGuide', event.target.value)} className={`textarea textarea-bordered min-h-32 leading-relaxed ${attemptedSave && metadataLengthErrors.studyGuide ? 'textarea-error' : ''}`} aria-invalid={Boolean(attemptedSave && metadataLengthErrors.studyGuide)} aria-describedby={guideCountId} />
                 {attemptedSave && metadataLengthErrors.studyGuide && <span className="mt-1 text-xs font-semibold text-error" role="alert">{metadataLengthErrors.studyGuide}</span>}
                 {attemptedSave && uncoveredAnswers.length > 0 && <span className="mt-1 text-xs font-semibold text-error" role="alert">The guide is missing {uncoveredAnswers.length} complete {uncoveredAnswers.length === 1 ? 'answer phrase' : 'answer phrases'}.</span>}
               </label>
@@ -365,13 +368,13 @@ export default function DeckEditor({
 
             {attemptedSave && draft.cards.length < minimumCards && <div ref={firstErrorRef} tabIndex={-1} role="alert" className="alert alert-error mt-4 text-sm"><span>Add at least {minimumCards} {minimumCards === 1 ? 'card' : 'cards'} before saving.</span></div>}
 
-            <ol className="mt-4 space-y-4" aria-label="Ordered deck cards">
+            <ol className="mt-3 space-y-3" aria-label="Ordered deck cards">
               {draft.cards.map((card, index) => {
                 const cardErrors = errors.cards[card.id]
                 const expanded = expandedCards.has(card.id)
                 return (
                   <li key={card.id} className="rounded-3xl border border-base-300 bg-base-100 shadow-sm" aria-label={`Card ${index + 1} of ${draft.cards.length}`}>
-                    <div className="flex items-center gap-2 border-b border-base-300 p-3 sm:px-5">
+                    <div className="flex items-center gap-2 border-b border-base-300 px-3 py-2 sm:px-4">
                       <GripVertical size={18} className="hidden shrink-0 text-base-content/30 sm:block" aria-hidden="true" />
                       <button type="button" onClick={() => setExpandedCards((current) => { const next = new Set(current); if (next.has(card.id)) next.delete(card.id); else next.add(card.id); return next })} className="btn btn-ghost min-w-0 flex-1 justify-start px-2 text-left" aria-expanded={expanded} aria-controls={`card-fields-${card.id}`}>
                         <span className="badge badge-primary badge-outline shrink-0">{index + 1}</span>
@@ -386,7 +389,7 @@ export default function DeckEditor({
                     </div>
 
                     {expanded && (
-                      <div id={`card-fields-${card.id}`} className="space-y-5 p-4 sm:p-6">
+                      <div id={`card-fields-${card.id}`} className="space-y-3 p-3 sm:p-4">
                         <EditorField label="Question" value={card.question} limit={DECK_EDITOR_LIMITS.question} inputId={`question-${card.id}`} error={showError(cardErrors?.question)} onChange={(value) => updateCard(card.id, (current) => ({ ...current, question: value }))} multiline />
                         <EditorField label="Answer" value={card.answer} limit={DECK_EDITOR_LIMITS.answer} inputId={`answer-${card.id}`} error={showError(cardErrors?.answer)} onChange={(value) => updateCard(card.id, (current) => ({ ...current, answer: value }))} multiline />
 
@@ -395,7 +398,7 @@ export default function DeckEditor({
                             <legend className="font-semibold">Distractors <span className="font-normal text-base-content/45">(optional)</span></legend>
                             <span className="text-xs text-base-content/45">{card.distractors.length} / {DECK_EDITOR_LIMITS.distractors}</span>
                           </div>
-                          <div className="mt-2 space-y-3">
+                          <div className="mt-2 space-y-2">
                             {card.distractors.map((distractor, distractorIndex) => {
                               const error = showError(cardErrors?.distractors[distractorIndex])
                               const errorId = `distractor-error-${card.id}-${distractorIndex}`
@@ -431,7 +434,7 @@ export default function DeckEditor({
         </div>
 
         <aside className="hidden lg:block" aria-label="Draft save summary">
-          <div className="sticky top-24 space-y-4">
+          <div className="sticky top-24 space-y-3">
             <DeckDraftDiff original={baseline} draft={draft} />
             {saveError && <div role="alert" className="alert alert-error text-sm"><span>{saveError}</span></div>}
             <button type="button" onClick={() => void handleSave()} disabled={!dirty || saving} className="btn btn-primary w-full gap-2">{saving ? <span className="loading loading-spinner loading-sm" aria-hidden="true" /> : <Save size={17} aria-hidden="true" />}{saving ? 'Saving…' : 'Save changes'}</button>
@@ -441,12 +444,12 @@ export default function DeckEditor({
       </div>
 
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-base-300 bg-base-100/95 p-3 shadow-[0_-10px_30px_rgba(0,0,0,0.08)] backdrop-blur motion-reduce:backdrop-filter-none lg:hidden">
-        <div className="mx-auto flex max-w-[100rem] items-center gap-2">
+        <div className="mx-auto flex max-w-6xl items-center gap-2">
           <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{dirty ? 'Unsaved changes' : 'No changes'}</p><p className="text-xs text-base-content/50">{changes.scheduleResetCardIds.length ? `${changes.scheduleResetCardIds.length} schedule reset` : `${draft.cards.length} cards`}</p></div>
           <button type="button" onClick={() => void requestCancel()} disabled={saving} className="btn btn-ghost btn-sm">Cancel</button>
           <button type="button" onClick={() => void handleSave()} disabled={!dirty || saving} className="btn btn-primary btn-sm gap-2">{saving ? <span className="loading loading-spinner loading-xs" aria-hidden="true" /> : <Check size={16} aria-hidden="true" />} Save</button>
         </div>
-        {saveError && <p role="alert" className="mx-auto mt-2 max-w-[100rem] text-xs font-semibold text-error">{saveError}</p>}
+        {saveError && <p role="alert" className="mx-auto mt-2 max-w-6xl text-xs font-semibold text-error">{saveError}</p>}
       </div>
     </main>
   )
@@ -475,7 +478,7 @@ function EditorField({ label, value, limit, inputId, error, multiline = false, o
   return (
     <label className="form-control">
       <span className="label pb-1"><span className="label-text font-semibold">{label}</span><CharacterCount id={countId} value={value} limit={limit} /></span>
-      {multiline ? <textarea {...shared} className={`textarea textarea-bordered min-h-24 ${error ? 'textarea-error' : ''}`} /> : <input {...shared} className={`input input-bordered ${error ? 'input-error' : ''}`} />}
+      {multiline ? <textarea {...shared} className={`textarea textarea-bordered min-h-16 ${error ? 'textarea-error' : ''}`} /> : <input {...shared} className={`input input-bordered ${error ? 'input-error' : ''}`} />}
       {error && <span id={errorId} role="alert" className="mt-1 text-xs font-semibold text-error">{error}</span>}
     </label>
   )

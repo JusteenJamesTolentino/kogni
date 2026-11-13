@@ -1,7 +1,8 @@
 import { motion } from 'framer-motion'
-import { BrainCircuit, LogIn, Sparkles } from 'lucide-react'
+import { LogIn, Sparkles } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import KogniLogo from './KogniLogo'
 import { useAuth } from '../context/AuthContext'
 import { getSafeRedirectTarget, paths } from '../router/paths'
 
@@ -41,9 +42,7 @@ export default function SignInScreen({ mode = 'signIn' }: AuthScreenProps) {
         aria-labelledby="welcome-title"
       >
         <div className="card-body items-center px-6 py-10 text-center sm:px-10">
-          <div className="mb-2 grid h-16 w-16 place-items-center rounded-2xl bg-primary text-primary-content shadow-lg shadow-primary/30">
-            <BrainCircuit size={34} aria-hidden="true" />
-          </div>
+          <KogniLogo size={64} className="mb-2 rounded-2xl shadow-lg shadow-primary/30" />
           <div className="badge badge-primary badge-outline mb-2 gap-1.5">
             <Sparkles size={13} aria-hidden="true" />
             AI-powered active recall

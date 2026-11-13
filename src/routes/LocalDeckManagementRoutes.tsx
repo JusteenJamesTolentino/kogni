@@ -6,5 +6,5 @@ export function LocalDeckEditRoute() {
 }
 
 export function LocalDeckRegenerateRoute() {
-  return <Navigate to={paths.import} replace />
+  return <Navigate to={paths.myDecks} replace />
 }

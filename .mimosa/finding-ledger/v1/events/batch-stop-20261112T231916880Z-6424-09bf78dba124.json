@@ -1,0 +1,54 @@
+{
+  "schemaVersion": "mimosa-finding-ledger-batch/v1",
+  "batchId": "stop-20261112T231916880Z-6424-09bf78dba124",
+  "runId": "20261112T231916880Z-6424-09bf78dba124",
+  "runStatus": "completed",
+  "coverage": {
+    "status": "complete",
+    "reasons": []
+  },
+  "source": {
+    "component": "zcode-hook",
+    "operationId": "Stop"
+  },
+  "revision": "5ea0b52b70b899b8fb2e1b02fbf9826694cac2f0",
+  "diffHash": "7dcb6f4b47f7e9d83e21d5b798aecf545298e1d9dc91f20b2002accfe79e33d5",
+  "rulesVersion": "unavailable",
+  "sessionHash": "cd95ed41352a8975433361874269812e703e06befc9e3c7784355b3b6a36c983",
+  "reportRef": ".mimosa/reports/task-review-sess_9e4942c2-93e7-4683-8b4c-6b169cc723d8-20261112T231916880Z-6424-09bf78dba124.json",
+  "events": [],
+  "observedFindingIds": [],
+  "verifiedFiles": [
+    {
+      "file": "app/layout.tsx",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/components/KogniLogo.tsx",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/components/Navbar.tsx",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/components/SideNav.tsx",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/components/SignInScreen.tsx",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/router/LoadingScreen.tsx",
+      "direct": "complete",
+      "projectContext": "partial"
+    }
+  ],
+  "recordedAt": "2026-11-12T23:19:17.668Z"
+}

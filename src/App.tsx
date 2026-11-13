@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState } from 'react'
-import { Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
 import { GuestOnlyRoute, OnboardingOnlyRoute, ProtectedRoute } from './router/guards'
 import { paths } from './router/paths'
@@ -26,7 +26,7 @@ const DashboardRoute = lazy(() => import('./routes/routeScreens').then((module) 
 const DeckLeaderboardRoute = lazy(() => import('./routes/routeScreens').then((module) => ({ default: module.DeckLeaderboardRoute })))
 const DeckRoute = lazy(() => import('./routes/routeScreens').then((module) => ({ default: module.DeckRoute })))
 const GlobalLeaderboardRoute = lazy(() => import('./routes/routeScreens').then((module) => ({ default: module.GlobalLeaderboardRoute })))
-const ImportRoute = lazy(() => import('./routes/routeScreens').then((module) => ({ default: module.ImportRoute })))
+const MyDecksRoute = lazy(() => import('./routes/routeScreens').then((module) => ({ default: module.MyDecksRoute })))
 const ProfileRoute = lazy(() => import('./routes/routeScreens').then((module) => ({ default: module.ProfileRoute })))
 const StudyRoute = lazy(() => import('./routes/routeScreens').then((module) => ({ default: module.StudyRoute })))
 
@@ -81,7 +81,8 @@ export default function App() {
         <Route element={<AuthenticatedShell />}>
           <Route index element={<DashboardRoute />} />
           <Route path="legacy-decks" element={<LegacyDecksRoute />} />
-          <Route path="import" element={<ImportRoute />} />
+          <Route path="mydecks" element={<MyDecksRoute />} />
+          <Route path="import" element={<Navigate to={paths.myDecks} replace />} />
           <Route path="community" element={<CommunityRoute />} />
           <Route path="leaderboards" element={<GlobalLeaderboardRoute />} />
           <Route path="profile" element={<ProfileRoute />} />

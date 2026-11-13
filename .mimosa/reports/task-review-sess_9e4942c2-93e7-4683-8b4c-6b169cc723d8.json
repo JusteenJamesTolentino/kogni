@@ -1,6 +1,6 @@
 {
   "schema_version": "mimosa-task-review/v2",
-  "run_id": "20261112T003733945Z-10044-bf851bf94338",
+  "run_id": "20261113T003846487Z-20308-aea520fea812",
   "run_status": "completed",
   "errors": [],
   "coverage": {
@@ -9,31 +9,31 @@
     "scope": "hook_observed_diff",
     "baseline": {
       "complete": true,
-      "captured_files": 169,
+      "captured_files": 174,
       "candidate_limit": 5000,
       "truncated": false,
       "enumeration_error_count": 0,
       "snapshot_error_count": 0,
-      "compensated_target_count": 14
+      "compensated_target_count": 2
     },
     "change_tracking": {
-      "touched_observed": 14,
-      "touched_retained": 14,
+      "touched_observed": 2,
+      "touched_retained": 2,
       "truncated": false,
-      "bash_mutation": false,
-      "bash_discovered": 0,
+      "bash_mutation": true,
+      "bash_discovered": 2,
       "bash_discovery_limit": 80,
       "bash_discovery_truncated": false
     },
     "candidates": {
-      "eligible_files": 14,
-      "selected_files": 14,
+      "eligible_files": 2,
+      "selected_files": 2,
       "limit": 20,
       "truncated": false
     },
     "scanning": {
-      "required_files": 10,
-      "scanned_files": 10,
+      "required_files": 2,
+      "scanned_files": 2,
       "skipped_files": 0,
       "failed_files": 0,
       "project_checks_required": 0,
@@ -49,192 +49,48 @@
     "reasons": [],
     "reasons_truncated": false
   },
-  "generated_at": "2026-11-12T00:37:33.945Z",
+  "generated_at": "2026-11-13T00:38:46.487Z",
   "session_id": "sess_9e4942c2-93e7-4683-8b4c-6b169cc723d8",
   "target": ".",
-  "revision": "5b6ed6eb8f8dca0246396a511f9e969cfb36864c",
+  "revision": "5ea0b52b70b899b8fb2e1b02fbf9826694cac2f0",
   "rules_version": "unavailable",
-  "diff_hash": "be8089b1c9f95801ee058ee8a774b9bd2ad6db38f55ad2dcb47d4178bbee35f9",
+  "diff_hash": "b2155d312a47674e2211677fb912c3261d76e614ab6667dfc714739d54379687",
   "diff": {
     "algorithm": "sha256",
-    "changed_file_count": 10,
+    "changed_file_count": 2,
     "changed_files": [
       {
-        "file": "app/api/_tests/routes.test.ts",
-        "ranges": [
-          {
-            "start": 17,
-            "end": 17
-          },
-          {
-            "start": 75,
-            "end": 104
-          }
-        ],
-        "before_hash": "aab0c45dd70adbd8568b16658604a53a3167ad469d2a94ad5d065d35e91811fc",
-        "after_hash": "6a3370165ae02b63ffdaf672f3b0d0204649b85851472857f54d643955fd9555"
-      },
-      {
-        "file": "functions/src/owner-decks-core.test.ts",
+        "file": "src/components/Dashboard.tsx",
         "ranges": [
           {
             "start": 1,
-            "end": 40
+            "end": 1
+          },
+          {
+            "start": 44,
+            "end": 44
           }
         ],
-        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "after_hash": "88729d7886265abfaacefcb92acaafe89b166e11dcdb9a738fcdcc17bdd5a967"
-      },
-      {
-        "file": "functions/src/owner-decks-core.ts",
-        "ranges": [
-          {
-            "start": 6,
-            "end": 23
-          },
-          {
-            "start": 27,
-            "end": 41
-          },
-          {
-            "start": 43,
-            "end": 49
-          },
-          {
-            "start": 54,
-            "end": 54
-          },
-          {
-            "start": 58,
-            "end": 59
-          },
-          {
-            "start": 62,
-            "end": 62
-          }
-        ],
-        "before_hash": "9c620725bcc2ffb1e9ab7edc9e428f491e615adb06aacfae0650506756b15856",
-        "after_hash": "330b05b04acab7b4ea1f09f29db4e24c80c1b273b6890703ba6d3b4c1bd24db4"
-      },
-      {
-        "file": "src/components/MagicImport.tsx",
-        "ranges": [
-          {
-            "start": 38,
-            "end": 38
-          },
-          {
-            "start": 94,
-            "end": 94
-          },
-          {
-            "start": 123,
-            "end": 123
-          },
-          {
-            "start": 127,
-            "end": 127
-          },
-          {
-            "start": 190,
-            "end": 190
-          }
-        ],
-        "before_hash": "c5de73970664882ad7a4449df946cca55eafe2cf3ed331d7b8dc7bbf4127486e",
-        "after_hash": "2b23495dde81fc06b83d3207ecfea27e3ce094bf4bda21633d52835f7e868bd8"
-      },
-      {
-        "file": "src/components/Onboarding.tsx",
-        "ranges": [
-          {
-            "start": 38,
-            "end": 38
-          },
-          {
-            "start": 54,
-            "end": 56
-          }
-        ],
-        "before_hash": "555d961b52a5b31edd8c6b368792c66e6abf65f035f92b5e96843128864bf15d",
-        "after_hash": "398d6e5ebbe9c3a8fe47f9619c444854b19799595a6b1187b512e7212b79f7f1"
-      },
-      {
-        "file": "src/components/PrivacyNotice.tsx",
-        "ranges": [
-          {
-            "start": 20,
-            "end": 26
-          }
-        ],
-        "before_hash": "1f6faa0c409abda053bbd50a618a960f62519827406e4ffb5a4912c92e2bc352",
-        "after_hash": "505c84d9812aeafe7b7811850101bbb0635c3cc71fc5503722eecfe33ade1e1f"
-      },
-      {
-        "file": "src/lib/cloudDecks.ts",
-        "ranges": [
-          {
-            "start": 144,
-            "end": 145
-          },
-          {
-            "start": 147,
-            "end": 147
-          },
-          {
-            "start": 155,
-            "end": 157
-          },
-          {
-            "start": 162,
-            "end": 162
-          },
-          {
-            "start": 169,
-            "end": 170
-          }
-        ],
-        "before_hash": "39130ee39dfb017dce7014b6b437ca83e09721db8bfb63a65a945a9042af661d",
-        "after_hash": "fa8262b920bf3569e2599d612449458662dbb151b12684738836d2e16c0fdad6"
+        "before_hash": "4bce83b5c3c21dd815fecb2602ec1b74392ddc5128ad7e667202f79bac3f9b3d",
+        "after_hash": "69c9f271433c3e2d31180be4a67a5b96b1536aef8e4760ebd54aba1121a55ad9"
       },
       {
         "file": "src/routes/routeScreens.tsx",
         "ranges": [
           {
-            "start": 3,
-            "end": 3
+            "start": 53,
+            "end": 53
           }
         ],
-        "before_hash": "ac5590ac52df62ba7af3486cc155aba21a1ec0c0506e8623cad19e9d4d11c77d",
-        "after_hash": "496ed363d69cff9fc603ce88e35c9f4f1a814fadbc34487b08286e80551542fb"
-      },
-      {
-        "file": "test/lib/database.rules.test.ts",
-        "ranges": [
-          {
-            "start": 888,
-            "end": 906
-          }
-        ],
-        "before_hash": "46c8e4f01372645938d874f879606ed678dbfba73ca22469ec8cef489938b180",
-        "after_hash": "85f0cacc53f36314fa3e03ebe744c75408beda80f19d8a6dbb2c4028651acd6f"
-      },
-      {
-        "file": "test/lib/onlineDecks.test.ts",
-        "ranges": [
-          {
-            "start": 78,
-            "end": 99
-          }
-        ],
-        "before_hash": "e625c969fdca22a5989912b2723773174db6503b733955f542cb64f76015a6e5",
-        "after_hash": "5456b96eab42c068b58949f666e58f337045b678292e792fe7a11e702c0ed84d"
+        "before_hash": "1dc2bb304a28ab7c66f6dc3e4595aa8e884841f812a2bef94a0174fb836ed8fe",
+        "after_hash": "e0b298a87a3e1a0e155a722304eab1862cafd8ac24c7af43a1ef9ac832e83ad5"
       }
     ]
   },
   "timing": {
-    "started_at": "2026-11-12T00:37:31.608Z",
-    "completed_at": "2026-11-12T00:37:33.945Z",
-    "duration_ms": 2337,
+    "started_at": "2026-11-13T00:38:44.145Z",
+    "completed_at": "2026-11-13T00:38:46.487Z",
+    "duration_ms": 2342,
     "measurement": "hook_wall_clock"
   },
   "tokens": {
@@ -249,10 +105,10 @@
     "profile": "gate",
     "operation": "Stop",
     "outcome": "complete",
-    "latencyMs": 2337,
-    "peakMemoryBytes": 152219648,
+    "latencyMs": 2342,
+    "peakMemoryBytes": 158752768,
     "memoryMeasurement": "max-observed-process-rss",
-    "scannedFiles": 10,
+    "scannedFiles": 2,
     "cache": {
       "hits": 0,
       "misses": 0,
@@ -277,8 +133,8 @@
   "finding_events": [],
   "findings": [],
   "artifacts": {
-    "immutable_report": ".mimosa/reports/task-review-sess_9e4942c2-93e7-4683-8b4c-6b169cc723d8-20261112T003733945Z-10044-bf851bf94338.json",
+    "immutable_report": ".mimosa/reports/task-review-sess_9e4942c2-93e7-4683-8b4c-6b169cc723d8-20261113T003846487Z-20308-aea520fea812.json",
     "latest_report": ".mimosa/reports/task-review-sess_9e4942c2-93e7-4683-8b4c-6b169cc723d8.json",
-    "history_summary": ".mimosa/history/run-20261112T003733945Z-10044-bf851bf94338.json"
+    "history_summary": ".mimosa/history/run-20261113T003846487Z-20308-aea520fea812.json"
   }
 }

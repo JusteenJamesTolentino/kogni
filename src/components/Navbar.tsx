@@ -1,6 +1,7 @@
-import { BrainCircuit, KeyRound, LogOut, Menu, Moon, Settings, Sun, UserRound } from 'lucide-react'
+import { KeyRound, LogOut, Menu, Moon, Settings, Sun, UserRound } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import type { CommunitySearchResult } from './Community'
+import KogniLogo from './KogniLogo'
 import { useAuth } from '../context/AuthContext'
 import { paths } from '../router/paths'
 
@@ -91,9 +92,7 @@ export default function Navbar({ onOpenApiKey, theme, onToggleTheme, searchQuery
                 className="btn btn-ghost gap-2 px-1 text-xl font-black tracking-tight sm:px-2"
                 aria-label="Go to dashboard"
               >
-                <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-primary-content shadow-lg shadow-primary/20">
-                  <BrainCircuit size={21} aria-hidden="true" />
-                </span>
+                <KogniLogo size={36} className="shadow-lg shadow-primary/20" />
                 <span>Kogni</span>
               </Link>
             </div>

@@ -5,7 +5,7 @@ export const paths = {
   privacy: '/privacy',
   profile: '/profile',
   dashboard: '/',
-  import: '/import',
+  myDecks: '/mydecks',
   community: '/community',
   leaderboards: '/leaderboards',
   onlineDecks: '/online-decks',
