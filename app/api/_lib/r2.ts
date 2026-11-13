@@ -68,8 +68,8 @@ export async function presignAvatarUpload(uid: string, contentType: string, size
   const { client, bucket } = r2()
   const key = buildAvatarKey(uid, contentType)
   // Only Content-Type and Content-Length are pinned: every signed header must be sent
-  // verbatim by the browser, and the bucket CORS allowlist covers just Content-Type —
-  // adding e.g. Cache-Control here would break the preflight for the browser PUT.
+  // verbatim by the browser. Cache-Control can be added once cloudflare.cors.json
+  // (which allowlists it) has been applied to the bucket — see README "Bucket CORS".
   const uploadUrl = await getSignedUrl(client, new PutObjectCommand({
     Bucket: bucket,
     Key: key,

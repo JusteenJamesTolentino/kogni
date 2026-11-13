@@ -139,6 +139,19 @@ Profile photos are stored in Cloudflare R2. All Kogni objects live under the `ko
 
 The client never supplies the public URL — it is derived from the verified key against `R2_PUBLIC_URL`. Server configuration uses `R2_ENDPOINT`, `R2_BUCKET_NAME`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, and `R2_PUBLIC_URL` (server-only environment).
 
+#### Bucket CORS
+
+`cloudflare.cors.json` is the canonical CORS configuration for the storage bucket; the browser PUT needs it to pass preflight. Apply it with any S3-compatible client:
+
+```bash
+aws s3api put-bucket-cors \
+  --endpoint-url "$R2_ENDPOINT" \
+  --bucket "$R2_BUCKET_NAME" \
+  --cors-configuration file://cloudflare.cors.json
+```
+
+The presigned upload deliberately pins only `Content-Type` and `Content-Length` — every signed header must be sent verbatim by the browser. `Cache-Control` is listed in `cloudflare.cors.json` but not yet signed: after applying this file, re-adding `CacheControl` to the presigned `PutObjectCommand` in `app/api/_lib/r2.ts` enables immutable browser caching of avatar objects.
+
 ## Error Handling & Edge Cases
 
 - Saving, loading, editing, reviewing, sharing, portal copying, and public publishing require connectivity. The application reports a connection error instead of falling back to IndexedDB.
