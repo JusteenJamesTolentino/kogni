@@ -57,6 +57,10 @@ export async function uploadAvatar(user: User, file: File, signal?: AbortSignal)
 
   // The presigned URL is scope-limited and self-authenticating; extra headers
   // (like our Authorization bearer) must not be sent alongside it.
+  const target = new URL(presign.uploadUrl)
+  if (target.protocol !== 'https:' || target.username || target.password) {
+    throw new ApiRequestError('The storage upload target is invalid.', 'invalid-response')
+  }
   const putResponse = await fetch(presign.uploadUrl, {
     method: 'PUT',
     body: file,

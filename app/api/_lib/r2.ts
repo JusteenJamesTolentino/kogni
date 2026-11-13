@@ -67,12 +67,14 @@ export async function presignAvatarUpload(uid: string, contentType: string, size
   }
   const { client, bucket } = r2()
   const key = buildAvatarKey(uid, contentType)
+  // Only Content-Type and Content-Length are pinned: every signed header must be sent
+  // verbatim by the browser, and the bucket CORS allowlist covers just Content-Type —
+  // adding e.g. Cache-Control here would break the preflight for the browser PUT.
   const uploadUrl = await getSignedUrl(client, new PutObjectCommand({
     Bucket: bucket,
     Key: key,
     ContentType: contentType,
     ContentLength: sizeBytes,
-    CacheControl: 'public, max-age=31536000, immutable',
   }), { expiresIn: PRESIGN_EXPIRY_SECONDS })
   return { key, uploadUrl, publicUrl: publicUrlForKey(key), expiresIn: PRESIGN_EXPIRY_SECONDS }
 }
