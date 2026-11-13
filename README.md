@@ -141,7 +141,7 @@ The client never supplies the public URL — it is derived from the verified key
 
 #### Bucket CORS
 
-`cloudflare.cors.json` is the canonical CORS configuration for the storage bucket; the browser PUT needs it to pass preflight. Apply it with any S3-compatible client:
+`cloudflare.cors.json` at the repo root is the canonical CORS configuration for the storage bucket; the browser PUT needs it to pass preflight. It is deliberately gitignored (local infrastructure config, not committed) — keep a copy alongside your Cloudflare credentials. Apply it with any S3-compatible client:
 
 ```bash
 aws s3api put-bucket-cors \

@@ -33,3 +33,6 @@ firebase-debug.log
 
 # ZCode / Mimosa plugin session state
 .mimosa/
+
+# Cloudflare bucket infrastructure config (kept local only)
+cloudflare.cors.json
