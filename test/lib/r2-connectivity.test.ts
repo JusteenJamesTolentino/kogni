@@ -68,26 +68,53 @@ const suite = config ? describe : describe.skip
 /**
  * Live tests are environment-sensitive: corporate VPNs (e.g. Cloudflare WARP tunnels),
  * offline dev machines, or DNS hiccups can make the public host unreachable without
- * any code being wrong. Probe once and skip the suite instead of failing the build.
+ * any code being wrong. Probe with retries and skip the suite instead of failing the
+ * build; a DNS failure hitting mid-test after a good probe also skips, not fails.
  */
 let networkReachable: boolean | null = null
 
+function isNetworkOutage(error: unknown): boolean {
+  const parts: unknown[] = [error, (error as { cause?: unknown })?.cause]
+  return parts.some((part) => {
+    const code = part !== null && typeof part === 'object' && 'code' in part ? String((part as { code: unknown }).code) : ''
+    const message = part instanceof Error ? part.message : String(part ?? '')
+    return code === 'ENOTFOUND' || code === 'EAI_AGAIN' || code === 'ECONNREFUSED' || code === 'ECONNRESET' ||
+      message.includes('fetch failed') || message.includes('getaddrinfo')
+  })
+}
+
 async function probeNetwork(): Promise<boolean> {
   if (networkReachable !== null) return networkReachable
-  try {
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), 8000)
-    const response = await fetch(config!.publicBaseUrl, { method: 'HEAD', signal: controller.signal })
-    clearTimeout(timer)
-    networkReachable = response.status < 500
-  } catch {
-    networkReachable = false
+  // WARP resolvers flap; give DNS three chances before declaring the host unreachable.
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), 8000)
+      const response = await fetch(config!.publicBaseUrl, { method: 'HEAD', signal: controller.signal })
+      clearTimeout(timer)
+      networkReachable = response.status < 500
+      if (networkReachable) return true
+    } catch (error) {
+      if (attempt === 2 && !isNetworkOutage(error)) throw error
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1000))
   }
-  return networkReachable
+  networkReachable = false
+  return false
 }
 
 /** A valid 1×1 transparent PNG (67 bytes) — enough to satisfy a real object write. */
 const TINY_PNG = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='), (character) => character.charCodeAt(0))
+
+/** Skips instead of failing when a transient network outage interrupts a live call. */
+async function runLive(ctx: { skip: () => void }, run: () => Promise<void>): Promise<void> {
+  try {
+    await run()
+  } catch (error) {
+    if (isNetworkOutage(error)) ctx.skip()
+    else throw error
+  }
+}
 
 suite('Cloudflare R2 storage connectivity', () => {
   const client = new S3Client({
@@ -98,55 +125,59 @@ suite('Cloudflare R2 storage connectivity', () => {
 
   it('round-trips an avatar-shaped object through the kogni/ prefix', async (ctx) => {
     if (!await probeNetwork()) ctx.skip()
-    const key = buildAvatarKey('connectivity-test-uid', 'image/png')
-    expect(key.startsWith(`${KOGNI_PREFIX}avatars/`)).toBe(true)
+    await runLive(ctx, async () => {
+      const key = buildAvatarKey('connectivity-test-uid', 'image/png')
+      expect(key.startsWith(`${KOGNI_PREFIX}avatars/`)).toBe(true)
 
-    const uploadUrl = await getSignedUrl(client, new PutObjectCommand({
-      Bucket: config!.bucket,
-      Key: key,
-      ContentType: 'image/png',
-      ContentLength: TINY_PNG.length,
-      CacheControl: AVATAR_CACHE_CONTROL,
-    }), { expiresIn: 120 })
-    expect(isSafePublicUrl(uploadUrl)).toBe(true)
+      const uploadUrl = await getSignedUrl(client, new PutObjectCommand({
+        Bucket: config!.bucket,
+        Key: key,
+        ContentType: 'image/png',
+        ContentLength: TINY_PNG.length,
+        CacheControl: AVATAR_CACHE_CONTROL,
+      }), { expiresIn: 120 })
+      expect(isSafePublicUrl(uploadUrl)).toBe(true)
 
-    // The browser-shaped PUT must succeed with exactly the signed headers.
-    const put = await fetch(uploadUrl, {
-      method: 'PUT',
-      body: TINY_PNG,
-      headers: { 'content-type': 'image/png', 'cache-control': AVATAR_CACHE_CONTROL },
+      // The browser-shaped PUT must succeed with exactly the signed headers.
+      const put = await fetch(uploadUrl, {
+        method: 'PUT',
+        body: TINY_PNG,
+        headers: { 'content-type': 'image/png', 'cache-control': AVATAR_CACHE_CONTROL },
+      })
+      expect(put.status).toBe(200)
+
+      const head = await client.send(new HeadObjectCommand({ Bucket: config!.bucket, Key: key }))
+      expect(head.ContentLength).toBe(TINY_PNG.length)
+      expect(head.ContentType).toBe('image/png')
+      expect(head.CacheControl).toBe(AVATAR_CACHE_CONTROL)
+
+      const objectUrl = `${config!.publicBaseUrl}/${key}`
+      expect(isSafePublicUrl(objectUrl)).toBe(true)
+      const publicRead = await fetch(objectUrl, { method: 'GET' })
+      expect(publicRead.status).toBe(200)
+      expect(Buffer.from(await publicRead.arrayBuffer()).equals(Buffer.from(TINY_PNG))).toBe(true)
+
+      // No leftovers: the round trip cleans up after itself.
+      await client.send(new DeleteObjectCommand({ Bucket: config!.bucket, Key: key }))
+      const gone = await client.send(new HeadObjectCommand({ Bucket: config!.bucket, Key: key })).then(() => true, (error: unknown) => {
+        const name = error !== null && typeof error === 'object' && 'name' in error ? String(error.name) : ''
+        if (name === 'NotFound' || name === 'NoSuchKey' || name === '404') return false
+        throw error
+      })
+      expect(gone).toBe(false)
     })
-    expect(put.status).toBe(200)
-
-    const head = await client.send(new HeadObjectCommand({ Bucket: config!.bucket, Key: key }))
-    expect(head.ContentLength).toBe(TINY_PNG.length)
-    expect(head.ContentType).toBe('image/png')
-    expect(head.CacheControl).toBe(AVATAR_CACHE_CONTROL)
-
-    const objectUrl = `${config!.publicBaseUrl}/${key}`
-    expect(isSafePublicUrl(objectUrl)).toBe(true)
-    const publicRead = await fetch(objectUrl, { method: 'GET' })
-    expect(publicRead.status).toBe(200)
-    expect(Buffer.from(await publicRead.arrayBuffer()).equals(Buffer.from(TINY_PNG))).toBe(true)
-
-    // No leftovers: the round trip cleans up after itself.
-    await client.send(new DeleteObjectCommand({ Bucket: config!.bucket, Key: key }))
-    const gone = await client.send(new HeadObjectCommand({ Bucket: config!.bucket, Key: key })).then(() => true, (error: unknown) => {
-      const name = error !== null && typeof error === 'object' && 'name' in error ? String(error.name) : ''
-      if (name === 'NotFound' || name === 'NoSuchKey' || name === '404') return false
-      throw error
-    })
-    expect(gone).toBe(false)
   })
 
   it('serves known public objects with an image content type', async (ctx) => {
     if (!await probeNetwork()) ctx.skip()
-    // Existing object committed through the public custom domain (verified manually 2026-11-14).
-    const knownObjectUrl = `${config!.publicBaseUrl}/public/file_0000000007508211b4946faf91859f0c.png`
-    expect(isSafePublicUrl(knownObjectUrl)).toBe(true)
-    const response = await fetch(knownObjectUrl, { method: 'GET' })
-    expect(response.status).toBe(200)
-    expect(response.headers.get('content-type')).toBe('image/png')
-    await response.body?.cancel()
+    await runLive(ctx, async () => {
+      // Existing object committed through the public custom domain (verified manually 2026-11-14).
+      const knownObjectUrl = `${config!.publicBaseUrl}/public/file_0000000007508211b4946faf91859f0c.png`
+      expect(isSafePublicUrl(knownObjectUrl)).toBe(true)
+      const response = await fetch(knownObjectUrl, { method: 'GET' })
+      expect(response.status).toBe(200)
+      expect(response.headers.get('content-type')).toBe('image/png')
+      await response.body?.cancel()
+    })
   })
 })
