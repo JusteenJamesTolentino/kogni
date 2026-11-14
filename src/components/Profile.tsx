@@ -1,8 +1,7 @@
 import type { ReactNode } from 'react'
+import type { LucideIcon } from 'lucide-react'
+import { GraduationCap, Medal, Sparkles, Sprout } from 'lucide-react'
 import ProfileCard3D from './ProfileCard3D'
-import useOnlineStatus from '../hooks/useOnlineStatus'
-
-export type PublicPresenceStatus = 'online' | 'away' | 'offline' | 'hidden'
 
 export interface ProfileStat {
   id: string
@@ -11,13 +10,19 @@ export interface ProfileStat {
   helpText?: string
 }
 
+export interface ProfileBadge {
+  id: string
+  kind: 'role' | 'rank' | 'status'
+  label: string
+}
+
 export interface ProfileProps {
   /** Canonical public nickname supplied by the profile data owner. */
   nickname: string
   avatarUrl?: string | null
   avatarAlt?: string
-  /** Publicly shared presence. This is separate from device connectivity. */
-  publicPresence: PublicPresenceStatus
+  /** Role/Rank/Status badges replacing the old presence and device indicators. */
+  badges?: ProfileBadge[]
   stats: ProfileStat[]
   socialError?: string
   onRetrySocial?: () => void
@@ -26,18 +31,26 @@ export interface ProfileProps {
   error?: string
 }
 
-const presenceDetails: Record<PublicPresenceStatus, { label: string; dot: string; text: string }> = {
-  online: { label: 'Online', dot: 'bg-success', text: 'text-success' },
-  away: { label: 'Away', dot: 'bg-warning', text: 'text-warning' },
-  offline: { label: 'Offline', dot: 'bg-base-content/30', text: 'text-base-content/55' },
-  hidden: { label: 'Presence hidden', dot: 'bg-base-content/20', text: 'text-base-content/55' },
+const badgeIcons: Record<string, LucideIcon> = {
+  student: GraduationCap,
+  teacher: GraduationCap,
+  learner: Sprout,
+  apprentice: Sprout,
+  scholar: Medal,
+  strategist: Medal,
+  luminary: Medal,
+  pioneer: Sparkles,
+  'early-educator': Sparkles,
+  'quiz-architect': Sparkles,
+  'perfect-round': Sparkles,
+  'founders-pick': Sparkles,
 }
 
 export default function Profile({
   nickname,
   avatarUrl,
   avatarAlt = '',
-  publicPresence,
+  badges = [],
   stats,
   socialError = '',
   onRetrySocial,
@@ -45,8 +58,6 @@ export default function Profile({
   editing = false,
   error = '',
 }: ProfileProps) {
-  const { isDeviceOnline, deviceStatusLabel } = useOnlineStatus()
-  const presence = presenceDetails[publicPresence]
   const initial = (nickname.trim().charAt(0) || '?').toUpperCase()
 
   return (
@@ -68,16 +79,20 @@ export default function Profile({
               </div>
               <div className="min-w-0 flex-1 pb-1">
                 <h2 className="truncate text-2xl font-black sm:text-3xl">{nickname || 'Kogni learner'}</h2>
-                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2 text-sm font-semibold">
-                  <span className={`inline-flex items-center gap-1.5 ${presence.text}`}>
-                    <span className={`h-2.5 w-2.5 rounded-full ${presence.dot}`} aria-hidden="true" />
-                    Public presence: {presence.label}
-                  </span>
-                  <span className={`inline-flex items-center gap-1.5 ${isDeviceOnline ? 'text-success' : 'text-error'}`}>
-                    <span className={`h-2.5 w-2.5 rounded-full ${isDeviceOnline ? 'bg-success' : 'bg-error'}`} aria-hidden="true" />
-                    {deviceStatusLabel}
-                  </span>
-                </div>
+                {badges.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2" aria-label="Profile badges">
+                    {badges.map((badge) => {
+                      const Icon = badgeIcons[badge.id] ?? Sparkles
+                      const tone = badge.kind === 'role' ? 'badge-primary' : badge.kind === 'rank' ? 'badge-accent' : 'badge-outline'
+                      return (
+                        <span key={badge.kind === 'role' ? 'role' : badge.id} className={`badge gap-1.5 font-semibold ${tone}`}>
+                          <Icon size={14} aria-hidden="true" />
+                          {badge.label}
+                        </span>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
               {onEditAvatar && (
                 <button type="button" onClick={onEditAvatar} className="btn btn-outline btn-sm self-start sm:mb-1 sm:self-auto" disabled={editing}>
@@ -85,10 +100,6 @@ export default function Profile({
                 </button>
               )}
             </div>
-
-            <p className="mt-2 text-xs leading-relaxed text-base-content/50">
-              Device connectivity describes this browser only. Public presence is a separate status shared with other learners.
-            </p>
 
             {socialError && (
               <div role="alert" className="alert alert-warning mt-5 text-sm">

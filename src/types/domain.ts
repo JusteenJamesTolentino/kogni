@@ -420,6 +420,9 @@ export interface AccountAvatar {
   updatedAt: number
 }
 
+/** Quiz-system role; optional so accounts created before roles need no migration. */
+export type AccountRole = 'student' | 'teacher'
+
 export interface AccountRecord {
   uid: string
   status: 'ready'
@@ -430,6 +433,8 @@ export interface AccountRecord {
   privacy: AccountPrivacyRecord
   preferences: AccountPreferences
   avatar?: AccountAvatar
+  role?: AccountRole
+  roleUpdatedAt?: DatabaseTimestamp
 }
 
 /** Deliberately small projection readable by other ready accounts. */

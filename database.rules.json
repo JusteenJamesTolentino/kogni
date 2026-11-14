@@ -437,6 +437,12 @@
             ".validate": false
           }
         },
+        "role": {
+          ".validate": "!newData.exists() || newData.val() === 'student' || newData.val() === 'teacher'"
+        },
+        "roleUpdatedAt": {
+          ".validate": "!newData.exists() || (newData.isNumber() && newData.val() >= now - 60000 && newData.val() <= now + 60000)"
+        },
         "$other": {
           ".validate": false
         }

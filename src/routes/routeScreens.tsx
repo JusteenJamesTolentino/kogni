@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowRight, Layers3, Plus, WandSparkles } from 'lucide-react'
+import { ArrowRight, GraduationCap, Layers3, ListChecks, Plus, Presentation, WandSparkles } from 'lucide-react'
 import { Link, Navigate, useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom'
 import Community from '../components/Community'
 import Dashboard from '../components/Dashboard'
@@ -15,9 +15,11 @@ import { getSocialSummary } from '../lib/social'
 import type { SocialSummary } from '../lib/social'
 import { createCloudReviewSaver, createPrivateDeck, loadCloudDeck, loadCloudLibrary, newCloudDeckId } from '../lib/cloudDecks'
 import { subscribeToMyLeaderboardRecord } from '../lib/leaderboard'
+import { profileBadges } from '../lib/badges'
+import { accountRole, updateAccountRole } from '../lib/account'
 import { getErrorMessage } from '../lib/errors'
 import { shuffle } from '../lib/shuffle'
-import type { StudyCard, StudyDeck } from '../types/domain'
+import type { AccountRole, StudyCard, StudyDeck } from '../types/domain'
 import type { AppShellContextValue } from './AppShell'
 import {
   deckStudyPath,
@@ -298,7 +300,7 @@ export function ProfileRoute() {
         nickname={account.nickname}
         avatarUrl={avatarUrl}
         avatarAlt={`${account.nickname}'s avatar`}
-        publicPresence={account.preferences.presence ? 'online' : 'hidden'}
+        badges={profileBadges(account)}
         stats={[
           { id: 'followers', label: 'Followers', value: socialValue(socialSummary?.followerCount), helpText: socialLoading ? 'Loading social count' : undefined },
           { id: 'following', label: 'Following', value: socialValue(socialSummary?.followingCount), helpText: socialLoading ? 'Loading social count' : undefined },
@@ -321,6 +323,81 @@ export function ProfileRoute() {
         onClose={() => setAvatarOpen(false)}
       />
     </>
+  )
+}
+
+/** First-visit role gate, then the quiz hub landing (teacher/student tooling lands in Slices 2-3). */
+export function QuizRoute() {
+  const { user, account } = useAppShell()
+  const { refreshAccount } = useAuth()
+  const [savingRole, setSavingRole] = useState<AccountRole | null>(null)
+  const [error, setError] = useState('')
+  const role = accountRole(account)
+
+  const chooseRole = async (nextRole: AccountRole): Promise<void> => {
+    if (savingRole) return
+    setSavingRole(nextRole); setError('')
+    try {
+      await updateAccountRole(user, nextRole)
+      await refreshAccount()
+    } catch (cause: unknown) {
+      setError(getErrorMessage(cause, 'The role could not be saved.'))
+    } finally {
+      setSavingRole(null)
+    }
+  }
+
+  const roleCards: Array<{ role: AccountRole; label: string; description: string; icon: typeof GraduationCap }> = [
+    { role: 'student', label: 'Student', description: 'Take quizzes with codes shared by your teacher and track your rank.', icon: GraduationCap },
+    { role: 'teacher', label: 'Teacher', description: 'Create quizzes, share codes with your class, and review results.', icon: Presentation },
+  ]
+
+  return (
+    <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
+      {error && <div role="alert" className="alert alert-error mb-6"><span>{error}</span></div>}
+      {!account.role ? (
+        <section aria-labelledby="quiz-role-title" className="rounded-3xl border border-primary/20 bg-base-100 p-6 shadow-xl sm:p-9">
+          <span className="badge badge-primary gap-1"><ListChecks size={13} /> Quiz system</span>
+          <h1 id="quiz-role-title" className="mt-4 text-3xl font-black">How will you use quizzes?</h1>
+          <p className="mt-2 text-base-content/60">
+            Pick your role for school quizzes. You can switch anytime — quizzes never award XP and never touch your review schedules.
+          </p>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            {roleCards.map((card) => (
+              <button
+                key={card.role}
+                type="button"
+                onClick={() => void chooseRole(card.role)}
+                disabled={Boolean(savingRole)}
+                className="rounded-2xl border border-base-300 bg-base-100 p-5 text-left shadow-sm transition hover:border-primary/40 hover:shadow-md disabled:opacity-60"
+              >
+                <card.icon size={26} className="text-primary" aria-hidden="true" />
+                <h2 className="mt-3 text-xl font-black">{card.label}{savingRole === card.role && <span className="loading loading-spinner loading-sm ml-2 align-middle" />}</h2>
+                <p className="mt-1 text-sm text-base-content/60">{card.description}</p>
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : (
+        <section aria-labelledby="quiz-hub-title" className="rounded-3xl border border-primary/20 bg-base-100 p-6 shadow-xl sm:p-9">
+          <span className="badge badge-primary gap-1"><ListChecks size={13} /> Quiz hub</span>
+          <h1 id="quiz-hub-title" className="mt-4 text-3xl font-black">Quizzes</h1>
+          <p className="mt-2 text-base-content/60">
+            You are set up as <strong>{role === 'teacher' ? 'a Teacher' : 'a Student'}</strong>. Timed, auto-graded quizzes for school use arrive in the next update — they will never affect your XP, ranks on leaderboards, or review schedules.
+          </p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            {role === 'teacher'
+              ? <button type="button" className="btn btn-primary gap-2" disabled><Presentation size={17} /> Create quiz — coming soon</button>
+              : <button type="button" className="btn btn-primary gap-2" disabled><GraduationCap size={17} /> Enter quiz code — coming soon</button>}
+            {roleCards.filter((card) => card.role !== role).map((card) => (
+              <button key={card.role} type="button" className="btn btn-ghost gap-2" onClick={() => void chooseRole(card.role)} disabled={Boolean(savingRole)}>
+                <card.icon size={17} /> Switch to {card.label}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+    </main>
   )
 }
 

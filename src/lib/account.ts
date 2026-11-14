@@ -5,6 +5,7 @@ import { isRecord } from './errors'
 import type {
   AccountPreferences,
   AccountRecord,
+  AccountRole,
   NicknameIdentity,
   PublicAccountProfile,
 } from '../types/domain'
@@ -13,6 +14,14 @@ export const PRIVACY_VERSION = 'privacy-2026-11-10-ai-series-1'
 export const NICKNAME_MIN_LENGTH = 3
 export const NICKNAME_MAX_LENGTH = 24
 export const NICKNAME_PATTERN = /^[A-Za-z0-9_]{3,24}$/
+
+export const ACCOUNT_ROLES: readonly AccountRole[] = Object.freeze(['student', 'teacher'])
+/** Accounts created before roles existed behave as students; no migration needed. */
+export const DEFAULT_ACCOUNT_ROLE: AccountRole = 'student'
+
+export function isAccountRole(value: unknown): value is AccountRole {
+  return typeof value === 'string' && (ACCOUNT_ROLES as readonly string[]).includes(value)
+}
 
 export interface CompleteAccountOnboardingInput {
   nickname: unknown
@@ -67,8 +76,14 @@ export function isAccountRecord(value: unknown): value is AccountRecord {
     timestampIsValid(value.privacy.acknowledgedAt) &&
     isRecord(acknowledgements) &&
     timestampIsValid(acknowledgements[PRIVACY_VERSION]) &&
-    isPreferences(value.preferences)
+    isPreferences(value.preferences) &&
+    (value.role === undefined || isAccountRole(value.role))
   )
+}
+
+/** Resolves the effective quiz role, defaulting pre-role accounts to Student. */
+export function accountRole(account: AccountRecord): AccountRole {
+  return account.role ?? DEFAULT_ACCOUNT_ROLE
 }
 
 /** Returns the case-insensitive nickname claim key used by every backend service. */
@@ -229,6 +244,25 @@ export async function renameAccount(
   }
 
   await update(ref(database), updates)
+  return next
+}
+
+/** Switches the quiz-system role. Owner-only; roles are honor-system and changeable. */
+export async function updateAccountRole(
+  user: User | null | undefined,
+  role: unknown,
+): Promise<AccountRecord> {
+  const authenticatedUser = requireUser(user)
+  if (!isAccountRole(role)) throw new TypeError(`role must be one of: ${ACCOUNT_ROLES.join(', ')}`)
+  const current = await requireReadyAccount(authenticatedUser)
+  if (accountRole(current) === role) return current
+  const updatedAt = serverTimestamp()
+  const next: AccountRecord = { ...current, role, roleUpdatedAt: updatedAt, updatedAt }
+  await update(ref(database), {
+    [`accounts/${authenticatedUser.uid}/role`]: role,
+    [`accounts/${authenticatedUser.uid}/roleUpdatedAt`]: updatedAt,
+    [`accounts/${authenticatedUser.uid}/updatedAt`]: updatedAt,
+  })
   return next
 }
 

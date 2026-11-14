@@ -11,6 +11,7 @@ export const paths = {
   onlineDecks: '/online-decks',
   legacyDecks: '/legacy-decks',
   studyDue: '/study/due',
+  quiz: '/quiz',
 } as const
 
 export function playerProfilePath(playerId: string): string {

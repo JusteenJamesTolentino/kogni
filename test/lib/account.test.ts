@@ -3,6 +3,7 @@ import {
   NICKNAME_MAX_LENGTH,
   NICKNAME_MIN_LENGTH,
   PRIVACY_VERSION,
+  accountRole,
   canonicalizeNickname,
   isAccountRecord,
   nicknameIdentity,
@@ -44,5 +45,28 @@ describe('account nickname identity', () => {
     })
     expect(isAccountRecord({ ...account, email: 'private@example.test' })).toBe(true)
     expect(isAccountRecord({ ...account, nicknameCanonical: 'ADA_2026' })).toBe(false)
+  })
+
+  it('treats missing roles as Student and rejects unknown role values', () => {
+    const account = {
+      uid: 'user-1',
+      status: 'ready' as const,
+      nickname: 'Ada_2026',
+      nicknameCanonical: 'ada_2026',
+      createdAt: 1,
+      updatedAt: 2,
+      privacy: {
+        currentVersion: PRIVACY_VERSION,
+        acknowledgedAt: 1,
+        acknowledgements: { [PRIVACY_VERSION]: 1 },
+      },
+      preferences: { discoverable: false, presence: false },
+    }
+    expect(accountRole(account)).toBe('student')
+    expect(accountRole({ ...account, role: 'teacher' })).toBe('teacher')
+    expect(accountRole({ ...account, role: 'student' })).toBe('student')
+    expect(isAccountRecord({ ...account, role: 'teacher' })).toBe(true)
+    expect(isAccountRecord({ ...account, role: 'admin' })).toBe(false)
+    expect(isAccountRecord({ ...account, role: 3 })).toBe(false)
   })
 })

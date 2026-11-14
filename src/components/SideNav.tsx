@@ -1,4 +1,4 @@
-import { BookOpen, CircleUserRound, GraduationCap, Home, Layers3, PanelLeftClose, PanelLeftOpen, Trophy, Users, X } from 'lucide-react'
+import { BookOpen, CircleUserRound, GraduationCap, Home, Layers3, ListChecks, PanelLeftClose, PanelLeftOpen, Trophy, Users, X } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import KogniLogo from './KogniLogo'
@@ -16,6 +16,7 @@ const sideNavItems: SideNavItem[] = [
   { to: paths.myDecks, label: 'My decks', icon: Layers3 },
   { to: paths.onlineDecks, label: 'Online decks', icon: BookOpen },
   { to: paths.studyDue, label: 'Study due', icon: GraduationCap },
+  { to: paths.quiz, label: 'Quizzes', icon: ListChecks },
   { to: paths.community, label: 'Community', icon: Users },
   { to: paths.leaderboards, label: 'Leaderboard', icon: Trophy },
   { to: paths.profile, label: 'Profile', icon: CircleUserRound },
