@@ -1027,3 +1027,68 @@ describeRules('quiz code rules', () => {
     await assertFails(set(ref(ownerDatabase, 'quizCodes/ABCD-EFGH'), { ...quizCode(OWNER_ID, now), ownerId: OUTSIDER_ID }))
   })
 })
+
+describeRules('quiz creation rules', () => {
+  const QUIZ_ID = 'quiz_test-quiz'
+  const CODE = 'ABCD-EFGH'
+
+  // Timestamps are computed per test: the ±60s freshness windows in the rules
+  // reject values captured at module-load time, long before slow suites finish.
+  function quizRecord(ownerId: string, now: number = Date.now()) {
+    return {
+      id: QUIZ_ID,
+      ownerId,
+      title: 'Cell quiz',
+      description: '',
+      questionCount: 2,
+      questions: {
+        q_0: { prompt: 'What is ATP?', choices: { 0: 'Energy currency', 1: 'A protein' } },
+        q_1: { prompt: 'Pick B', choices: { 0: 'A', 1: 'B', 2: 'C' } },
+      },
+      createdAt: now,
+      updatedAt: now,
+    }
+  }
+
+  function answerKey(ownerId: string) {
+    return { ownerId, correct: { q_0: 0, q_1: 1 } }
+  }
+
+  it('lets a teacher publish a quiz, answer key, code, and index in one atomic write', async () => {
+    const ownerDatabase = testEnvironment.authenticatedContext(OWNER_ID).database()
+    const now = Date.now()
+    await assertSucceeds(update(ref(ownerDatabase), {
+      [`quizzes/${QUIZ_ID}`]: quizRecord(OWNER_ID, now),
+      [`quizAnswers/${QUIZ_ID}`]: answerKey(OWNER_ID),
+      [`quizCodes/${CODE}`]: { quizId: QUIZ_ID, ownerId: OWNER_ID, createdAt: now },
+      [`quizzesByOwner/${OWNER_ID}/${QUIZ_ID}`]: { code: CODE, title: 'Cell quiz', createdAt: now },
+    }))
+  })
+
+  it('keeps the answer key owner-only while quiz content stays readable', async () => {
+    const ownerDatabase = testEnvironment.authenticatedContext(OWNER_ID).database()
+    const learnerDatabase = testEnvironment.authenticatedContext(RECIPIENT_ID).database()
+    await assertSucceeds(set(ref(ownerDatabase, `quizzes/${QUIZ_ID}`), quizRecord(OWNER_ID)))
+    await assertSucceeds(set(ref(ownerDatabase, `quizAnswers/${QUIZ_ID}`), answerKey(OWNER_ID)))
+
+    await assertSucceeds(get(ref(learnerDatabase, `quizzes/${QUIZ_ID}`)))
+    await assertFails(get(ref(learnerDatabase, `quizAnswers/${QUIZ_ID}`)))
+    await assertFails(get(ref(learnerDatabase, `quizzesByOwner/${OWNER_ID}`)))
+  })
+
+  it('rejects overwrites, forged owners, oversized quizzes, and bad shapes', async () => {
+    const ownerDatabase = testEnvironment.authenticatedContext(OWNER_ID).database()
+    const outsiderDatabase = testEnvironment.authenticatedContext(OUTSIDER_ID).database()
+    await assertSucceeds(set(ref(ownerDatabase, `quizzes/${QUIZ_ID}`), quizRecord(OWNER_ID)))
+
+    // Quizzes are immutable in v1 — even the owner cannot rewrite one.
+    await assertFails(set(ref(ownerDatabase, `quizzes/${QUIZ_ID}`), quizRecord(OWNER_ID)))
+    await assertFails(set(ref(outsiderDatabase, 'quizzes/quiz_forged'), quizRecord(OUTSIDER_ID)))
+    // Space is a valid RTDB path character but violates the quiz-ID pattern.
+    await assertFails(set(ref(ownerDatabase, 'quizzes/quiz_bad id'), quizRecord(OWNER_ID)))
+
+    const oversized = quizRecord(OWNER_ID)
+    for (let index = 0; index < 51; index += 1) oversized.questions[`q_${index}`] = { prompt: 'x', choices: { 0: 'a', 1: 'b' } }
+    await assertFails(set(ref(ownerDatabase, 'quizzes/quiz_oversized'), oversized))
+  })
+})

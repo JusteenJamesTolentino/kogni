@@ -17,7 +17,8 @@ import { createCloudReviewSaver, createPrivateDeck, loadCloudDeck, loadCloudLibr
 import { subscribeToMyLeaderboardRecord } from '../lib/leaderboard'
 import { profileBadges } from '../lib/badges'
 import { accountRole, updateAccountRole } from '../lib/account'
-import { formatQuizCodeInput, lookupQuizCode, normalizeQuizCode } from '../lib/quizzes'
+import { formatQuizCodeInput, listOwnedQuizzes, lookupQuizCode, normalizeQuizCode } from '../lib/quizzes'
+import QuizCreator from '../components/QuizCreator'
 import { getErrorMessage } from '../lib/errors'
 import { shuffle } from '../lib/shuffle'
 import type { AccountRole, StudyCard, StudyDeck } from '../types/domain'
@@ -327,7 +328,7 @@ export function ProfileRoute() {
   )
 }
 
-/** First-visit role gate, then the quiz hub: students join by code, teacher tooling lands in Slice 2. */
+/** First-visit role gate, then the quiz hub: students join by code, teachers create and share. */
 export function QuizRoute() {
   const { user, account } = useAppShell()
   const { refreshAccount } = useAuth()
@@ -337,6 +338,8 @@ export function QuizRoute() {
   const [codeInput, setCodeInput] = useState('')
   const [lookingUp, setLookingUp] = useState(false)
   const [codeResult, setCodeResult] = useState<{ status: 'found' | 'not-found'; code: string } | null>(null)
+  const [ownedQuizzes, setOwnedQuizzes] = useState<Array<{ quizId: string; code: string; title: string; createdAt: number }>>([])
+  const [quizzesLoading, setQuizzesLoading] = useState(false)
   const role = accountRole(account)
   const codeParam = searchParams.get('code') ?? ''
 
@@ -383,6 +386,21 @@ export function QuizRoute() {
     setLastAutoLookup(autoLookupKey)
     void joinByCode(autoLookupKey)
   }, [autoLookupKey, joinByCode, lastAutoLookup])
+
+  // Teachers see their published quizzes with codes so codes can always be re-shared.
+  const loadOwnedQuizzes = useCallback(async (): Promise<void> => {
+    setQuizzesLoading(true)
+    try {
+      setOwnedQuizzes(await listOwnedQuizzes(user.uid))
+    } catch {
+      setOwnedQuizzes([])
+    } finally {
+      setQuizzesLoading(false)
+    }
+  }, [user.uid])
+  useEffect(() => {
+    if (role === 'teacher' && account.role) void loadOwnedQuizzes()
+  }, [role, account.role, loadOwnedQuizzes])
 
   const roleCards: Array<{ role: AccountRole; label: string; description: string; icon: typeof GraduationCap }> = [
     { role: 'student', label: 'Student', description: 'Take quizzes with codes shared by your teacher and track your rank.', icon: GraduationCap },
@@ -454,9 +472,30 @@ export function QuizRoute() {
               {codeStatusLine}
             </>
           ) : (
-            <p className="mt-2 text-base-content/60">
-              Quiz creation and shareable links (<code>/quiz?code=ABCD-EFGH</code>) arrive in the next update. Your students will enter the code here — quizzes never award XP and never touch review schedules.
-            </p>
+            <>
+              <p className="mt-2 text-base-content/60">
+                Create a timed, auto-graded quiz and share its code or link with your class — students enter it here. Quizzes never award XP and never touch review schedules.
+              </p>
+              <div className="mt-5">
+                <Link to={paths.quizCreate} className="btn btn-primary gap-2"><Presentation size={17} /> Create quiz</Link>
+              </div>
+              {ownedQuizzes.length > 0 && (
+                <div className="mt-6">
+                  <h2 className="text-sm font-semibold uppercase tracking-wider text-base-content/55">Your quizzes {quizzesLoading && <span className="loading loading-spinner loading-xs" />}</h2>
+                  <ul className="mt-2 space-y-2">
+                    {ownedQuizzes.map((quiz) => (
+                      <li key={quiz.quizId} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-base-300 bg-base-200/40 px-4 py-3">
+                        <div className="min-w-0">
+                          <div className="truncate font-semibold">{quiz.title}</div>
+                          <div className="font-mono text-sm tracking-widest text-base-content/60">{quiz.code}</div>
+                        </div>
+                        <Link to={`${paths.quiz}?code=${quiz.code}`} className="btn btn-ghost btn-sm">Open student view</Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </>
           )}
           <div className="mt-6 flex flex-wrap gap-3">
             {roleCards.filter((card) => card.role !== role).map((card) => (
@@ -469,6 +508,15 @@ export function QuizRoute() {
       )}
     </main>
   )
+}
+
+/** Teacher-only quiz creator; students are redirected back to the hub. */
+export function QuizCreatorRoute() {
+  const { user, account } = useAppShell()
+  const role = accountRole(account)
+  if (!account.role) return <Navigate to={paths.quiz} replace />
+  if (role !== 'teacher') return <Navigate to={paths.quiz} replace />
+  return <QuizCreator user={user} onExit={() => window.history.back()} />
 }
 
 export function GlobalLeaderboardRoute() {

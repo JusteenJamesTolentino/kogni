@@ -1,0 +1,230 @@
+
+> kogni@0.0.0 test:rules
+> firebase emulators:exec --only database --config firebase.test.json --project demo-kognit-rules "vitest run test/lib/database.rules.test.ts"
+
+[36m[1mi  emulators:[22m[39m Starting emulators: database
+[36m[1mi  emulators:[22m[39m Detected demo project ID "demo-kognit-rules", emulated services will use a demo configuration and attempts to access non-emulated services for this project will fail.
+[36m[1mi  database:[22m[39m Database Emulator logging to [1mdatabase-debug.log[22m
+[36m[1mi [22m[39m Running script: [1mvitest run test/lib/database.rules.test.ts[22m
+
+[1m[30m[46m RUN [49m[39m[22m [36mv5.1.0 [39m[90mC:/Users/Justeen/code/kognit[39m
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mcommunity database rules[2m > [22m[2maccepts legacy shares without a study guide and rejects oversized guides
+[22m[39m[2026-11-14T11:27:48.546Z]  @firebase/database: FIREBASE WARNING: update at / failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mcommunity database rules[2m > [22m[2mprevents a recipient from forging another share
+[22m[39m[2026-11-14T11:27:48.701Z]  @firebase/database: FIREBASE WARNING: update at / failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mdeck portal database rules[2m > [22m[2mlets only the owner renew and keeps immutable content and IDs
+[22m[39m[2026-11-14T11:27:49.316Z]  @firebase/database: FIREBASE WARNING: update at /deckPortals/0123456789AB failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mdeck portal database rules[2m > [22m[2mlets only the owner renew and keeps immutable content and IDs
+[22m[39m[2026-11-14T11:27:49.334Z]  @firebase/database: FIREBASE WARNING: update at /deckPortals/0123456789AB failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mdeck portal database rules[2m > [22m[2mlets only the owner renew and keeps immutable content and IDs
+[22m[39m[2026-11-14T11:27:49.341Z]  @firebase/database: FIREBASE WARNING: update at /deckPortals/0123456789AB failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mdeck portal database rules[2m > [22m[2mlets only the owner renew and keeps immutable content and IDs
+[22m[39m[2026-11-14T11:27:49.350Z]  @firebase/database: FIREBASE WARNING: update at /deckPortals/0123456789AB/snapshot failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mdeck portal database rules[2m > [22m[2mlets only the owner renew and keeps immutable content and IDs
+[22m[39m[2026-11-14T11:27:49.357Z]  @firebase/database: FIREBASE WARNING: update at /deckPortals/0123456789AB failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mdeck portal database rules[2m > [22m[2mrevokes permanently, removes the active mapping, and preserves owner access
+[22m[39m[2026-11-14T11:27:49.522Z]  @firebase/database: FIREBASE WARNING: update at /deckPortals/0123456789AB failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mdeck portal database rules[2m > [22m[2mrevokes permanently, removes the active mapping, and preserves owner access
+[22m[39m[2026-11-14T11:27:49.525Z]  @firebase/database: FIREBASE WARNING: update at / failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mdeck portal database rules[2m > [22m[2mrevokes permanently, removes the active mapping, and preserves owner access
+[22m[39m[2026-11-14T11:27:49.537Z]  @firebase/database: FIREBASE WARNING: update at / failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mdeck portal database rules[2m > [22m[2mrotates atomically and rejects a second active mapping
+[22m[39m[2026-11-14T11:27:49.659Z]  @firebase/database: FIREBASE WARNING: update at / failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mdeck portal database rules[2m > [22m[2mrotates atomically and rejects a second active mapping
+[22m[39m[2026-11-14T11:27:49.679Z]  @firebase/database: FIREBASE WARNING: update at / failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mdeck portal database rules[2m > [22m[2menforces community-equivalent content limits and owner-local mapping
+[22m[39m[2026-11-14T11:27:49.769Z]  @firebase/database: FIREBASE WARNING: update at / failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mdeck portal database rules[2m > [22m[2menforces community-equivalent content limits and owner-local mapping
+[22m[39m[2026-11-14T11:27:49.783Z]  @firebase/database: FIREBASE WARNING: update at / failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mdeck portal database rules[2m > [22m[2menforces community-equivalent content limits and owner-local mapping
+[22m[39m[2026-11-14T11:27:49.787Z]  @firebase/database: FIREBASE WARNING: update at / failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2maccount privacy, nickname, and presence rules[2m > [22m[2matomically onboards with private defaults and a case-insensitive claim
+[22m[39m[2026-11-14T11:27:49.977Z]  @firebase/database: FIREBASE WARNING: update at / failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2maccount privacy, nickname, and presence rules[2m > [22m[2mrejects malformed nicknames, old privacy acknowledgement, and public email fields
+[22m[39m[2026-11-14T11:27:50.065Z]  @firebase/database: FIREBASE WARNING: update at / failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2maccount privacy, nickname, and presence rules[2m > [22m[2mrejects malformed nicknames, old privacy acknowledgement, and public email fields
+[22m[39m[2026-11-14T11:27:50.071Z]  @firebase/database: FIREBASE WARNING: update at / failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2maccount privacy, nickname, and presence rules[2m > [22m[2mrejects malformed nicknames, old privacy acknowledgement, and public email fields
+[22m[39m[2026-11-14T11:27:50.079Z]  @firebase/database: FIREBASE WARNING: update at / failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2maccount privacy, nickname, and presence rules[2m > [22m[2mrenames atomically, releases the old claim, and updates the projection
+[22m[39m[2026-11-14T11:27:50.176Z]  @firebase/database: FIREBASE WARNING: update at / failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2maccount privacy, nickname, and presence rules[2m > [22m[2mrequires ready accounts and opt-in before presence reads or writes
+[22m[39m[2026-11-14T11:27:50.266Z]  @firebase/database: FIREBASE WARNING: set at /presenceSessions/owner-user/tab-a failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2maccount privacy, nickname, and presence rules[2m > [22m[2mrequires ready accounts and opt-in before presence reads or writes
+[22m[39m[2026-11-14T11:27:50.366Z]  @firebase/database: FIREBASE WARNING: set at /presenceSessions/owner-user/forged failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2maccount privacy, nickname, and presence rules[2m > [22m[2mrequires ready accounts and opt-in before presence reads or writes
+[22m[39m[2026-11-14T11:27:50.369Z]  @firebase/database: FIREBASE WARNING: set at /presenceSessions/owner-user/timestamp failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2maccount privacy, nickname, and presence rules[2m > [22m[2mrequires ready accounts and opt-in before presence reads or writes
+[22m[39m[2026-11-14T11:27:50.386Z]  @firebase/database: FIREBASE WARNING: set at /presenceSessions/owner-user/tab-new failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mtrusted discovery projection rules[2m > [22m[2mallows only bounded indexed reads and denies every client write
+[22m[39m[2026-11-14T11:27:50.556Z]  @firebase/database: FIREBASE WARNING: set at /activePlayers/recipient-user failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mtrusted discovery projection rules[2m > [22m[2mallows only bounded indexed reads and denies every client write
+[22m[39m[2026-11-14T11:27:50.589Z]  @firebase/database: FIREBASE WARNING: set at /publicOnlineDeckCatalog/online-deck-example failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mtrusted discovery projection rules[2m > [22m[2mallows only bounded indexed reads and denies every client write
+[22m[39m[2026-11-14T11:27:50.598Z]  @firebase/database: FIREBASE WARNING: set at /onlineDecksByOwner/owner-user/online-deck-example failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mtrusted discovery projection rules[2m > [22m[2mdenies active-player writes and deletes even for an eligible opted-in owner
+[22m[39m[2026-11-14T11:27:50.779Z]  @firebase/database: FIREBASE WARNING: set at /activePlayers/owner-user failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mtrusted discovery projection rules[2m > [22m[2mdenies active-player writes and deletes even for an eligible opted-in owner
+[22m[39m[2026-11-14T11:27:50.783Z]  @firebase/database: FIREBASE WARNING: set at /activePlayers/owner-user failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mtrusted social graph database rules[2m > [22m[2mdenies all client access to canonical edges and public profile storage
+[22m[39m[2026-11-14T11:27:51.067Z]  @firebase/database: FIREBASE WARNING: set at /publicPlayerProfiles/owner-user failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mtrusted social graph database rules[2m > [22m[2mdenies all client access to canonical edges and public profile storage
+[22m[39m[2026-11-14T11:27:51.126Z]  @firebase/database: FIREBASE WARNING: set at /playerFollowEdges/ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mtrusted social graph database rules[2m > [22m[2mdenies every client write to derived edges and private blocks
+[22m[39m[2026-11-14T11:27:51.515Z]  @firebase/database: FIREBASE WARNING: set at /playerFollowing/recipient-user/owner-user failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mtrusted social graph database rules[2m > [22m[2mdenies every client write to derived edges and private blocks
+[22m[39m[2026-11-14T11:27:51.539Z]  @firebase/database: FIREBASE WARNING: set at /playerFollowers/owner-user/recipient-user failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mtrusted social graph database rules[2m > [22m[2mdenies every client write to derived edges and private blocks
+[22m[39m[2026-11-14T11:27:51.542Z]  @firebase/database: FIREBASE WARNING: set at /playerFollowers/owner-user/recipient-user failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mtrusted social graph database rules[2m > [22m[2mdenies every client write to derived edges and private blocks
+[22m[39m[2026-11-14T11:27:51.545Z]  @firebase/database: FIREBASE WARNING: set at /playerFollowing/recipient-user/owner-user failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mtrusted social graph database rules[2m > [22m[2mdenies every client write to derived edges and private blocks
+[22m[39m[2026-11-14T11:27:51.548Z]  @firebase/database: FIREBASE WARNING: set at /playerFollowers/owner-user/recipient-user failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mtrusted social graph database rules[2m > [22m[2mdenies every client write to derived edges and private blocks
+[22m[39m[2026-11-14T11:27:51.551Z]  @firebase/database: FIREBASE WARNING: set at /playerBlocks/owner-user/outsider-user failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mversioned online deck database rules[2m > [22m[2mallows owner creation and visibility/access-scoped viewer reads
+[22m[39m[2026-11-14T11:27:51.777Z]  @firebase/database: FIREBASE WARNING: set at /onlineDeckAccess/online-deck-example/outsider-user failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mversioned online deck database rules[2m > [22m[2mpublishes only an owner successor and keeps old versions immutable
+[22m[39m[2026-11-14T11:27:52.077Z]  @firebase/database: FIREBASE WARNING: update at /onlineDecks/online-deck-example failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mversioned online deck database rules[2m > [22m[2mpublishes only an owner successor and keeps old versions immutable
+[22m[39m[2026-11-14T11:27:52.099Z]  @firebase/database: FIREBASE WARNING: update at /onlineDecks/online-deck-example/versions/1/cards/stable-card failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mversioned online deck database rules[2m > [22m[2mmakes deleted status terminal, preserves versions, and makes grants inert
+[22m[39m[2026-11-14T11:27:52.257Z]  @firebase/database: FIREBASE WARNING: update at /onlineDecks/online-deck-example/head failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mversioned online deck database rules[2m > [22m[2mmakes deleted status terminal, preserves versions, and makes grants inert
+[22m[39m[2026-11-14T11:27:52.260Z]  @firebase/database: FIREBASE WARNING: set at /onlineDeckAccess/online-deck-example/outsider-user failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mversioned online deck database rules[2m > [22m[2mmakes deleted status terminal, preserves versions, and makes grants inert
+[22m[39m[2026-11-14T11:27:52.267Z]  @firebase/database: FIREBASE WARNING: set at /onlineDecks/online-deck-example/versions/1 failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mversioned online deck database rules[2m > [22m[2mrejects stale/skipped publishing and enforces offline policy bounds
+[22m[39m[2026-11-14T11:27:52.357Z]  @firebase/database: FIREBASE WARNING: update at /onlineDecks/online-deck-example failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mversioned online deck database rules[2m > [22m[2mrejects stale/skipped publishing and enforces offline policy bounds
+[22m[39m[2026-11-14T11:27:52.364Z]  @firebase/database: FIREBASE WARNING: update at /onlineDecks/online-deck-example/head/offlinePolicy failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mseries and completion database rules[2m > [22m[2mrequires owner-atomic linkage and exactly 30 cards for every series part
+[22m[39m[2026-11-14T11:27:52.471Z]  @firebase/database: FIREBASE WARNING: set at /deckSeries/series-one failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mseries and completion database rules[2m > [22m[2mrequires owner-atomic linkage and exactly 30 cards for every series part
+[22m[39m[2026-11-14T11:27:52.577Z]  @firebase/database: FIREBASE WARNING: update at /onlineDecks/series-deck-one/head failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mseries and completion database rules[2m > [22m[2mkeeps middle parts recorded and enforces immutable part positions
+[22m[39m[2026-11-14T11:27:52.736Z]  @firebase/database: FIREBASE WARNING: set at /deckSeries/series-one/parts/1 failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mseries and completion database rules[2m > [22m[2mkeeps middle parts recorded and enforces immutable part positions
+[22m[39m[2026-11-14T11:27:52.740Z]  @firebase/database: FIREBASE WARNING: update at /deckSeries/series-one/parts/2 failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mseries and completion database rules[2m > [22m[2mallows only distinct real card progress and completion at exactly 30
+[22m[39m[2026-11-14T11:27:52.913Z]  @firebase/database: FIREBASE WARNING: set at /onlinePartProgress/recipient-user/series-one/1 failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mseries and completion database rules[2m > [22m[2mallows only distinct real card progress and completion at exactly 30
+[22m[39m[2026-11-14T11:27:52.916Z]  @firebase/database: FIREBASE WARNING: set at /onlinePartProgress/recipient-user/series-one/1 failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mseries and completion database rules[2m > [22m[2mallows only distinct real card progress and completion at exactly 30
+[22m[39m[2026-11-14T11:27:52.975Z]  @firebase/database: FIREBASE WARNING: set at /onlinePartProgress/recipient-user/series-one/1 failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mseries and completion database rules[2m > [22m[2mallows only distinct real card progress and completion at exactly 30
+[22m[39m[2026-11-14T11:27:53.006Z]  @firebase/database: FIREBASE WARNING: set at /onlinePartProgress/recipient-user/series-one/1 failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2monline schedule database rules[2m > [22m[2mrejects schedule writes after private access is revoked
+[22m[39m[2026-11-14T11:27:53.144Z]  @firebase/database: FIREBASE WARNING: set at /onlineSchedules/recipient-user/online-deck-example/stable-card failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2monline schedule database rules[2m > [22m[2misolates schedule paths to the authenticated uid/deck/card
+[22m[39m[2026-11-14T11:27:53.333Z]  @firebase/database: FIREBASE WARNING: set at /onlineSchedules/recipient-user/online-deck-example/other-card failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2monline schedule database rules[2m > [22m[2mpermits first review at a published revision above one and rejects mismatched versions
+[22m[39m[2026-11-14T11:27:53.458Z]  @firebase/database: FIREBASE WARNING: set at /onlineSchedules/recipient-user/online-deck-example/other-card failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2monline schedule database rules[2m > [22m[2menforces immutable events, monotonic revisions, and current contentRevision
+[22m[39m[2026-11-14T11:27:53.589Z]  @firebase/database: FIREBASE WARNING: set at /onlineSchedules/recipient-user/online-deck-example/stable-card failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2monline schedule database rules[2m > [22m[2menforces immutable events, monotonic revisions, and current contentRevision
+[22m[39m[2026-11-14T11:27:53.592Z]  @firebase/database: FIREBASE WARNING: set at /onlineSchedules/recipient-user/online-deck-example/stable-card failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2maccount role rules[2m > [22m[2mrejects unknown role values, stale timestamps, and other writers
+[22m[39m[2026-11-14T11:27:53.853Z]  @firebase/database: FIREBASE WARNING: update at /accounts/owner-user failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2maccount role rules[2m > [22m[2mrejects unknown role values, stale timestamps, and other writers
+[22m[39m[2026-11-14T11:27:53.858Z]  @firebase/database: FIREBASE WARNING: update at /accounts/owner-user failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2maccount role rules[2m > [22m[2mrejects unknown role values, stale timestamps, and other writers
+[22m[39m[2026-11-14T11:27:53.899Z]  @firebase/database: FIREBASE WARNING: update at /accounts/owner-user failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mquiz code rules[2m > [22m[2mallows only the owner to publish a well-formed code and rejects forgeries
+[22m[39m[2026-11-14T11:27:54.110Z]  @firebase/database: FIREBASE WARNING: set at /quizCodes/ABCD-EFGH failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mquiz code rules[2m > [22m[2mallows only the owner to publish a well-formed code and rejects forgeries
+[22m[39m[2026-11-14T11:27:54.113Z]  @firebase/database: FIREBASE WARNING: set at /quizCodes/NOTACODE failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mquiz code rules[2m > [22m[2mallows only the owner to publish a well-formed code and rejects forgeries
+[22m[39m[2026-11-14T11:27:54.116Z]  @firebase/database: FIREBASE WARNING: set at /quizCodes/ABCD-EFGH failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mquiz creation rules[2m > [22m[2mrejects overwrites, forged owners, oversized quizzes, and bad shapes
+[22m[39m[2026-11-14T11:27:54.418Z]  @firebase/database: FIREBASE WARNING: set at /quizzes/quiz_test-quiz failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mquiz creation rules[2m > [22m[2mrejects overwrites, forged owners, oversized quizzes, and bad shapes
+[22m[39m[2026-11-14T11:27:54.449Z]  @firebase/database: FIREBASE WARNING: set at /quizzes/quiz_forged failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mquiz creation rules[2m > [22m[2mrejects overwrites, forged owners, oversized quizzes, and bad shapes
+[22m[39m[2026-11-14T11:27:54.452Z]  @firebase/database: FIREBASE WARNING: set at /quizzes/quiz_bad id failed: permission_denied 
+
+[90mstderr[2m | test/lib/database.rules.test.ts[2m > [22m[2mquiz creation rules[2m > [22m[2mrejects overwrites, forged owners, oversized quizzes, and bad shapes
+[22m[39m[2026-11-14T11:27:54.456Z]  @firebase/database: FIREBASE WARNING: set at /quizzes/quiz_oversized failed: permission_denied 
+
+ [32m✓[39m test/lib/database.rules.test.ts [2m([22m[2m38 tests[22m[2m)[22m[33m 7309[2mms[22m[39m
+   [32m✓[39m community database rules [2m(4)[22m
+     [33m[2m✓[22m[39m allows an owner to share atomically and only granted users to read the snapshot[33m 981[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m38 passed[39m[22m[90m (38)[39m
+[2m   Start at [22m 19:27:46
+[2m   Duration [22m 8.05s[2m (tests 94%, import 5%, transform 1%)[22m
+
+[32m[1m+ [22m[39m Script exited successfully (code 0)
+[36m[1mi  emulators:[22m[39m Shutting down emulators.
+[36m[1mi  database:[22m[39m Stopping Database Emulator
+[33m[1m! [22m[39m Database Emulator has exited upon receiving signal: SIGINT
+[36m[1mi  hub:[22m[39m Stopping emulator hub
+[36m[1mi  logging:[22m[39m Stopping Logging Emulator

@@ -12,6 +12,7 @@ export const paths = {
   legacyDecks: '/legacy-decks',
   studyDue: '/study/due',
   quiz: '/quiz',
+  quizCreate: '/quiz/create',
 } as const
 
 export function playerProfilePath(playerId: string): string {
