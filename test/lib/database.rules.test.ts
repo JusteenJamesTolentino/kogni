@@ -966,3 +966,64 @@ describeRules('online schedule database rules', () => {
     await assertFails(set(ref(viewerDatabase, `onlineSchedules/${RECIPIENT_ID}/${ONLINE_DECK_ID}/${ONLINE_CARD_ID}`), stale))
   })
 })
+
+describeRules('account role rules', () => {
+  async function seedAccount(uid: string): Promise<void> {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const database = context.database()
+      await set(ref(database, `accounts/${uid}`), accountRecord(uid, 'Nickname'))
+      await set(ref(database, 'nicknameClaims/nickname'), uid)
+    })
+  }
+
+  it('lets the owner set a valid role with fresh timestamps', async () => {
+    await seedAccount(OWNER_ID)
+    const ownerDatabase = testEnvironment.authenticatedContext(OWNER_ID).database()
+    const now = Date.now()
+    await assertSucceeds(update(ref(ownerDatabase, `accounts/${OWNER_ID}`), {
+      role: 'student',
+      roleUpdatedAt: now,
+      updatedAt: now,
+    }))
+    const stored = (await get(ref(ownerDatabase, `accounts/${OWNER_ID}`))).val()
+    expect(stored.role).toBe('student')
+  })
+
+  it('rejects unknown role values, stale timestamps, and other writers', async () => {
+    await seedAccount(OWNER_ID)
+    const ownerDatabase = testEnvironment.authenticatedContext(OWNER_ID).database()
+    const outsiderDatabase = testEnvironment.authenticatedContext(OUTSIDER_ID).database()
+    const now = Date.now()
+
+    await assertFails(update(ref(ownerDatabase, `accounts/${OWNER_ID}`), { role: 'admin', roleUpdatedAt: now, updatedAt: now }))
+    await assertFails(update(ref(ownerDatabase, `accounts/${OWNER_ID}`), { role: 'student', roleUpdatedAt: now - 120000, updatedAt: now }))
+    await assertFails(update(ref(outsiderDatabase, `accounts/${OWNER_ID}`), { role: 'teacher', roleUpdatedAt: now, updatedAt: now }))
+  })
+})
+
+describeRules('quiz code rules', () => {
+  const CODE = 'ABCD-EFGH'
+
+  function quizCode(ownerId: string, now = Date.now()) {
+    return { quizId: 'quiz-one', ownerId, createdAt: now }
+  }
+
+  it('lets any signed-in learner resolve codes, including missing ones', async () => {
+    const learnerDatabase = testEnvironment.authenticatedContext(RECIPIENT_ID).database()
+    const missing = (await get(ref(learnerDatabase, `quizCodes/${CODE}`))).val()
+    expect(missing).toBeNull()
+  })
+
+  it('allows only the owner to publish a well-formed code and rejects forgeries', async () => {
+    const ownerDatabase = testEnvironment.authenticatedContext(OWNER_ID).database()
+    const outsiderDatabase = testEnvironment.authenticatedContext(OUTSIDER_ID).database()
+    const now = Date.now()
+
+    await assertSucceeds(set(ref(ownerDatabase, `quizCodes/${CODE}`), quizCode(OWNER_ID, now)))
+    await assertSucceeds(get(ref(testEnvironment.authenticatedContext(RECIPIENT_ID).database(), `quizCodes/${CODE}`)))
+
+    await assertFails(set(ref(outsiderDatabase, `quizCodes/${CODE}`), quizCode(OUTSIDER_ID, now)))
+    await assertFails(set(ref(ownerDatabase, 'quizCodes/NOTACODE'), quizCode(OWNER_ID, now)))
+    await assertFails(set(ref(ownerDatabase, 'quizCodes/ABCD-EFGH'), { ...quizCode(OWNER_ID, now), ownerId: OUTSIDER_ID }))
+  })
+})

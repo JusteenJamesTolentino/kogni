@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ArrowRight, GraduationCap, Layers3, ListChecks, Plus, Presentation, WandSparkles } from 'lucide-react'
 import { Link, Navigate, useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom'
 import Community from '../components/Community'
@@ -17,6 +17,7 @@ import { createCloudReviewSaver, createPrivateDeck, loadCloudDeck, loadCloudLibr
 import { subscribeToMyLeaderboardRecord } from '../lib/leaderboard'
 import { profileBadges } from '../lib/badges'
 import { accountRole, updateAccountRole } from '../lib/account'
+import { formatQuizCodeInput, lookupQuizCode, normalizeQuizCode } from '../lib/quizzes'
 import { getErrorMessage } from '../lib/errors'
 import { shuffle } from '../lib/shuffle'
 import type { AccountRole, StudyCard, StudyDeck } from '../types/domain'
@@ -326,18 +327,25 @@ export function ProfileRoute() {
   )
 }
 
-/** First-visit role gate, then the quiz hub landing (teacher/student tooling lands in Slices 2-3). */
+/** First-visit role gate, then the quiz hub: students join by code, teacher tooling lands in Slice 2. */
 export function QuizRoute() {
   const { user, account } = useAppShell()
   const { refreshAccount } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [savingRole, setSavingRole] = useState<AccountRole | null>(null)
   const [error, setError] = useState('')
+  const [codeInput, setCodeInput] = useState('')
+  const [lookingUp, setLookingUp] = useState(false)
+  const [codeResult, setCodeResult] = useState<{ status: 'found' | 'not-found'; code: string } | null>(null)
   const role = accountRole(account)
+  const codeParam = searchParams.get('code') ?? ''
 
   const chooseRole = async (nextRole: AccountRole): Promise<void> => {
     if (savingRole) return
     setSavingRole(nextRole); setError('')
     try {
+      // updateAccountRole no-ops when the role is already set — always resync the
+      // account afterwards so the UI can never wedge on a stale local copy.
       await updateAccountRole(user, nextRole)
       await refreshAccount()
     } catch (cause: unknown) {
@@ -347,10 +355,45 @@ export function QuizRoute() {
     }
   }
 
+  const joinByCode = useCallback(async (value: string): Promise<void> => {
+    setLookingUp(true); setError(''); setCodeResult(null)
+    try {
+      const result = await lookupQuizCode(value)
+      setCodeResult({ status: result.status, code: result.code })
+      setCodeInput(formatQuizCodeInput(value))
+      if (result.status === 'found') {
+        // Keep the shareable URL; taking the quiz itself lands in Slice 3.
+        setSearchParams({ code: result.code }, { replace: true })
+      }
+    } catch (cause: unknown) {
+      setCodeResult(null)
+      setError(cause instanceof TypeError ? cause.message : getErrorMessage(cause, 'The quiz code could not be checked.'))
+    } finally {
+      setLookingUp(false)
+    }
+  }, [setSearchParams])
+
+  // Teacher-shared links (/quiz?code=ABCD-EFGH) resolve automatically once the
+  // student has a role; a missing role shows the gate first, then this fires.
+  const autoCode = useMemo(() => normalizeQuizCode(codeParam), [codeParam])
+  const autoLookupKey = role === 'student' ? autoCode : null
+  const [lastAutoLookup, setLastAutoLookup] = useState<string | null>(null)
+  useEffect(() => {
+    if (!autoLookupKey || lastAutoLookup === autoLookupKey) return
+    setLastAutoLookup(autoLookupKey)
+    void joinByCode(autoLookupKey)
+  }, [autoLookupKey, joinByCode, lastAutoLookup])
+
   const roleCards: Array<{ role: AccountRole; label: string; description: string; icon: typeof GraduationCap }> = [
     { role: 'student', label: 'Student', description: 'Take quizzes with codes shared by your teacher and track your rank.', icon: GraduationCap },
     { role: 'teacher', label: 'Teacher', description: 'Create quizzes, share codes with your class, and review results.', icon: Presentation },
   ]
+
+  const codeStatusLine = codeResult ? (
+    codeResult.status === 'found'
+      ? <div role="status" className="alert alert-success mt-4"><span>Quiz <strong>{codeResult.code}</strong> is ready. Taking quizzes opens in the next update — keep this link handy.</span></div>
+      : <div role="status" className="alert alert-warning mt-4"><span>No live quiz is using code <strong>{codeResult.code}</strong> yet. Ask your teacher to share one.</span></div>
+  ) : null
 
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
@@ -382,16 +425,43 @@ export function QuizRoute() {
         <section aria-labelledby="quiz-hub-title" className="rounded-3xl border border-primary/20 bg-base-100 p-6 shadow-xl sm:p-9">
           <span className="badge badge-primary gap-1"><ListChecks size={13} /> Quiz hub</span>
           <h1 id="quiz-hub-title" className="mt-4 text-3xl font-black">Quizzes</h1>
-          <p className="mt-2 text-base-content/60">
-            You are set up as <strong>{role === 'teacher' ? 'a Teacher' : 'a Student'}</strong>. Timed, auto-graded quizzes for school use arrive in the next update — they will never affect your XP, ranks on leaderboards, or review schedules.
-          </p>
+          {role === 'student' ? (
+            <>
+              <p className="mt-2 text-base-content/60">
+                Enter the quiz code your teacher shared, or open their link (<code>/quiz?code=ABCD-EFGH</code>) and it fills in automatically.
+              </p>
+              <form
+                className="mt-5 flex flex-wrap items-center gap-3"
+                onSubmit={(event) => { event.preventDefault(); void joinByCode(codeInput) }}
+              >
+                <input
+                  value={codeInput}
+                  onChange={(event) => setCodeInput(formatQuizCodeInput(event.target.value))}
+                  placeholder="ABCD-EFGH"
+                  inputMode="text"
+                  autoCapitalize="characters"
+                  autoComplete="off"
+                  spellCheck={false}
+                  aria-label="Quiz code"
+                  className="input input-bordered w-44 font-mono text-lg uppercase tracking-widest"
+                  disabled={lookingUp}
+                />
+                <button type="submit" className="btn btn-primary gap-2" disabled={lookingUp || normalizeQuizCode(codeInput) === null}>
+                  {lookingUp && <span className="loading loading-spinner loading-sm" />}
+                  <GraduationCap size={17} /> Join quiz
+                </button>
+              </form>
+              {codeStatusLine}
+            </>
+          ) : (
+            <p className="mt-2 text-base-content/60">
+              Quiz creation and shareable links (<code>/quiz?code=ABCD-EFGH</code>) arrive in the next update. Your students will enter the code here — quizzes never award XP and never touch review schedules.
+            </p>
+          )}
           <div className="mt-6 flex flex-wrap gap-3">
-            {role === 'teacher'
-              ? <button type="button" className="btn btn-primary gap-2" disabled><Presentation size={17} /> Create quiz — coming soon</button>
-              : <button type="button" className="btn btn-primary gap-2" disabled><GraduationCap size={17} /> Enter quiz code — coming soon</button>}
             {roleCards.filter((card) => card.role !== role).map((card) => (
-              <button key={card.role} type="button" className="btn btn-ghost gap-2" onClick={() => void chooseRole(card.role)} disabled={Boolean(savingRole)}>
-                <card.icon size={17} /> Switch to {card.label}
+              <button key={card.role} type="button" className="btn btn-ghost btn-sm gap-2" onClick={() => void chooseRole(card.role)} disabled={Boolean(savingRole)}>
+                <card.icon size={15} /> Switch to {card.label}
               </button>
             ))}
           </div>
