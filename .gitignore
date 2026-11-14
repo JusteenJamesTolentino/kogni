@@ -36,3 +36,5 @@ firebase-debug.log
 
 # Cloudflare bucket infrastructure config (kept local only)
 cloudflare.cors.json
+"# Emulator test logs"  
+"rules-output.txt"  
