@@ -34,7 +34,6 @@ export default function MagicImport({ apiKey, model, onOpenApiKey, onComplete, o
   const generating = useRef(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const dialogRef = useRef<HTMLDialogElement>(null)
-  const activityIdRef = useRef(0)
   const [hasPendingDraft, setHasPendingDraft] = useState(false)
   const [file, setFile] = useState<File | null>(null)
   const [dragActive, setDragActive] = useState(false)
@@ -68,8 +67,10 @@ export default function MagicImport({ apiKey, model, onOpenApiKey, onComplete, o
   }, [busy])
 
   const addActivity = (message: string, detail?: string): void => {
-    activityIdRef.current += 1
-    setActivities((current) => [...current, { id: activityIdRef.current, message, detail }])
+    // Derive the id inside the updater: refs read inside updaters are impure, and React
+    // may run them lazily (twice in StrictMode), which produced duplicate activity ids
+    // and React duplicate-key warnings when several progress events fired together.
+    setActivities((current) => [...current, { id: current.length + 1, message, detail }])
   }
 
   const handleProgress = (progress: GenerationProgress): void => {
@@ -109,7 +110,6 @@ export default function MagicImport({ apiKey, model, onOpenApiKey, onComplete, o
     if (!file || generating.current) return
     generating.current = true
 
-    activityIdRef.current = 0
     setActivities([])
     setStatus('generating')
     setError('')

@@ -63,7 +63,6 @@ export default function RegenerateDeck({
   const titleId = useId()
   const sourceNoteId = useId()
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const activityIdRef = useRef(0)
   const [file, setFile] = useState<File | null>(null)
   const [dragActive, setDragActive] = useState(false)
   const [localGenerating, setLocalGenerating] = useState(false)
@@ -119,13 +118,13 @@ export default function RegenerateDeck({
   }
 
   const reportProgress = (progress: RegenerationProgress): void => {
-    activityIdRef.current += 1
-    setActivities((current) => [...current, { ...progress, id: activityIdRef.current }])
+    // Id derived inside the updater — refs read here are impure and duplicate keys
+    // when React runs queued updaters lazily (same bug as MagicImport's log).
+    setActivities((current) => [...current, { ...progress, id: current.length + 1 }])
   }
 
   const generate = async (): Promise<void> => {
     if (!file || generating) return
-    activityIdRef.current = 0
     setActivities([])
     setLocalError('')
     setLocalGenerating(true)
