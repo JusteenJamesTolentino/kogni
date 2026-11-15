@@ -54,7 +54,7 @@ vi.mock('firebase/auth', () => ({
   signInWithPopup: vi.fn(),
   getAdditionalUserInfo: vi.fn(),
 }))
-vi.mock('../../src/lib/account', () => ({ getAccount: mocks.getAccount, completeAccountOnboarding: mocks.completeOnboarding }))
+vi.mock('../../src/lib/account', () => ({ getAccount: mocks.getAccount, completeAccountOnboarding: mocks.completeOnboarding, PRIVACY_VERSION: 'test' }))
 vi.mock('../../src/lib/presence', () => ({ startPresenceSession: mocks.startPresence }))
 vi.mock('../../src/lib/db', () => ({ setDatabaseUser: mocks.setDatabaseUser }))
 
@@ -62,8 +62,8 @@ import { AuthProvider, useAuth } from '../../src/context/AuthContext'
 
 const userA = { uid: 'user-a' } as User
 const userB = { uid: 'user-b' } as User
-const accountA = { uid: userA.uid, preferences: { presence: true, discoverable: true } }
-const accountB = { uid: userB.uid, preferences: { presence: true, discoverable: true } }
+const accountA = { uid: userA.uid, privacy: { currentVersion: 'test' }, preferences: { presence: true, discoverable: true } }
+const accountB = { uid: userB.uid, privacy: { currentVersion: 'test' }, preferences: { presence: true, discoverable: true } }
 const render = () => {
   mocks.cursor = 0
   const element = AuthProvider({ children: null })

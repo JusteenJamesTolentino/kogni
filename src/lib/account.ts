@@ -61,6 +61,16 @@ function isPreferences(value: unknown): value is AccountPreferences {
 }
 
 export function isAccountRecord(value: unknown): value is AccountRecord {
+  if (!isAccountRecordShape(value)) return false
+  return value.privacy.currentVersion === PRIVACY_VERSION
+}
+
+/**
+ * Full account validity except the privacy version equality. Accounts acknowledging an
+ * older privacy version still load so the app can present the re-acknowledgement gate
+ * instead of wedging them into onboarding (their nickname claim already exists).
+ */
+export function isAccountRecordShape(value: unknown): value is AccountRecord {
   if (!isRecord(value) || !isRecord(value.privacy)) return false
   const acknowledgements = value.privacy.acknowledgements
   return (
@@ -72,10 +82,10 @@ export function isAccountRecord(value: unknown): value is AccountRecord {
     value.nicknameCanonical === value.nickname.toLowerCase() &&
     timestampIsValid(value.createdAt) &&
     timestampIsValid(value.updatedAt) &&
-    value.privacy.currentVersion === PRIVACY_VERSION &&
+    typeof value.privacy.currentVersion === 'string' &&
     timestampIsValid(value.privacy.acknowledgedAt) &&
     isRecord(acknowledgements) &&
-    timestampIsValid(acknowledgements[PRIVACY_VERSION]) &&
+    timestampIsValid(acknowledgements[value.privacy.currentVersion]) &&
     isPreferences(value.preferences) &&
     (value.role === undefined || isAccountRole(value.role))
   )
@@ -198,7 +208,35 @@ export async function completeAccountOnboarding(
 export async function getAccount(user: User | null | undefined): Promise<AccountRecord | null> {
   const authenticatedUser = requireUser(user)
   const value: unknown = (await get(ref(database, `accounts/${authenticatedUser.uid}`))).val()
-  return isAccountRecord(value) && value.uid === authenticatedUser.uid ? value : null
+  return isAccountRecordShape(value) && value.uid === authenticatedUser.uid ? value : null
+}
+
+/** True when the loaded record is valid but still acknowledging an older privacy version. */
+export function privacyAcknowledgementPending(account: AccountRecord): boolean {
+  return account.privacy.currentVersion !== PRIVACY_VERSION
+}
+
+/**
+ * Re-acknowledges the current privacy version by replacing the privacy subtree
+ * (the acknowledgement history keeps only the current version's entry).
+ */
+export async function acknowledgePrivacy(user: User | null | undefined): Promise<AccountRecord> {
+  const authenticatedUser = requireUser(user)
+  const current = await getAccount(authenticatedUser)
+  if (!current) throw new TypeError('A ready account is required')
+  if (!privacyAcknowledgementPending(current)) return current
+  const timestamp = serverTimestamp()
+  const privacy: AccountRecord['privacy'] = {
+    currentVersion: PRIVACY_VERSION,
+    acknowledgedAt: timestamp,
+    acknowledgements: { [PRIVACY_VERSION]: timestamp },
+  }
+  await update(ref(database), {
+    [`accounts/${authenticatedUser.uid}/privacy`]: privacy,
+    [`accounts/${authenticatedUser.uid}/updatedAt`]: timestamp,
+  })
+  const next = await getAccount(authenticatedUser)
+  return next ?? current
 }
 
 export async function requireReadyAccount(

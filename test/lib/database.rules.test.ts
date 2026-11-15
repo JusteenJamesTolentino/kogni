@@ -450,6 +450,34 @@ describeRules('account privacy, nickname, and presence rules', () => {
     }))
   })
 
+  it('allows re-acknowledging a newer privacy version on an existing account', async () => {
+    const ownerDatabase = testEnvironment.authenticatedContext(OWNER_ID).database()
+    const stale = { ...accountRecord(OWNER_ID, 'Ada_2026'), privacy: {
+      currentVersion: 'privacy-2026-11-10-ai-series-1',
+      acknowledgedAt: 1,
+      acknowledgements: { 'privacy-2026-11-10-ai-series-1': 1 },
+    } }
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const database = context.database()
+      await set(ref(database, `nicknameClaims/ada_2026`), OWNER_ID)
+      await set(ref(database, `accounts/${OWNER_ID}`), stale)
+    })
+
+    const now = Date.now()
+    await assertSucceeds(update(ref(ownerDatabase, `accounts/${OWNER_ID}`), {
+      privacy: { currentVersion: PRIVACY_VERSION, acknowledgedAt: now, acknowledgements: { [PRIVACY_VERSION]: now } },
+      updatedAt: now,
+    }))
+    const stored = (await get(ref(ownerDatabase, `accounts/${OWNER_ID}`))).val() as { privacy: { currentVersion: string } }
+    expect(stored.privacy.currentVersion).toBe(PRIVACY_VERSION)
+
+    // The stale privacy block itself is still rejected — only the current version validates.
+    await assertFails(update(ref(ownerDatabase, `accounts/${OWNER_ID}`), {
+      privacy: { currentVersion: 'privacy-2026-11-10-ai-series-1', acknowledgedAt: Date.now(), acknowledgements: { 'privacy-2026-11-10-ai-series-1': Date.now() } },
+      updatedAt: Date.now(),
+    }))
+  })
+
   it('rejects malformed nicknames, old privacy acknowledgement, and public email fields', async () => {
     const ownerDatabase = testEnvironment.authenticatedContext(OWNER_ID).database()
     const malformed = accountRecord(OWNER_ID, 'ab')

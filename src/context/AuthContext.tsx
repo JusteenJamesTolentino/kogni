@@ -6,6 +6,7 @@ import type { AccountRecord } from '../types/domain'
 import { auth, googleProvider } from '../lib/firebase'
 import { completeAccountOnboarding, getAccount } from '../lib/account'
 import type { CompleteAccountOnboardingInput } from '../lib/account'
+import { PRIVACY_VERSION } from '../lib/account'
 import { startPresenceSession } from '../lib/presence'
 import type { PresenceSession } from '../lib/presence'
 import { getErrorMessage, isRecord } from '../lib/errors'
@@ -104,7 +105,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [])
 
   useEffect(() => {
+    // Presence writes are rejected by rules until the current privacy version is
+    // acknowledged — hold off rather than surfacing permission errors on the gate.
     if (!user || account?.uid !== user.uid || !account.preferences.presence) return
+    if (account.privacy.currentVersion !== PRIVACY_VERSION) return
     let active = true
     let ownedSession: PresenceSession | null = null
     const handlePresenceError = (presenceError: unknown) => {
