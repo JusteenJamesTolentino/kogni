@@ -39,3 +39,4 @@ cloudflare.cors.json
 
 # Emulator test logs
 rules-output.txt
+rules-run2.txt
