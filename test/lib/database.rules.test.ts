@@ -16,7 +16,7 @@ const SHARE_ID = 'share-example'
 const PORTAL_CODE = '0123456789AB'
 const ROTATED_PORTAL_CODE = 'CDEFGHJKMNPQ'
 const PORTAL_LIFETIME_MS = 30 * 24 * 60 * 60 * 1000
-const PRIVACY_VERSION = 'privacy-2026-11-10-ai-series-1'
+const PRIVACY_VERSION = 'privacy-2026-11-15-school-quizzes-1'
 
 function accountRecord(
   uid: string,
@@ -1090,5 +1090,86 @@ describeRules('quiz creation rules', () => {
     const oversized = quizRecord(OWNER_ID)
     for (let index = 0; index < 51; index += 1) oversized.questions[`q_${index}`] = { prompt: 'x', choices: { 0: 'a', 1: 'b' } }
     await assertFails(set(ref(ownerDatabase, 'quizzes/quiz_oversized'), oversized))
+  })
+})
+
+describeRules('quiz attempt and stats rules', () => {
+  const QUIZ_ID = 'quiz_test-quiz'
+
+  function quizRecord(ownerId: string, now = Date.now()) {
+    return {
+      id: QUIZ_ID,
+      ownerId,
+      title: 'Cell quiz',
+      questionCount: 2,
+      questions: {
+        q_0: { prompt: 'What is ATP?', choices: { 0: 'Energy currency', 1: 'A protein' } },
+        q_1: { prompt: 'Pick B', choices: { 0: 'A', 1: 'B', 2: 'C' } },
+      },
+      createdAt: now,
+      updatedAt: now,
+    }
+  }
+
+  function attemptRecord(nickname = 'StudentA', now = Date.now()) {
+    return {
+      uid: RECIPIENT_ID,
+      nickname,
+      quizId: QUIZ_ID,
+      quizTitle: 'Cell quiz',
+      answers: { q_0: 0, q_1: 1 },
+      correctCount: 2,
+      questionCount: 2,
+      score: 100,
+      passed: true,
+      gradedAt: now,
+      breakdown: [
+        { id: 'q_0', prompt: 'What is ATP?', choices: ['Energy currency', 'A protein'], chosenIndex: 0, correctIndex: 0, correct: true },
+        { id: 'q_1', prompt: 'Pick B', choices: ['A', 'B', 'C'], chosenIndex: 1, correctIndex: 1, correct: true },
+      ],
+    }
+  }
+
+  async function seedQuizWithAttempt() {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const database = context.database()
+      await set(ref(database, `quizzes/${QUIZ_ID}`), { ...quizRecord(OWNER_ID), id: QUIZ_ID })
+      await set(ref(database, `quizAttempts/${QUIZ_ID}/${RECIPIENT_ID}`), attemptRecord())
+      await set(ref(database, `roleStats/${RECIPIENT_ID}`), { quizzesTaken: 1, quizzesPassed: 1, currentStreak: 1, bestStreak: 1, totalCorrect: 2, totalQuestions: 2 })
+      await set(ref(database, `badges/${RECIPIENT_ID}/perfect-round`), { awardedAt: Date.now(), type: 'auto' })
+    })
+  }
+
+  it('lets the quiz owner and the subject read an attempt, and denies outsiders', async () => {
+    await seedQuizWithAttempt()
+    const ownerDatabase = testEnvironment.authenticatedContext(OWNER_ID).database()
+    const subjectDatabase = testEnvironment.authenticatedContext(RECIPIENT_ID).database()
+    const outsiderDatabase = testEnvironment.authenticatedContext(OUTSIDER_ID).database()
+
+    await assertSucceeds(get(ref(ownerDatabase, `quizAttempts/${QUIZ_ID}`)))
+    await assertSucceeds(get(ref(subjectDatabase, `quizAttempts/${QUIZ_ID}/${RECIPIENT_ID}`)))
+    await assertFails(get(ref(outsiderDatabase, `quizAttempts/${QUIZ_ID}/${RECIPIENT_ID}`)))
+  })
+
+  it('rejects every client write to attempts, role stats, and badges (admin grading only)', async () => {
+    await seedQuizWithAttempt()
+    const subjectDatabase = testEnvironment.authenticatedContext(RECIPIENT_ID).database()
+    const ownerDatabase = testEnvironment.authenticatedContext(OWNER_ID).database()
+
+    await assertFails(set(ref(subjectDatabase, `quizAttempts/${QUIZ_ID}/${RECIPIENT_ID}`), attemptRecord('Forged', Date.now())))
+    await assertFails(update(ref(subjectDatabase, `roleStats/${RECIPIENT_ID}`), { quizzesTaken: 9999 }))
+    await assertFails(set(ref(subjectDatabase, `badges/${RECIPIENT_ID}/perfect-round`), { awardedAt: Date.now(), type: 'auto' }))
+    await assertFails(set(ref(ownerDatabase, `badges/${OWNER_ID}/founders-pick`), { awardedAt: Date.now(), type: 'granted' }))
+  })
+
+  it('lets only the subject read their own role stats and badges', async () => {
+    await seedQuizWithAttempt()
+    const subjectDatabase = testEnvironment.authenticatedContext(RECIPIENT_ID).database()
+    const outsiderDatabase = testEnvironment.authenticatedContext(OUTSIDER_ID).database()
+
+    await assertSucceeds(get(ref(subjectDatabase, `roleStats/${RECIPIENT_ID}`)))
+    await assertSucceeds(get(ref(subjectDatabase, `badges/${RECIPIENT_ID}`)))
+    await assertFails(get(ref(outsiderDatabase, `roleStats/${RECIPIENT_ID}`)))
+    await assertFails(get(ref(outsiderDatabase, `badges/${RECIPIENT_ID}`)))
   })
 })

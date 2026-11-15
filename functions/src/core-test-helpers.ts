@@ -4,7 +4,7 @@ function record(value: unknown): Record<string, unknown> {
   return value !== null && typeof value === 'object' ? value as Record<string, unknown> : {}
 }
 
-export function eligibleTestAccount(uid: string, privacyVersion = 'privacy-2026-11-10-ai-series-1') {
+export function eligibleTestAccount(uid: string, privacyVersion = 'privacy-2026-11-15-school-quizzes-1') {
   return {
     uid, status: 'ready', nickname: `User_${uid}`.slice(0, 24), nicknameCanonical: `user_${uid}`.slice(0, 24),
     privacy: { currentVersion: privacyVersion, acknowledgements: { [privacyVersion]: 1 } },

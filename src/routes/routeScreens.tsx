@@ -18,7 +18,12 @@ import { subscribeToMyLeaderboardRecord } from '../lib/leaderboard'
 import { profileBadges } from '../lib/badges'
 import { accountRole, updateAccountRole } from '../lib/account'
 import { formatQuizCodeInput, listOwnedQuizzes, lookupQuizCode, normalizeQuizCode } from '../lib/quizzes'
+import type { QuizAttemptResult, QuizContentView, QuizRankStats } from '../lib/quizzes'
+import { fetchQuizContent } from '../lib/quizzes'
 import QuizCreator from '../components/QuizCreator'
+import QuizTaking from '../components/QuizTaking'
+import QuizResultView from '../components/QuizResultView'
+import QuizResults from '../components/QuizResults'
 import { getErrorMessage } from '../lib/errors'
 import { shuffle } from '../lib/shuffle'
 import type { AccountRole, StudyCard, StudyDeck } from '../types/domain'
@@ -29,6 +34,7 @@ import {
   playerProfilePath,
   paths,
   portalPath,
+  quizResultsPath,
 } from '../router/paths'
 
 function useAppShell(): AppShellContextValue {
@@ -338,6 +344,10 @@ export function QuizRoute() {
   const [codeInput, setCodeInput] = useState('')
   const [lookingUp, setLookingUp] = useState(false)
   const [codeResult, setCodeResult] = useState<{ status: 'found' | 'not-found'; code: string } | null>(null)
+  const [activeQuiz, setActiveQuiz] = useState<QuizContentView | null>(null)
+  const [activeQuizCode, setActiveQuizCode] = useState('')
+  const [taking, setTaking] = useState(false)
+  const [result, setResult] = useState<{ result: QuizAttemptResult; stats?: QuizRankStats; alreadyTaken: boolean } | null>(null)
   const [ownedQuizzes, setOwnedQuizzes] = useState<Array<{ quizId: string; code: string; title: string; createdAt: number }>>([])
   const [quizzesLoading, setQuizzesLoading] = useState(false)
   const role = accountRole(account)
@@ -359,14 +369,17 @@ export function QuizRoute() {
   }
 
   const joinByCode = useCallback(async (value: string): Promise<void> => {
-    setLookingUp(true); setError(''); setCodeResult(null)
+    setLookingUp(true); setError(''); setCodeResult(null); setActiveQuiz(null); setResult(null)
     try {
       const result = await lookupQuizCode(value)
       setCodeResult({ status: result.status, code: result.code })
       setCodeInput(formatQuizCodeInput(value))
       if (result.status === 'found') {
-        // Keep the shareable URL; taking the quiz itself lands in Slice 3.
+        // Keep the shareable URL and load the answer-free question set.
         setSearchParams({ code: result.code }, { replace: true })
+        const content = await fetchQuizContent(result.quiz.quizId)
+        setActiveQuiz(content)
+        setActiveQuizCode(result.code)
       }
     } catch (cause: unknown) {
       setCodeResult(null)
@@ -407,11 +420,27 @@ export function QuizRoute() {
     { role: 'teacher', label: 'Teacher', description: 'Create quizzes, share codes with your class, and review results.', icon: Presentation },
   ]
 
-  const codeStatusLine = codeResult ? (
-    codeResult.status === 'found'
-      ? <div role="status" className="alert alert-success mt-4"><span>Quiz <strong>{codeResult.code}</strong> is ready. Taking quizzes opens in the next update — keep this link handy.</span></div>
-      : <div role="status" className="alert alert-warning mt-4"><span>No live quiz is using code <strong>{codeResult.code}</strong> yet. Ask your teacher to share one.</span></div>
-  ) : null
+  const codeStatusLine = codeResult
+    ? codeResult.status === 'not-found'
+      ? <div role="status" className="alert alert-warning mt-4"><span>No live quiz is using code <strong>{codeResult.code}</strong> yet. Ask your teacher to share one.</span></div>
+      : null
+    : null
+
+  // Taking and result screens render as their own pages, outside the hub section.
+  if (role === 'student' && result) {
+    return <QuizResultView result={result.result} stats={result.stats} alreadyTaken={result.alreadyTaken} />
+  }
+  if (role === 'student' && activeQuiz && taking) {
+    return (
+      <QuizTaking
+        user={user}
+        quiz={activeQuiz}
+        code={activeQuizCode}
+        onFinished={(graded, stats) => { setResult({ result: graded, stats, alreadyTaken: false }); setTaking(false) }}
+        onExit={() => { setTaking(false); setActiveQuiz(null); setResult(null); setSearchParams({}, { replace: true }) }}
+      />
+    )
+  }
 
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
@@ -444,33 +473,49 @@ export function QuizRoute() {
           <span className="badge badge-primary gap-1"><ListChecks size={13} /> Quiz hub</span>
           <h1 id="quiz-hub-title" className="mt-4 text-3xl font-black">Quizzes</h1>
           {role === 'student' ? (
-            <>
-              <p className="mt-2 text-base-content/60">
-                Enter the quiz code your teacher shared, or open their link (<code>/quiz?code=ABCD-EFGH</code>) and it fills in automatically.
-              </p>
-              <form
-                className="mt-5 flex flex-wrap items-center gap-3"
-                onSubmit={(event) => { event.preventDefault(); void joinByCode(codeInput) }}
-              >
-                <input
-                  value={codeInput}
-                  onChange={(event) => setCodeInput(formatQuizCodeInput(event.target.value))}
-                  placeholder="ABCD-EFGH"
-                  inputMode="text"
-                  autoCapitalize="characters"
-                  autoComplete="off"
-                  spellCheck={false}
-                  aria-label="Quiz code"
-                  className="input input-bordered w-44 font-mono text-lg uppercase tracking-widest"
-                  disabled={lookingUp}
-                />
-                <button type="submit" className="btn btn-primary gap-2" disabled={lookingUp || normalizeQuizCode(codeInput) === null}>
-                  {lookingUp && <span className="loading loading-spinner loading-sm" />}
-                  <GraduationCap size={17} /> Join quiz
-                </button>
-              </form>
-              {codeStatusLine}
-            </>
+            activeQuiz ? (
+              <div>
+                <h2 className="text-2xl font-black">{activeQuiz.title}</h2>
+                {activeQuiz.description && <p className="mt-2 text-base-content/60">{activeQuiz.description}</p>}
+                <ul className="mt-4 space-y-1 text-sm text-base-content/70">
+                  <li>{activeQuiz.questions.length} questions · 30 seconds each · no pause between questions</li>
+                  <li>Exactly <strong>one graded attempt</strong> — opening the quiz again later shows this result instead</li>
+                  <li>Quizzes never award XP and never touch review schedules</li>
+                </ul>
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <button type="button" className="btn btn-primary gap-2" onClick={() => setTaking(true)}><GraduationCap size={17} /> Start quiz</button>
+                  <button type="button" className="btn btn-ghost" onClick={() => { setActiveQuiz(null); setResult(null); setSearchParams({}, { replace: true }) }}>Leave</button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <p className="mt-2 text-base-content/60">
+                  Enter the quiz code your teacher shared, or open their link (<code>/quiz?code=ABCD-EFGH</code>) and it fills in automatically.
+                </p>
+                <form
+                  className="mt-5 flex flex-wrap items-center gap-3"
+                  onSubmit={(event) => { event.preventDefault(); void joinByCode(codeInput) }}
+                >
+                  <input
+                    value={codeInput}
+                    onChange={(event) => setCodeInput(formatQuizCodeInput(event.target.value))}
+                    placeholder="ABCD-EFGH"
+                    inputMode="text"
+                    autoCapitalize="characters"
+                    autoComplete="off"
+                    spellCheck={false}
+                    aria-label="Quiz code"
+                    className="input input-bordered w-44 font-mono text-lg uppercase tracking-widest"
+                    disabled={lookingUp}
+                  />
+                  <button type="submit" className="btn btn-primary gap-2" disabled={lookingUp || normalizeQuizCode(codeInput) === null}>
+                    {lookingUp && <span className="loading loading-spinner loading-sm" />}
+                    <GraduationCap size={17} /> Join quiz
+                  </button>
+                </form>
+                {codeStatusLine}
+              </>
+            )
           ) : (
             <>
               <p className="mt-2 text-base-content/60">
@@ -489,7 +534,10 @@ export function QuizRoute() {
                           <div className="truncate font-semibold">{quiz.title}</div>
                           <div className="font-mono text-sm tracking-widest text-base-content/60">{quiz.code}</div>
                         </div>
-                        <Link to={`${paths.quiz}?code=${quiz.code}`} className="btn btn-ghost btn-sm">Open student view</Link>
+                        <div className="flex shrink-0 gap-2">
+                          <Link to={quizResultsPath(quiz.quizId)} className="btn btn-outline btn-sm">Results</Link>
+                          <Link to={`${paths.quiz}?code=${quiz.code}`} className="btn btn-ghost btn-sm">Open student view</Link>
+                        </div>
                       </li>
                     ))}
                   </ul>
@@ -517,6 +565,16 @@ export function QuizCreatorRoute() {
   if (!account.role) return <Navigate to={paths.quiz} replace />
   if (role !== 'teacher') return <Navigate to={paths.quiz} replace />
   return <QuizCreator user={user} onExit={() => window.history.back()} />
+}
+
+/** Teacher-only roster for one quiz. */
+export function QuizResultsRoute() {
+  const { user, account } = useAppShell()
+  const { quizId = '' } = useParams()
+  const role = accountRole(account)
+  if (!account.role) return <Navigate to={paths.quiz} replace />
+  if (role !== 'teacher' || !quizId) return <Navigate to={paths.quiz} replace />
+  return <QuizResults quizId={quizId} ownerId={user.uid} />
 }
 
 export function GlobalLeaderboardRoute() {

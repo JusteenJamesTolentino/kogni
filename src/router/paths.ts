@@ -23,6 +23,10 @@ export function onlineDeckPath(deckId: string): string {
   return `${paths.onlineDecks}/${encodeURIComponent(deckId)}`
 }
 
+export function quizResultsPath(quizId: string): string {
+  return `/quiz/results/${encodeURIComponent(quizId)}`
+}
+
 export function onlineDeckEditPath(deckId: string): string {
   return `${onlineDeckPath(deckId)}/edit`
 }

@@ -401,6 +401,30 @@
         }
       }
     },
+    "quizAttempts": {
+      "$quizId": {
+        ".read": "auth != null && root.child('quizzes').child($quizId).child('ownerId').val() === auth.uid",
+        "$uid": {
+          ".read": "auth != null && ($uid === auth.uid || root.child('quizzes').child($quizId).child('ownerId').val() === auth.uid)",
+          ".write": false
+        }
+      }
+    },
+    "roleStats": {
+      "$uid": {
+        ".read": "auth != null && $uid === auth.uid",
+        ".write": false
+      }
+    },
+    "badges": {
+      "$uid": {
+        ".read": "auth != null && $uid === auth.uid",
+        ".write": false,
+        "$badgeId": {
+          ".validate": "!newData.exists() || (newData.hasChildren(['awardedAt', 'type']) && (newData.child('type').val() === 'auto' || newData.child('type').val() === 'granted'))"
+        }
+      }
+    },
     "quizzes": {
       "$quizId": {
         ".read": "auth != null",
@@ -512,15 +536,15 @@
           ".validate": "newData.isNumber() && newData.val() >= now - 60000 && newData.val() <= now + 60000"
         },
         "privacy": {
-          ".validate": "newData.hasChildren(['currentVersion', 'acknowledgedAt', 'acknowledgements']) && newData.child('currentVersion').val() === 'privacy-2026-11-10-ai-series-1' && newData.child('acknowledgedAt').isNumber() && newData.child('acknowledgements').child('privacy-2026-11-10-ai-series-1').val() === newData.child('acknowledgedAt').val()",
+          ".validate": "newData.hasChildren(['currentVersion', 'acknowledgedAt', 'acknowledgements']) && newData.child('currentVersion').val() === 'privacy-2026-11-15-school-quizzes-1' && newData.child('acknowledgedAt').isNumber() && newData.child('acknowledgements').child('privacy-2026-11-15-school-quizzes-1').val() === newData.child('acknowledgedAt').val()",
           "currentVersion": {
-            ".validate": "newData.val() === 'privacy-2026-11-10-ai-series-1'"
+            ".validate": "newData.val() === 'privacy-2026-11-15-school-quizzes-1'"
           },
           "acknowledgedAt": {
             ".validate": "newData.isNumber()"
           },
           "acknowledgements": {
-            "privacy-2026-11-10-ai-series-1": {
+            "privacy-2026-11-15-school-quizzes-1": {
               ".validate": "newData.isNumber()"
             },
             "$other": {
@@ -584,7 +608,7 @@
         ".read": "auth != null && $uid === auth.uid",
         ".write": "auth != null && $uid === auth.uid && !newData.exists()",
         "$sessionId": {
-          ".write": "auth != null && $uid === auth.uid && (!newData.exists() || (newData.val() === true && newData.parent().parent().parent().child('accounts').child(auth.uid).child('status').val() === 'ready' && newData.parent().parent().parent().child('accounts').child(auth.uid).child('privacy').child('currentVersion').val() === 'privacy-2026-11-10-ai-series-1' && newData.parent().parent().parent().child('accounts').child(auth.uid).child('preferences').child('presence').val() === true))",
+          ".write": "auth != null && $uid === auth.uid && (!newData.exists() || (newData.val() === true && newData.parent().parent().parent().child('accounts').child(auth.uid).child('status').val() === 'ready' && newData.parent().parent().parent().child('accounts').child(auth.uid).child('privacy').child('currentVersion').val() === 'privacy-2026-11-15-school-quizzes-1' && newData.parent().parent().parent().child('accounts').child(auth.uid).child('preferences').child('presence').val() === true))",
           ".validate": "!newData.exists() || newData.val() === true",
           "$other": {
             ".validate": false

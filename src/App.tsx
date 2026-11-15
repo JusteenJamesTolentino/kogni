@@ -30,6 +30,7 @@ const MyDecksRoute = lazy(() => import('./routes/routeScreens').then((module) =>
 const ProfileRoute = lazy(() => import('./routes/routeScreens').then((module) => ({ default: module.ProfileRoute })))
 const QuizRoute = lazy(() => import('./routes/routeScreens').then((module) => ({ default: module.QuizRoute })))
 const QuizCreatorRoute = lazy(() => import('./routes/routeScreens').then((module) => ({ default: module.QuizCreatorRoute })))
+const QuizResultsRoute = lazy(() => import('./routes/routeScreens').then((module) => ({ default: module.QuizResultsRoute })))
 const StudyRoute = lazy(() => import('./routes/routeScreens').then((module) => ({ default: module.StudyRoute })))
 
 function AuthenticatedShell() {
@@ -90,6 +91,7 @@ export default function App() {
           <Route path="profile" element={<ProfileRoute />} />
           <Route path="quiz" element={<QuizRoute />} />
           <Route path="quiz/create" element={<QuizCreatorRoute />} />
+          <Route path="quiz/results/:quizId" element={<QuizResultsRoute />} />
           <Route path="players/:playerId" element={<PublicPlayerRoute />} />
           <Route path="decks/:deckId" element={<DeckRoute />} />
           <Route path="decks/:deckId/edit" element={<LocalDeckEditRoute />} />

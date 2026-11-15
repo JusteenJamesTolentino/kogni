@@ -10,7 +10,7 @@ import type {
   PublicAccountProfile,
 } from '../types/domain'
 
-export const PRIVACY_VERSION = 'privacy-2026-11-10-ai-series-1'
+export const PRIVACY_VERSION = 'privacy-2026-11-15-school-quizzes-1'
 export const NICKNAME_MIN_LENGTH = 3
 export const NICKNAME_MAX_LENGTH = 24
 export const NICKNAME_PATTERN = /^[A-Za-z0-9_]{3,24}$/

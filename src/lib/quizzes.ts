@@ -1,6 +1,8 @@
 import { get, ref, update } from 'firebase/database'
 import type { User } from 'firebase/auth'
 import { database } from './firebase'
+import { authenticatedRequest } from './vercel-api'
+import { isRecord } from './errors'
 
 /**
  * Quiz-code helpers for the school quiz system. Codes are 4-4 alphanumeric
@@ -191,4 +193,106 @@ export async function listOwnedQuizzes(uid: string): Promise<Array<{ quizId: str
       return { quizId, code, title, createdAt }
     })
     .sort((left, right) => right.createdAt - left.createdAt)
+}
+
+// ---------------------------------------------------------------------------
+// Taking quizzes (students). One graded attempt per quiz; 30s hard per question.
+// ---------------------------------------------------------------------------
+
+export interface QuizQuestionView {
+  id: string
+  prompt: string
+  choices: string[]
+}
+
+export interface QuizContentView {
+  quizId: string
+  title: string
+  description: string
+  questions: QuizQuestionView[]
+}
+
+export interface GradedQuestionView {
+  id: string
+  prompt: string
+  choices: string[]
+  chosenIndex: number
+  correctIndex: number
+  correct: boolean
+}
+
+export interface QuizAttemptResult {
+  uid: string
+  nickname: string
+  quizId: string
+  quizTitle: string
+  correctCount: number
+  questionCount: number
+  score: number
+  passed: boolean
+  gradedAt: number
+  breakdown: GradedQuestionView[]
+}
+
+export interface QuizRankStats {
+  quizzesTaken: number
+  quizzesPassed: number
+  currentStreak: number
+  bestStreak: number
+  totalCorrect: number
+  totalQuestions: number
+  lifetimeAccuracy: number
+}
+
+function isQuizAttemptResult(value: unknown): value is QuizAttemptResult {
+  return isRecord(value) &&
+    typeof value.uid === 'string' &&
+    typeof value.nickname === 'string' &&
+    typeof value.quizId === 'string' &&
+    typeof value.correctCount === 'number' &&
+    typeof value.questionCount === 'number' &&
+    typeof value.score === 'number' &&
+    typeof value.gradedAt === 'number' &&
+    Array.isArray(value.breakdown)
+}
+
+function isQuizSubmitResponse(value: unknown): value is { status: 'graded' | 'already'; result: QuizAttemptResult; stats?: QuizRankStats } | { status: 'rejected'; reason: 'own-quiz' } {
+  if (isRecord(value) && value.status === 'rejected' && value.reason === 'own-quiz') return true
+  return isRecord(value) && (value.status === 'graded' || value.status === 'already') && isQuizAttemptResult(value.result)
+}
+
+/** Loads the answer-free question set for a quiz, ordered by its q_N index. */
+export async function fetchQuizContent(quizId: string): Promise<QuizContentView> {
+  const value: unknown = (await get(ref(database, `quizzes/${quizId}`))).val() as unknown
+  if (typeof value !== 'object' || value === null || typeof (value as { questions?: unknown }).questions !== 'object') {
+    throw new Error('This quiz is no longer available.')
+  }
+  const record = value as { id?: unknown; title?: unknown; description?: unknown; questions?: Record<string, unknown> }
+  const questions = Object.entries(record.questions as Record<string, unknown>)
+    .filter(([, question]) => isRecord(question) && typeof question.prompt === 'string' && Array.isArray(question.choices))
+    .map(([id, question]) => ({
+      id,
+      prompt: String((question as { prompt: unknown }).prompt),
+      choices: (question as { choices: unknown[] }).choices.map((choice) => String(choice)),
+    }))
+    .sort((left, right) => left.id.localeCompare(right.id, undefined, { numeric: true }))
+  return {
+    quizId: typeof record.id === 'string' ? record.id : quizId,
+    title: typeof record.title === 'string' ? record.title : 'Quiz',
+    description: typeof record.description === 'string' ? record.description : '',
+    questions,
+  }
+}
+
+/**
+ * Submits the single graded attempt. The server holds the answer key, enforces the
+ * one-attempt contract, and returns the full per-question breakdown only after the
+ * attempt is committed (re-submissions return the stored result instead of failing).
+ */
+export async function submitQuizAttempt(quizId: string, answers: Record<string, number>): Promise<{ status: 'graded' | 'already'; result: QuizAttemptResult; stats?: QuizRankStats } | { status: 'rejected'; reason: 'own-quiz' }> {
+  return authenticatedRequest('/api/quiz/submit', isQuizSubmitResponse, {
+    method: 'POST',
+    body: { quizId, answers },
+    timeoutMs: 30_000,
+  })
 }

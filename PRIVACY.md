@@ -1,8 +1,8 @@
 # Kogni Account and Study Data Privacy
 
-Effective version: `privacy-2026-11-10-ai-series-1`
+Effective version: `privacy-2026-11-15-school-quizzes-1`
 
-This document describes how the implemented Kogni account, online deck, study, sharing, recovery, and presence features handle data. It is a product disclosure, not legal advice or a substitute for a privacy policy reviewed for every jurisdiction where Kogni is offered.
+This document describes how the implemented Kogni account, online deck, study, sharing, recovery, quiz, and presence features handle data. It is a product disclosure, not legal advice or a substitute for a privacy policy reviewed for every jurisdiction where Kogni is offered.
 
 ## Private account record
 
@@ -60,6 +60,16 @@ Discoverable profiles may show the canonical nickname, Community XP labeled clie
 
 Following is immediate but grants no deck or presence access. Blocking is private, removes follows in both directions, and prevents public profile retrieval. Community XP is client-reported and unsuitable for rewards, permissions, moderation, or other authoritative decisions.
 
+## School quizzes (teacher and student)
+
+The quiz system stores a self-asserted role (`student` or `teacher`) on the private account record; it is changeable at any time and grants no additional identity beyond quiz tooling access.
+
+Teacher-created quizzes store the question set, an owner-only answer key, and a join code. Quiz content contains no answer material and is readable by signed-in learners; the answer key is readable only by the quiz creator.
+
+When a student takes a quiz, Kogni records one attempt per quiz containing the chosen choices, the correct count, the percentage score, the grading timestamp, and the student's nickname. The quiz creator can see those attempts and per-question aggregates for their own quizzes only. Quiz attempts never award XP, never touch spaced-repetition schedules, and never appear on leaderboards.
+
+Kogni also keeps per-student quiz aggregates (quizzes taken, passed, streaks, total correct and total questions) and auto-granted status badges (for example Pioneer for first-year accounts, or Perfect Round for any 100% attempt). These derive only from quiz activity, are readable by the owning account, and are projected publicly only if the user enables discoverability. Joining a quiz with a code reveals the quiz content to the joining student and records one attempt per quiz; it does not expose any other personal data to the quiz creator beyond the nickname and the attempt itself.
+
 ## Access controls and user controls
 
 Realtime Database rules default to deny and enforce owner-only access for private account records, private decks, and per-account schedules. The owner-only `/api/decks` endpoint requires Firebase authentication, a ready account, and the current privacy acknowledgement, and returns only active deck metadata owned by the caller. Discoverability is not used to authorize access to the owner's private library.
@@ -67,11 +77,13 @@ Realtime Database rules default to deny and enforce owner-only access for privat
 Implemented controls include:
 
 - choosing or renaming a nickname;
+- choosing or switching the quiz role;
 - enabling or disabling discoverability;
 - enabling or disabling presence;
 - keeping new decks private or explicitly publishing them;
 - deleting an online deck to create a private tombstone;
-- reading the signed-in user's account-backed library; and
-- previewing and explicitly recovering legacy device decks as private cloud copies.
+- reading the signed-in user's account-backed library;
+- previewing and explicitly recovering legacy device decks as private cloud copies; and
+- taking quizzes with a code, knowing each quiz records exactly one graded attempt visible to that quiz's creator.
 
 Disabling discoverability removes public profile projections, and disabling presence removes active presence sessions. Historical immutable records may retain data required by their retention contract. Complete account deletion must coordinate Firebase Authentication deletion with cleanup or retention of all owned account, deck, schedule, sharing, social, and legacy data before it is presented as a complete deletion control.
