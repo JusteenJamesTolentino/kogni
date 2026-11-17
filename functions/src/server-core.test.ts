@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { eligibleTestAccount as account, memoryDatabase } from './core-test-helpers.js'
+import { eligibleTestAccount as account, memoryDatabase, TEST_PRIVACY_VERSION } from './core-test-helpers.js'
 import { followEdgeId, followPlayerService, getPlayerProfileService, getSocialSummaryService, requireTargetUid, SocialError, unfollowPlayerService } from './social-core.js'
 import { encodePlayerDeckCursor, listPlayerDecksService, PLAYER_DECK_MAX_OWNER_RECORDS } from './player-decks-core.js'
 import { getPlayerPresenceService, listOnlinePlayersService, PRESENCE_BATCH_SIZE } from './discovery-core.js'
 
-const version = 'privacy-2026-11-10-ai-series-1'
+const version = TEST_PRIVACY_VERSION
 
 function seed() {
   return memoryDatabase({ accounts: { alice: account('alice'), bob: account('bob') }, leaderboard: { bob: { xp: 42 } } })

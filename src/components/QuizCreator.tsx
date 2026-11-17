@@ -1,9 +1,13 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { User } from 'firebase/auth'
-import { Check, Copy, ListChecks, Plus, Trash2, X } from 'lucide-react'
-import { QUIZ_LIMITS, createQuiz } from '../lib/quizzes'
-import type { CreatedQuiz, QuizDraftQuestion } from '../lib/quizzes'
+import { Check, Copy, ListChecks, Plus, ShieldCheck, Trash2, X } from 'lucide-react'
+import {
+  QUIZ_INTEGRITY_NOTICE_VERSION,
+  QUIZ_LIMITS,
+  createQuiz,
+} from '../lib/quizzes'
+import type { CreatedQuiz, QuizDraftQuestion, QuizIntegrityPolicy } from '../lib/quizzes'
 
 interface QuizCreatorProps {
   user: User
@@ -36,10 +40,16 @@ export default function QuizCreator({ user, onExit }: QuizCreatorProps) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [created, setCreated] = useState<CreatedQuiz | null>(null)
+  const [integrityEnabled, setIntegrityEnabled] = useState(false)
+  const [authorityAcknowledged, setAuthorityAcknowledged] = useState(false)
   const [copied, setCopied] = useState<'code' | 'link' | null>(null)
+  const copyResetTimerRef = useRef<number | null>(null)
+
+  useEffect(() => () => {
+    if (copyResetTimerRef.current !== null) window.clearTimeout(copyResetTimerRef.current)
+  }, [])
 
   const errors = validateDraft(title, description, questions)
-  const invalidCount = (errors.title ? 1 : 0) + Object.keys(errors.questions).length
 
   const showError = (value?: string): string | undefined => (attemptedSave ? value : undefined)
 
@@ -72,10 +82,20 @@ export default function QuizCreator({ user, onExit }: QuizCreatorProps) {
   const save = async (): Promise<void> => {
     if (saving) return
     setAttemptedSave(true)
-    if (!title.trim() || Object.keys(errors.questions).length > 0) return
+    if (!title.trim() || Object.keys(errors.questions).length > 0 || (integrityEnabled && !authorityAcknowledged)) return
     setSaving(true); setError('')
     try {
-      setCreated(await createQuiz(user, title, description, questions))
+      const integrity: QuizIntegrityPolicy | undefined = integrityEnabled && authorityAcknowledged
+        ? {
+            enabled: true,
+            noticeVersion: QUIZ_INTEGRITY_NOTICE_VERSION,
+            authorityAcknowledgedAt: Date.now(),
+          }
+        : undefined
+      const nextQuiz = integrity
+        ? await createQuiz(user, title, description, questions, integrity)
+        : await createQuiz(user, title, description, questions)
+      setCreated(nextQuiz)
     } catch (cause: unknown) {
       setError(cause instanceof Error ? cause.message : 'The quiz could not be created.')
     } finally {
@@ -83,11 +103,30 @@ export default function QuizCreator({ user, onExit }: QuizCreatorProps) {
     }
   }
 
+  const resetCreator = (): void => {
+    setTitle('')
+    setDescription('')
+    setQuestions([blankQuestion()])
+    setAttemptedSave(false)
+    setSaving(false)
+    setError('')
+    setCreated(null)
+    setIntegrityEnabled(false)
+    setAuthorityAcknowledged(false)
+    if (copyResetTimerRef.current !== null) window.clearTimeout(copyResetTimerRef.current)
+    copyResetTimerRef.current = null
+    setCopied(null)
+  }
+
   const copy = async (kind: 'code' | 'link', value: string): Promise<void> => {
     try {
       await navigator.clipboard.writeText(value)
       setCopied(kind)
-      window.setTimeout(() => setCopied(null), 2000)
+      if (copyResetTimerRef.current !== null) window.clearTimeout(copyResetTimerRef.current)
+      copyResetTimerRef.current = window.setTimeout(() => {
+        copyResetTimerRef.current = null
+        setCopied(null)
+      }, 2000)
     } catch {
       setCopied(null)
     }
@@ -103,6 +142,20 @@ export default function QuizCreator({ user, onExit }: QuizCreatorProps) {
           <p className="mt-2 text-base-content/60">
             Share the code or link with your class. Students enter it at <code>/quiz</code>. Each student gets one graded attempt; scores are visible only to you.
           </p>
+          <div className={`mt-4 rounded-2xl border p-4 ${created.integrityMode ? 'border-info/30 bg-info/5' : 'border-base-300 bg-base-200/40'}`}>
+            <div className="flex flex-wrap items-center gap-2">
+              <ShieldCheck size={17} className={created.integrityMode ? 'text-info' : 'text-base-content/45'} aria-hidden="true" />
+              <span className="font-semibold">Integrity Mode</span>
+              <span className={`badge badge-sm ${created.integrityMode ? 'badge-info' : 'badge-ghost'}`}>
+                {created.integrityMode ? 'On' : 'Off'}
+              </span>
+            </div>
+            <p className="mt-1 text-xs text-base-content/60">
+              {created.integrityMode
+                ? 'Students receive the limitations notice before they choose how to start.'
+                : 'This quiz uses the ordinary one-attempt flow without attention or fullscreen monitoring.'}
+            </p>
+          </div>
           <div className="mt-6 rounded-2xl border border-base-300 bg-base-200/50 p-5 text-center">
             <div className="text-xs font-semibold uppercase tracking-wider text-base-content/55">Quiz code</div>
             <div className="mt-1 font-mono text-4xl font-black tracking-[0.3em]">{created.code}</div>
@@ -118,7 +171,7 @@ export default function QuizCreator({ user, onExit }: QuizCreatorProps) {
           </div>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link to="/quiz" className="btn btn-primary">Back to quiz hub</Link>
-            <button type="button" className="btn btn-ghost" onClick={onExit}>Create another quiz</button>
+            <button type="button" className="btn btn-ghost" onClick={resetCreator}>Create another quiz</button>
           </div>
         </section>
       </main>
@@ -160,6 +213,66 @@ export default function QuizCreator({ user, onExit }: QuizCreatorProps) {
             />
           </label>
         </div>
+
+        <section aria-labelledby="integrity-mode-title" className={`mt-7 rounded-2xl border p-5 ${integrityEnabled ? 'border-info/35 bg-info/5' : 'border-base-300 bg-base-200/40'}`}>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <ShieldCheck size={19} className={integrityEnabled ? 'text-info' : 'text-base-content/45'} aria-hidden="true" />
+                <h2 id="integrity-mode-title" className="font-black">Integrity Mode</h2>
+                <span className="badge badge-ghost badge-sm">Optional</span>
+              </div>
+              <p className="mt-1 text-sm text-base-content/60">
+                Adds a transparent, limited technical-signal review for this quiz. It is off by default.
+              </p>
+            </div>
+            <input
+              type="checkbox"
+              className="toggle toggle-info"
+              checked={integrityEnabled}
+              onChange={(event) => {
+                setIntegrityEnabled(event.target.checked)
+                if (!event.target.checked) setAuthorityAcknowledged(false)
+              }}
+              aria-label="Enable Integrity Mode"
+              disabled={saving}
+            />
+          </div>
+
+          {integrityEnabled && (
+            <div className="mt-4 space-y-4">
+              <div className="rounded-xl border border-info/25 bg-base-100 p-4 text-sm text-base-content/75">
+                <p>
+                  Integrity Mode requests fullscreen and records limited page-attention, fullscreen, connection, and replacement-session signals.
+                </p>
+                <ul className="mt-3 list-disc space-y-1 pl-5">
+                  <li>It cannot detect passive split view or activity on another screen or device.</li>
+                  <li>It does not use a camera, microphone, screen recording, keystroke collection, or location.</li>
+                  <li>Signals are context, not proof, and never affect a score or attempt automatically.</li>
+                </ul>
+              </div>
+              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-base-300 bg-base-100 p-4">
+                <input
+                  type="checkbox"
+                  className="checkbox checkbox-info mt-0.5"
+                  checked={authorityAcknowledged}
+                  onChange={(event) => setAuthorityAcknowledged(event.target.checked)}
+                  disabled={saving}
+                  aria-describedby="integrity-authority-help"
+                />
+                <span>
+                  <span className="font-semibold">I am authorized to use this feature with this class and will review events in context under school policy.</span>
+                  <span id="integrity-authority-help" className="mt-1 block text-xs text-base-content/60">
+                    Required before publishing with Integrity Mode.
+                  </span>
+                </span>
+              </label>
+              {attemptedSave && !authorityAcknowledged && (
+                <p className="text-sm font-semibold text-error" role="alert">Acknowledge your authority and the limitations to enable Integrity Mode.</p>
+              )}
+            </div>
+          )}
+        </section>
 
         <div className="mt-8">
           <div className="flex flex-wrap items-center justify-between gap-3">

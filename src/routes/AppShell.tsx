@@ -398,9 +398,9 @@ export default function AppShell({ user }: AppShellProps) {
       <main className="grid min-h-screen place-items-center bg-base-200 px-4">
         <section className="card max-w-xl border border-warning/50 bg-base-100 p-8 shadow-xl">
           <div className="badge badge-warning badge-outline">Privacy notice updated</div>
-          <h1 className="mt-3 text-2xl font-black">Kogni now includes school quizzes</h1>
+          <h1 className="mt-3 text-2xl font-black">Kogni now includes optional Quiz Integrity Mode</h1>
           <p className="mt-2 text-sm text-base-content/70">
-            The privacy notice was updated to cover quiz roles, one-attempt quiz records visible to the quiz's creator, and per-student quiz aggregates. Quizzes never award XP and never touch review schedules.
+            The privacy notice now covers teacher-enabled Integrity Mode and its behavioral signal data: page focus or visibility interruptions, fullscreen state, browser-reported connection interruptions, and session replacement. These observations may be missing or forged, never prove cheating, and never change a score automatically.
           </p>
           <p className="mt-2 text-sm text-base-content/70">Everything stays read-only until you acknowledge the updated notice — <Link to={paths.privacy} className="link link-primary">read the full notice ({PRIVACY_VERSION})</Link>.</p>
           {privacyGateError && <div role="alert" className="alert alert-error mt-4"><span>{privacyGateError}</span></div>}

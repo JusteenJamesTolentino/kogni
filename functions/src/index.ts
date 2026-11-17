@@ -3,7 +3,9 @@ import { getDatabase } from 'firebase-admin/database'
 import { logger } from 'firebase-functions'
 import { onValueWritten } from 'firebase-functions/v2/database'
 import { onCall } from 'firebase-functions/v2/https'
+import { onSchedule } from 'firebase-functions/v2/scheduler'
 import { expectedPrivacyVersion } from './config.js'
+import { cleanupQuizIntegrityData, reconcileQuizAttemptEffects } from './quiz-effects.js'
 import {
   buildActivePlayerProjection,
   buildOnlineDeckProjectionRemoval,
@@ -135,6 +137,27 @@ export const reconcileLeaderboardPlayerProfile = onValueWritten(
   { ...databaseTriggerOptions, ref: '/leaderboard/{uid}/xp', retry: true },
   async (event) => {
     await reconcilePublicPlayerProfile(getDatabase(), event.params.uid, expectedPrivacyVersion())
+  },
+)
+
+export const cleanupQuizIntegrityRetention = onSchedule(
+  { ...callableOptions, schedule: 'every 24 hours', timeZone: 'UTC', retryCount: 3 },
+  async () => {
+    const summary = await cleanupQuizIntegrityData(getDatabase())
+    logger.info('Quiz Integrity retention cleanup completed', summary)
+  },
+)
+
+export const reconcileQuizAttemptProjection = onValueWritten(
+  { ...databaseTriggerOptions, ref: '/quizAttempts/{quizId}/{uid}', retry: true },
+  async (event) => {
+    const after = event.data.after.val() as unknown
+    if (after === null || typeof after !== 'object' || (after as { schemaVersion?: unknown }).schemaVersion !== 2 || (after as { status?: unknown }).status !== 'completed') return
+    const reconciled = await reconcileQuizAttemptEffects(getDatabase(), event.params.quizId, event.params.uid)
+    if (!reconciled) {
+      logger.error('Completed quiz attempt projection was not eligible', { quizId: event.params.quizId, uid: event.params.uid })
+      throw new Error('Completed quiz attempt projection was not eligible')
+    }
   },
 )
 

@@ -2,10 +2,10 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { HttpsError, type CallableRequest } from 'firebase-functions/v2/https'
 import { createSocialCallableHandlers, followPlayerService, requireTargetUid } from './social.js'
-import { eligibleTestAccount as account, memoryDatabase } from './core-test-helpers.js'
+import { eligibleTestAccount as account, memoryDatabase, TEST_PRIVACY_VERSION } from './core-test-helpers.js'
 import type { Database } from 'firebase-admin/database'
 
-const version = 'privacy-2026-11-10-ai-series-1'
+const version = TEST_PRIVACY_VERSION
 
 function isCode(code: string) {
   return (error: unknown) => error instanceof HttpsError && error.code === code

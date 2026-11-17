@@ -1,6 +1,6 @@
 # Kogni Account and Study Data Privacy
 
-Effective version: `privacy-2026-11-15-school-quizzes-1`
+Effective version: `privacy-2026-11-17-quiz-integrity-1`
 
 This document describes how the implemented Kogni account, online deck, study, sharing, recovery, quiz, and presence features handle data. It is a product disclosure, not legal advice or a substitute for a privacy policy reviewed for every jurisdiction where Kogni is offered.
 
@@ -60,19 +60,30 @@ Discoverable profiles may show the canonical nickname, Community XP labeled clie
 
 Following is immediate but grants no deck or presence access. Blocking is private, removes follows in both directions, and prevents public profile retrieval. Community XP is client-reported and unsuitable for rewards, permissions, moderation, or other authoritative decisions.
 
-## School quizzes (teacher and student)
+## School quizzes and optional Quiz Integrity Mode
 
-The quiz system stores a self-asserted role (`student` or `teacher`) on the private account record; it is changeable at any time and grants no additional identity beyond quiz tooling access.
+Quiz roles (`student` or `teacher`) are self-asserted, changeable, and honor-system labels. They are not verified school authority, enrollment, employment, age, or identity credentials. Only an account currently labeled `teacher` can create quizzes in the client, but that label is not an authorization by a school.
 
-Teacher-created quizzes store the question set, an owner-only answer key, and a join code. Quiz content contains no answer material and is readable by signed-in learners; the answer key is readable only by the quiz creator.
+Teacher-created quizzes store the question set, an owner-only answer key, and a join code. Quiz content and prior-attempt metadata are delivered to students through authenticated server endpoints rather than direct database reads; the answer key remains owner-only. A student's quiz attempt stores chosen choices, server-owned per-question timing state, correct count, percentage score, grading timestamp, and nickname. The student and quiz owner can read the attempt after acknowledging the current privacy notice. Attempts do not award XP, change spaced-repetition schedules, or enter leaderboards.
 
-When a student takes a quiz, Kogni records one attempt per quiz containing the chosen choices, the correct count, the percentage score, the grading timestamp, and the student's nickname. The quiz creator can see those attempts and per-question aggregates for their own quizzes only. Quiz attempts never award XP, never touch spaced-repetition schedules, and never appear on leaderboards.
+Per-student quiz aggregates include quizzes taken and passed, streaks, total correct, total questions, and an internal idempotency ledger used to avoid applying the same attempt twice. Auto-granted status badges can derive from quiz activity. The owning student can read their aggregates; public projection occurs only where separately disclosed and enabled.
 
-Kogni also keeps per-student quiz aggregates (quizzes taken, passed, streaks, total correct and total questions) and auto-granted status badges (for example Pioneer for first-year accounts, or Perfect Round for any 100% attempt). These derive only from quiz activity, are readable by the owning account, and are projected publicly only if the user enables discoverability. Joining a quiz with a code reveals the quiz content to the joining student and records one attempt per quiz; it does not expose any other personal data to the quiz creator beyond the nickname and the attempt itself.
+Integrity Mode is optional, teacher-enabled per quiz, and off by default. Enabling it stores an immutable quiz policy with the teacher's acknowledgement of this disclosure. During an enabled timed attempt Kogni may collect bounded behavioral signals for:
+
+- page visibility or browser-window focus interruptions;
+- whether requested fullscreen was entered and when fullscreen ended;
+- browser-reported online/offline connection interruptions; and
+- replacement of the active quiz session by another session.
+
+Browser observation times and durations are untrusted client-reported values; Kogni also stores a server receipt time. The student who produced the log and the quiz owner may access that exact log while it is retained and after acknowledging the current privacy version. Raw Integrity Mode logs receive a 30-day deletion/access-expiration timestamp after grading. The included daily trusted cleanup, once deployed, completes abandoned timed attempts, assigns their deadline-based grading timestamp, and physically removes raw logs after expiry. Until that Functions deployment is active, expired logs are inaccessible under database rules but remain stored; backups or operational records may follow their separately reviewed retention schedule.
+
+These signals can be absent, delayed, duplicated, blocked, or forged. They are contextual observations only: they never prove cheating, never produce an automated misconduct verdict, and never alter a score automatically. Integrity Mode cannot reveal the contents of another tab or app, split-view content, screens, nearby devices, or what a person is doing away from the quiz. It does not use camera, microphone, screen recording, keystroke capture, location, IP-address logging, or device fingerprinting.
+
+Integrity Mode can reduce simple timer bypass, but it is not secure-browser, kiosk, proctoring, or surveillance software. Server-owned per-question deadlines continue while a page is hidden, a device sleeps, or the browser is offline. Answers not received by the server on time expire; locally selected or queued offline answers are not treated as timely merely because the browser reports an earlier local time.
 
 ## Access controls and user controls
 
-Realtime Database rules default to deny and enforce owner-only access for private account records, private decks, and per-account schedules. The owner-only `/api/decks` endpoint requires Firebase authentication, a ready account, and the current privacy acknowledgement, and returns only active deck metadata owned by the caller. Discoverability is not used to authorize access to the owner's private library.
+Realtime Database rules default to deny and enforce owner-only access for private account records, private decks, and per-account schedules. Quiz creation requires a ready account, the current privacy acknowledgement, and the account's self-asserted teacher role. Learner clients cannot read quiz codes or quiz content; quiz owners retain direct access to their own content and roster, while the authenticated server performs exact code resolution and timed question delivery. Quiz attempts and unexpired Integrity Mode logs are readable only by their student subject or quiz owner; every client write to attempts and signal logs is denied because trusted server code owns them. The owner-only `/api/decks` endpoint requires Firebase authentication, a ready account, and the current privacy acknowledgement, and returns only active deck metadata owned by the caller. Discoverability is not used to authorize access to the owner's private library.
 
 Implemented controls include:
 
@@ -84,6 +95,7 @@ Implemented controls include:
 - deleting an online deck to create a private tombstone;
 - reading the signed-in user's account-backed library;
 - previewing and explicitly recovering legacy device decks as private cloud copies; and
-- taking quizzes with a code, knowing each quiz records exactly one graded attempt visible to that quiz's creator.
+- taking timed quizzes with a code, knowing the student and quiz owner can read the resulting attempt; and
+- reviewing an optional Integrity Mode disclosure before a teacher enables its bounded behavioral signals for a quiz.
 
-Disabling discoverability removes public profile projections, and disabling presence removes active presence sessions. Historical immutable records may retain data required by their retention contract. Complete account deletion must coordinate Firebase Authentication deletion with cleanup or retention of all owned account, deck, schedule, sharing, social, and legacy data before it is presented as a complete deletion control.
+Disabling discoverability removes public profile projections, and disabling presence removes active presence sessions. The daily quiz cleanup deletes expired raw Integrity Mode logs, while backups or other historical immutable records may retain data required by their separately reviewed retention contract. Complete account deletion must coordinate Firebase Authentication deletion with cleanup or retention of all owned account, deck, schedule, sharing, social, and legacy data before it is presented as a complete deletion control.

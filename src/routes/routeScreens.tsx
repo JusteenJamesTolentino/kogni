@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ArrowRight, GraduationCap, Layers3, ListChecks, Plus, Presentation, WandSparkles } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ArrowRight, GraduationCap, Layers3, ListChecks, Plus, Presentation, ShieldCheck, WandSparkles } from 'lucide-react'
 import { Link, Navigate, useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom'
 import Community from '../components/Community'
 import Dashboard from '../components/Dashboard'
@@ -17,9 +17,8 @@ import { createCloudReviewSaver, createPrivateDeck, loadCloudDeck, loadCloudLibr
 import { subscribeToMyLeaderboardRecord } from '../lib/leaderboard'
 import { profileBadges } from '../lib/badges'
 import { accountRole, updateAccountRole } from '../lib/account'
-import { formatQuizCodeInput, listOwnedQuizzes, lookupQuizCode, normalizeQuizCode } from '../lib/quizzes'
-import type { QuizAttemptResult, QuizContentView, QuizRankStats } from '../lib/quizzes'
-import { fetchQuizContent } from '../lib/quizzes'
+import { formatQuizCodeInput, listOwnedQuizzes, normalizeQuizCode, resolveQuizCode } from '../lib/quizzes'
+import type { OwnedQuizSummary, QuizAttemptResult, QuizRankStats, QuizResolutionMetadata } from '../lib/quizzes'
 import QuizCreator from '../components/QuizCreator'
 import QuizTaking from '../components/QuizTaking'
 import QuizResultView from '../components/QuizResultView'
@@ -342,14 +341,16 @@ export function QuizRoute() {
   const [savingRole, setSavingRole] = useState<AccountRole | null>(null)
   const [error, setError] = useState('')
   const [codeInput, setCodeInput] = useState('')
+  const joinRequestRef = useRef(0)
   const [lookingUp, setLookingUp] = useState(false)
   const [codeResult, setCodeResult] = useState<{ status: 'found' | 'not-found'; code: string } | null>(null)
-  const [activeQuiz, setActiveQuiz] = useState<QuizContentView | null>(null)
+  const [activeQuiz, setActiveQuiz] = useState<QuizResolutionMetadata | null>(null)
   const [activeQuizCode, setActiveQuizCode] = useState('')
   const [taking, setTaking] = useState(false)
   const [result, setResult] = useState<{ result: QuizAttemptResult; stats?: QuizRankStats; alreadyTaken: boolean } | null>(null)
-  const [ownedQuizzes, setOwnedQuizzes] = useState<Array<{ quizId: string; code: string; title: string; createdAt: number }>>([])
+  const [ownedQuizzes, setOwnedQuizzes] = useState<OwnedQuizSummary[]>([])
   const [quizzesLoading, setQuizzesLoading] = useState(false)
+  const [quizzesError, setQuizzesError] = useState('')
   const role = accountRole(account)
   const codeParam = searchParams.get('code') ?? ''
 
@@ -369,23 +370,33 @@ export function QuizRoute() {
   }
 
   const joinByCode = useCallback(async (value: string): Promise<void> => {
-    setLookingUp(true); setError(''); setCodeResult(null); setActiveQuiz(null); setResult(null)
+    const requestId = joinRequestRef.current + 1
+    joinRequestRef.current = requestId
+    setLookingUp(true); setError(''); setCodeResult(null); setActiveQuiz(null); setResult(null); setTaking(false)
     try {
-      const result = await lookupQuizCode(value)
-      setCodeResult({ status: result.status, code: result.code })
-      setCodeInput(formatQuizCodeInput(value))
-      if (result.status === 'found') {
-        // Keep the shareable URL and load the answer-free question set.
-        setSearchParams({ code: result.code }, { replace: true })
-        const content = await fetchQuizContent(result.quiz.quizId)
-        setActiveQuiz(content)
-        setActiveQuizCode(result.code)
+      const resolution = await resolveQuizCode(value)
+      if (joinRequestRef.current !== requestId) return
+      setCodeResult({ status: 'found', code: resolution.code })
+      setCodeInput(resolution.code)
+      setSearchParams({ code: resolution.code }, { replace: true })
+      setActiveQuiz(resolution.quiz)
+      setActiveQuizCode(resolution.code)
+      if (resolution.status === 'completed') {
+        setResult({ result: resolution.result, stats: resolution.stats, alreadyTaken: true })
       }
     } catch (cause: unknown) {
-      setCodeResult(null)
-      setError(cause instanceof TypeError ? cause.message : getErrorMessage(cause, 'The quiz code could not be checked.'))
+      if (joinRequestRef.current !== requestId) return
+      const message = cause instanceof TypeError ? cause.message : getErrorMessage(cause, 'The quiz code could not be checked.')
+      const normalized = normalizeQuizCode(value)
+      if (normalized && /no live quiz/i.test(message)) {
+        setCodeResult({ status: 'not-found', code: normalized })
+        setCodeInput(normalized)
+      } else {
+        setCodeResult(null)
+        setError(message)
+      }
     } finally {
-      setLookingUp(false)
+      if (joinRequestRef.current === requestId) setLookingUp(false)
     }
   }, [setSearchParams])
 
@@ -393,20 +404,25 @@ export function QuizRoute() {
   // student has a role; a missing role shows the gate first, then this fires.
   const autoCode = useMemo(() => normalizeQuizCode(codeParam), [codeParam])
   const autoLookupKey = role === 'student' ? autoCode : null
-  const [lastAutoLookup, setLastAutoLookup] = useState<string | null>(null)
+  const lastAutoLookupRef = useRef<string | null>(null)
   useEffect(() => {
-    if (!autoLookupKey || lastAutoLookup === autoLookupKey) return
-    setLastAutoLookup(autoLookupKey)
+    lastAutoLookupRef.current = null
+  }, [role])
+  useEffect(() => {
+    if (!autoLookupKey || lastAutoLookupRef.current === autoLookupKey) return
+    lastAutoLookupRef.current = autoLookupKey
     void joinByCode(autoLookupKey)
-  }, [autoLookupKey, joinByCode, lastAutoLookup])
+  }, [autoLookupKey, joinByCode])
 
   // Teachers see their published quizzes with codes so codes can always be re-shared.
   const loadOwnedQuizzes = useCallback(async (): Promise<void> => {
     setQuizzesLoading(true)
+    setQuizzesError('')
     try {
       setOwnedQuizzes(await listOwnedQuizzes(user.uid))
-    } catch {
+    } catch (cause: unknown) {
       setOwnedQuizzes([])
+      setQuizzesError(getErrorMessage(cause, 'Your quizzes could not be loaded.'))
     } finally {
       setQuizzesLoading(false)
     }
@@ -436,7 +452,7 @@ export function QuizRoute() {
         user={user}
         quiz={activeQuiz}
         code={activeQuizCode}
-        onFinished={(graded, stats) => { setResult({ result: graded, stats, alreadyTaken: false }); setTaking(false) }}
+        onFinished={(graded, stats, alreadyTaken) => { setResult({ result: graded, stats, alreadyTaken }); setTaking(false) }}
         onExit={() => { setTaking(false); setActiveQuiz(null); setResult(null); setSearchParams({}, { replace: true }) }}
       />
     )
@@ -475,15 +491,25 @@ export function QuizRoute() {
           {role === 'student' ? (
             activeQuiz ? (
               <div>
-                <h2 className="text-2xl font-black">{activeQuiz.title}</h2>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-2xl font-black">{activeQuiz.title}</h2>
+                  {activeQuiz.integrity.enabled && <span className="badge badge-info gap-1"><ShieldCheck size={13} aria-hidden="true" /> Integrity Mode</span>}
+                </div>
                 {activeQuiz.description && <p className="mt-2 text-base-content/60">{activeQuiz.description}</p>}
                 <ul className="mt-4 space-y-1 text-sm text-base-content/70">
-                  <li>{activeQuiz.questions.length} questions · 30 seconds each · no pause between questions</li>
+                  <li>{activeQuiz.questionCount} {activeQuiz.questionCount === 1 ? 'question' : 'questions'} · 30 seconds each · one question at a time</li>
                   <li>Exactly <strong>one graded attempt</strong> — opening the quiz again later shows this result instead</li>
                   <li>Quizzes never award XP and never touch review schedules</li>
                 </ul>
+                {activeQuiz.integrity.enabled && (
+                  <p className="mt-3 rounded-xl border border-info/25 bg-info/5 p-3 text-sm text-base-content/70">
+                    Review the Integrity Mode limitations and accommodation notice before starting or resuming.
+                  </p>
+                )}
                 <div className="mt-6 flex flex-wrap gap-3">
-                  <button type="button" className="btn btn-primary gap-2" onClick={() => setTaking(true)}><GraduationCap size={17} /> Start quiz</button>
+                  <button type="button" className="btn btn-primary gap-2" onClick={() => setTaking(true)}>
+                    <GraduationCap size={17} /> {activeQuiz.integrity.enabled ? 'Review and start' : 'Start quiz'}
+                  </button>
                   <button type="button" className="btn btn-ghost" onClick={() => { setActiveQuiz(null); setResult(null); setSearchParams({}, { replace: true }) }}>Leave</button>
                 </div>
               </div>
@@ -524,6 +550,15 @@ export function QuizRoute() {
               <div className="mt-5">
                 <Link to={paths.quizCreate} className="btn btn-primary gap-2"><Presentation size={17} /> Create quiz</Link>
               </div>
+              {quizzesError && (
+                <div role="alert" className="alert alert-warning mt-5">
+                  <span>{quizzesError}</span>
+                  <button type="button" className="btn btn-sm" onClick={() => void loadOwnedQuizzes()} disabled={quizzesLoading}>Try again</button>
+                </div>
+              )}
+              {!quizzesLoading && !quizzesError && ownedQuizzes.length === 0 && (
+                <p className="mt-5 rounded-xl border border-base-300 bg-base-200/40 p-4 text-sm text-base-content/60">No published quizzes yet.</p>
+              )}
               {ownedQuizzes.length > 0 && (
                 <div className="mt-6">
                   <h2 className="text-sm font-semibold uppercase tracking-wider text-base-content/55">Your quizzes {quizzesLoading && <span className="loading loading-spinner loading-xs" />}</h2>
@@ -531,7 +566,10 @@ export function QuizRoute() {
                     {ownedQuizzes.map((quiz) => (
                       <li key={quiz.quizId} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-base-300 bg-base-200/40 px-4 py-3">
                         <div className="min-w-0">
-                          <div className="truncate font-semibold">{quiz.title}</div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <div className="truncate font-semibold">{quiz.title}</div>
+                            {quiz.integrityMode && <span className="badge badge-info badge-sm gap-1"><ShieldCheck size={11} aria-hidden="true" /> Integrity Mode</span>}
+                          </div>
                           <div className="font-mono text-sm tracking-widest text-base-content/60">{quiz.code}</div>
                         </div>
                         <div className="flex shrink-0 gap-2">
@@ -561,10 +599,11 @@ export function QuizRoute() {
 /** Teacher-only quiz creator; students are redirected back to the hub. */
 export function QuizCreatorRoute() {
   const { user, account } = useAppShell()
+  const navigate = useNavigate()
   const role = accountRole(account)
   if (!account.role) return <Navigate to={paths.quiz} replace />
   if (role !== 'teacher') return <Navigate to={paths.quiz} replace />
-  return <QuizCreator user={user} onExit={() => window.history.back()} />
+  return <QuizCreator user={user} onExit={() => navigate(paths.quiz)} />
 }
 
 /** Teacher-only roster for one quiz. */

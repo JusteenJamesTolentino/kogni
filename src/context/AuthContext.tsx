@@ -133,7 +133,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (presenceSessionRef.current === ownedSession) presenceSessionRef.current = null
       if (ownedSession) stopSession(ownedSession)
     }
-  }, [account?.uid, account?.preferences.presence, user])
+  }, [account?.uid, account?.preferences.presence, account?.privacy.currentVersion, user])
 
   const refreshAccount = async (): Promise<AccountRecord | null> => {
     if (!user || currentUserRef.current !== user) return null

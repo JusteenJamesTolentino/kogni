@@ -383,9 +383,11 @@
       }
     },
     "quizCodes": {
-      ".read": "auth != null",
+      ".read": false,
+      ".write": false,
       "$code": {
-        ".write": "auth != null && newData.exists() && newData.child('ownerId').val() === auth.uid && $code.matches(/^[A-Z0-9]{4}-[A-Z0-9]{4}$/) && (!data.exists() || data.child('ownerId').val() === auth.uid)",
+        ".read": false,
+        ".write": "auth != null && root.child('accounts').child(auth.uid).child('status').val() === 'ready' && root.child('accounts').child(auth.uid).child('privacy').child('currentVersion').val() === 'privacy-2026-11-17-quiz-integrity-1' && root.child('accounts').child(auth.uid).child('privacy').child('acknowledgements').child('privacy-2026-11-17-quiz-integrity-1').val() === root.child('accounts').child(auth.uid).child('privacy').child('acknowledgedAt').val() && root.child('accounts').child(auth.uid).child('role').val() === 'teacher' && !data.exists() && newData.exists() && newData.child('ownerId').val() === auth.uid && $code.matches(/^[A-Z0-9]{4}-[A-Z0-9]{4}$/)",
         ".validate": "newData.hasChildren(['quizId', 'ownerId', 'createdAt']) && newData.child('ownerId').val() === auth.uid",
         "quizId": {
           ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 128"
@@ -402,17 +404,37 @@
       }
     },
     "quizAttempts": {
+      ".read": false,
+      ".write": false,
       "$quizId": {
-        ".read": "auth != null && root.child('quizzes').child($quizId).child('ownerId').val() === auth.uid",
+        ".read": "auth != null && root.child('quizzes').child($quizId).child('ownerId').val() === auth.uid && root.child('accounts').child(auth.uid).child('status').val() === 'ready' && root.child('accounts').child(auth.uid).child('privacy').child('currentVersion').val() === 'privacy-2026-11-17-quiz-integrity-1' && root.child('accounts').child(auth.uid).child('privacy').child('acknowledgements').child('privacy-2026-11-17-quiz-integrity-1').val() === root.child('accounts').child(auth.uid).child('privacy').child('acknowledgedAt').val()",
+        ".write": false,
         "$uid": {
-          ".read": "auth != null && ($uid === auth.uid || root.child('quizzes').child($quizId).child('ownerId').val() === auth.uid)",
+          ".read": "auth != null && ($uid === auth.uid || root.child('quizzes').child($quizId).child('ownerId').val() === auth.uid) && root.child('accounts').child(auth.uid).child('status').val() === 'ready' && root.child('accounts').child(auth.uid).child('privacy').child('currentVersion').val() === 'privacy-2026-11-17-quiz-integrity-1' && root.child('accounts').child(auth.uid).child('privacy').child('acknowledgements').child('privacy-2026-11-17-quiz-integrity-1').val() === root.child('accounts').child(auth.uid).child('privacy').child('acknowledgedAt').val()",
           ".write": false
         }
       }
     },
+    "quizAttemptEvents": {
+      ".read": false,
+      ".write": false,
+      "$quizId": {
+        ".read": false,
+        ".write": false,
+        "$uid": {
+          ".read": "auth != null && ($uid === auth.uid || root.child('quizzes').child($quizId).child('ownerId').val() === auth.uid) && root.child('accounts').child(auth.uid).child('status').val() === 'ready' && root.child('accounts').child(auth.uid).child('privacy').child('currentVersion').val() === 'privacy-2026-11-17-quiz-integrity-1' && root.child('accounts').child(auth.uid).child('privacy').child('acknowledgements').child('privacy-2026-11-17-quiz-integrity-1').val() === root.child('accounts').child(auth.uid).child('privacy').child('acknowledgedAt').val() && root.child('quizAttempts').child($quizId).child($uid).child('integrity').child('enabled').val() === true && root.child('quizAttempts').child($quizId).child($uid).child('integrity').child('deleteAfter').isNumber() && root.child('quizAttempts').child($quizId).child($uid).child('integrity').child('deleteAfter').val() > now",
+          ".write": false,
+          "$eventId": {
+            ".write": false
+          }
+        }
+      }
+    },
     "roleStats": {
+      ".read": false,
+      ".write": false,
       "$uid": {
-        ".read": "auth != null && $uid === auth.uid",
+        ".read": "auth != null && $uid === auth.uid && root.child('accounts').child(auth.uid).child('status').val() === 'ready' && root.child('accounts').child(auth.uid).child('privacy').child('currentVersion').val() === 'privacy-2026-11-17-quiz-integrity-1' && root.child('accounts').child(auth.uid).child('privacy').child('acknowledgements').child('privacy-2026-11-17-quiz-integrity-1').val() === root.child('accounts').child(auth.uid).child('privacy').child('acknowledgedAt').val()",
         ".write": false
       }
     },
@@ -427,9 +449,9 @@
     },
     "quizzes": {
       "$quizId": {
-        ".read": "auth != null",
-        ".write": "auth != null && !data.exists() && newData.exists() && newData.child('ownerId').val() === auth.uid && $quizId.matches(/^[A-Za-z0-9_-]{1,128}$/)",
-        ".validate": "newData.hasChildren(['id', 'ownerId', 'title', 'questionCount', 'questions', 'createdAt', 'updatedAt']) && newData.child('id').val() === $quizId && newData.child('ownerId').val() === auth.uid && newData.child('questionCount').isNumber() && newData.child('questionCount').val() >= 1 && newData.child('questionCount').val() <= 50 && newData.child('createdAt').isNumber() && newData.child('updatedAt').isNumber() && newData.child('createdAt').val() === newData.child('updatedAt').val() && newData.child('createdAt').val() >= now - 60000 && newData.child('createdAt').val() <= now + 60000",
+        ".read": "auth != null && data.child('ownerId').val() === auth.uid && root.child('accounts').child(auth.uid).child('status').val() === 'ready' && root.child('accounts').child(auth.uid).child('privacy').child('currentVersion').val() === 'privacy-2026-11-17-quiz-integrity-1' && root.child('accounts').child(auth.uid).child('privacy').child('acknowledgements').child('privacy-2026-11-17-quiz-integrity-1').val() === root.child('accounts').child(auth.uid).child('privacy').child('acknowledgedAt').val()",
+        ".write": "auth != null && root.child('accounts').child(auth.uid).child('status').val() === 'ready' && root.child('accounts').child(auth.uid).child('privacy').child('currentVersion').val() === 'privacy-2026-11-17-quiz-integrity-1' && root.child('accounts').child(auth.uid).child('privacy').child('acknowledgements').child('privacy-2026-11-17-quiz-integrity-1').val() === root.child('accounts').child(auth.uid).child('privacy').child('acknowledgedAt').val() && root.child('accounts').child(auth.uid).child('role').val() === 'teacher' && !data.exists() && newData.exists() && newData.child('ownerId').val() === auth.uid && $quizId.matches(/^[A-Za-z0-9_-]{1,128}$/)",
+        ".validate": "newData.hasChildren(['id', 'ownerId', 'title', 'questionCount', 'questions', 'createdAt', 'updatedAt']) && newData.child('id').val() === $quizId && newData.child('ownerId').val() === auth.uid && newData.child('questionCount').isNumber() && newData.child('questionCount').val() >= 1 && newData.child('questionCount').val() <= 50 && newData.child('questionCount').val() % 1 === 0 && newData.child('questions').child('q_0').exists() && (newData.child('questionCount').val() <= 1 || newData.child('questions').child('q_1').exists()) && (newData.child('questionCount').val() <= 2 || newData.child('questions').child('q_2').exists()) && (newData.child('questionCount').val() <= 3 || newData.child('questions').child('q_3').exists()) && (newData.child('questionCount').val() <= 4 || newData.child('questions').child('q_4').exists()) && (newData.child('questionCount').val() <= 5 || newData.child('questions').child('q_5').exists()) && (newData.child('questionCount').val() <= 6 || newData.child('questions').child('q_6').exists()) && (newData.child('questionCount').val() <= 7 || newData.child('questions').child('q_7').exists()) && (newData.child('questionCount').val() <= 8 || newData.child('questions').child('q_8').exists()) && (newData.child('questionCount').val() <= 9 || newData.child('questions').child('q_9').exists()) && (newData.child('questionCount').val() <= 10 || newData.child('questions').child('q_10').exists()) && (newData.child('questionCount').val() <= 11 || newData.child('questions').child('q_11').exists()) && (newData.child('questionCount').val() <= 12 || newData.child('questions').child('q_12').exists()) && (newData.child('questionCount').val() <= 13 || newData.child('questions').child('q_13').exists()) && (newData.child('questionCount').val() <= 14 || newData.child('questions').child('q_14').exists()) && (newData.child('questionCount').val() <= 15 || newData.child('questions').child('q_15').exists()) && (newData.child('questionCount').val() <= 16 || newData.child('questions').child('q_16').exists()) && (newData.child('questionCount').val() <= 17 || newData.child('questions').child('q_17').exists()) && (newData.child('questionCount').val() <= 18 || newData.child('questions').child('q_18').exists()) && (newData.child('questionCount').val() <= 19 || newData.child('questions').child('q_19').exists()) && (newData.child('questionCount').val() <= 20 || newData.child('questions').child('q_20').exists()) && (newData.child('questionCount').val() <= 21 || newData.child('questions').child('q_21').exists()) && (newData.child('questionCount').val() <= 22 || newData.child('questions').child('q_22').exists()) && (newData.child('questionCount').val() <= 23 || newData.child('questions').child('q_23').exists()) && (newData.child('questionCount').val() <= 24 || newData.child('questions').child('q_24').exists()) && (newData.child('questionCount').val() <= 25 || newData.child('questions').child('q_25').exists()) && (newData.child('questionCount').val() <= 26 || newData.child('questions').child('q_26').exists()) && (newData.child('questionCount').val() <= 27 || newData.child('questions').child('q_27').exists()) && (newData.child('questionCount').val() <= 28 || newData.child('questions').child('q_28').exists()) && (newData.child('questionCount').val() <= 29 || newData.child('questions').child('q_29').exists()) && (newData.child('questionCount').val() <= 30 || newData.child('questions').child('q_30').exists()) && (newData.child('questionCount').val() <= 31 || newData.child('questions').child('q_31').exists()) && (newData.child('questionCount').val() <= 32 || newData.child('questions').child('q_32').exists()) && (newData.child('questionCount').val() <= 33 || newData.child('questions').child('q_33').exists()) && (newData.child('questionCount').val() <= 34 || newData.child('questions').child('q_34').exists()) && (newData.child('questionCount').val() <= 35 || newData.child('questions').child('q_35').exists()) && (newData.child('questionCount').val() <= 36 || newData.child('questions').child('q_36').exists()) && (newData.child('questionCount').val() <= 37 || newData.child('questions').child('q_37').exists()) && (newData.child('questionCount').val() <= 38 || newData.child('questions').child('q_38').exists()) && (newData.child('questionCount').val() <= 39 || newData.child('questions').child('q_39').exists()) && (newData.child('questionCount').val() <= 40 || newData.child('questions').child('q_40').exists()) && (newData.child('questionCount').val() <= 41 || newData.child('questions').child('q_41').exists()) && (newData.child('questionCount').val() <= 42 || newData.child('questions').child('q_42').exists()) && (newData.child('questionCount').val() <= 43 || newData.child('questions').child('q_43').exists()) && (newData.child('questionCount').val() <= 44 || newData.child('questions').child('q_44').exists()) && (newData.child('questionCount').val() <= 45 || newData.child('questions').child('q_45').exists()) && (newData.child('questionCount').val() <= 46 || newData.child('questions').child('q_46').exists()) && (newData.child('questionCount').val() <= 47 || newData.child('questions').child('q_47').exists()) && (newData.child('questionCount').val() <= 48 || newData.child('questions').child('q_48').exists()) && (newData.child('questionCount').val() <= 49 || newData.child('questions').child('q_49').exists()) && newData.child('createdAt').isNumber() && newData.child('updatedAt').isNumber() && newData.child('createdAt').val() === newData.child('updatedAt').val() && newData.child('createdAt').val() >= now - 60000 && newData.child('createdAt').val() <= now + 60000",
         "id": {
           ".validate": "newData.isString() && newData.val() === $quizId"
         },
@@ -443,7 +465,7 @@
           ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 2000)"
         },
         "questionCount": {
-          ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 50"
+          ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 50 && newData.val() % 1 === 0"
         },
         "createdAt": {
           ".validate": "newData.isNumber()"
@@ -452,13 +474,14 @@
           ".validate": "newData.isNumber()"
         },
         "questions": {
+          ".validate": "newData.hasChildren()",
           "$questionId": {
-            ".validate": "newData.hasChildren(['prompt', 'choices']) && $questionId.matches(/^q_[0-9]{1,3}$/)",
+            ".validate": "newData.hasChildren(['prompt', 'choices']) && (($questionId === 'q_0' && newData.parent().parent().child('questionCount').val() >= 1) || ($questionId === 'q_1' && newData.parent().parent().child('questionCount').val() >= 2) || ($questionId === 'q_2' && newData.parent().parent().child('questionCount').val() >= 3) || ($questionId === 'q_3' && newData.parent().parent().child('questionCount').val() >= 4) || ($questionId === 'q_4' && newData.parent().parent().child('questionCount').val() >= 5) || ($questionId === 'q_5' && newData.parent().parent().child('questionCount').val() >= 6) || ($questionId === 'q_6' && newData.parent().parent().child('questionCount').val() >= 7) || ($questionId === 'q_7' && newData.parent().parent().child('questionCount').val() >= 8) || ($questionId === 'q_8' && newData.parent().parent().child('questionCount').val() >= 9) || ($questionId === 'q_9' && newData.parent().parent().child('questionCount').val() >= 10) || ($questionId === 'q_10' && newData.parent().parent().child('questionCount').val() >= 11) || ($questionId === 'q_11' && newData.parent().parent().child('questionCount').val() >= 12) || ($questionId === 'q_12' && newData.parent().parent().child('questionCount').val() >= 13) || ($questionId === 'q_13' && newData.parent().parent().child('questionCount').val() >= 14) || ($questionId === 'q_14' && newData.parent().parent().child('questionCount').val() >= 15) || ($questionId === 'q_15' && newData.parent().parent().child('questionCount').val() >= 16) || ($questionId === 'q_16' && newData.parent().parent().child('questionCount').val() >= 17) || ($questionId === 'q_17' && newData.parent().parent().child('questionCount').val() >= 18) || ($questionId === 'q_18' && newData.parent().parent().child('questionCount').val() >= 19) || ($questionId === 'q_19' && newData.parent().parent().child('questionCount').val() >= 20) || ($questionId === 'q_20' && newData.parent().parent().child('questionCount').val() >= 21) || ($questionId === 'q_21' && newData.parent().parent().child('questionCount').val() >= 22) || ($questionId === 'q_22' && newData.parent().parent().child('questionCount').val() >= 23) || ($questionId === 'q_23' && newData.parent().parent().child('questionCount').val() >= 24) || ($questionId === 'q_24' && newData.parent().parent().child('questionCount').val() >= 25) || ($questionId === 'q_25' && newData.parent().parent().child('questionCount').val() >= 26) || ($questionId === 'q_26' && newData.parent().parent().child('questionCount').val() >= 27) || ($questionId === 'q_27' && newData.parent().parent().child('questionCount').val() >= 28) || ($questionId === 'q_28' && newData.parent().parent().child('questionCount').val() >= 29) || ($questionId === 'q_29' && newData.parent().parent().child('questionCount').val() >= 30) || ($questionId === 'q_30' && newData.parent().parent().child('questionCount').val() >= 31) || ($questionId === 'q_31' && newData.parent().parent().child('questionCount').val() >= 32) || ($questionId === 'q_32' && newData.parent().parent().child('questionCount').val() >= 33) || ($questionId === 'q_33' && newData.parent().parent().child('questionCount').val() >= 34) || ($questionId === 'q_34' && newData.parent().parent().child('questionCount').val() >= 35) || ($questionId === 'q_35' && newData.parent().parent().child('questionCount').val() >= 36) || ($questionId === 'q_36' && newData.parent().parent().child('questionCount').val() >= 37) || ($questionId === 'q_37' && newData.parent().parent().child('questionCount').val() >= 38) || ($questionId === 'q_38' && newData.parent().parent().child('questionCount').val() >= 39) || ($questionId === 'q_39' && newData.parent().parent().child('questionCount').val() >= 40) || ($questionId === 'q_40' && newData.parent().parent().child('questionCount').val() >= 41) || ($questionId === 'q_41' && newData.parent().parent().child('questionCount').val() >= 42) || ($questionId === 'q_42' && newData.parent().parent().child('questionCount').val() >= 43) || ($questionId === 'q_43' && newData.parent().parent().child('questionCount').val() >= 44) || ($questionId === 'q_44' && newData.parent().parent().child('questionCount').val() >= 45) || ($questionId === 'q_45' && newData.parent().parent().child('questionCount').val() >= 46) || ($questionId === 'q_46' && newData.parent().parent().child('questionCount').val() >= 47) || ($questionId === 'q_47' && newData.parent().parent().child('questionCount').val() >= 48) || ($questionId === 'q_48' && newData.parent().parent().child('questionCount').val() >= 49) || ($questionId === 'q_49' && newData.parent().parent().child('questionCount').val() >= 50))",
             "prompt": {
               ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 500"
             },
             "choices": {
-              ".validate": "newData.hasChildren()",
+              ".validate": "newData.hasChildren(['0', '1']) && !newData.child('4').exists()",
               "$choiceIndex": {
                 ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 200 && $choiceIndex.matches(/^[0-3]$/)"
               }
@@ -468,6 +491,21 @@
             }
           }
         },
+        "integrity": {
+          ".validate": "newData.hasChildren(['enabled', 'noticeVersion', 'authorityAcknowledgedAt'])",
+          "enabled": {
+            ".validate": "newData.val() === true"
+          },
+          "noticeVersion": {
+            ".validate": "newData.isString() && newData.val() === 'quiz-integrity-v1'"
+          },
+          "authorityAcknowledgedAt": {
+            ".validate": "newData.isNumber() && newData.val() % 1 === 0 && newData.val() > 0 && newData.val() >= now - 60000 && newData.val() <= now + 60000"
+          },
+          "$other": {
+            ".validate": false
+          }
+        },
         "$other": {
           ".validate": false
         }
@@ -475,15 +513,16 @@
     },
     "quizAnswers": {
       "$quizId": {
-        ".read": "auth != null && data.child('ownerId').val() === auth.uid",
-        ".write": "auth != null && !data.exists() && newData.child('ownerId').val() === auth.uid",
-        ".validate": "newData.hasChildren(['ownerId', 'correct']) && newData.child('ownerId').val() === auth.uid",
+        ".read": "auth != null && data.child('ownerId').val() === auth.uid && root.child('accounts').child(auth.uid).child('status').val() === 'ready' && root.child('accounts').child(auth.uid).child('privacy').child('currentVersion').val() === 'privacy-2026-11-17-quiz-integrity-1' && root.child('accounts').child(auth.uid).child('privacy').child('acknowledgements').child('privacy-2026-11-17-quiz-integrity-1').val() === root.child('accounts').child(auth.uid).child('privacy').child('acknowledgedAt').val()",
+        ".write": "auth != null && root.child('accounts').child(auth.uid).child('status').val() === 'ready' && root.child('accounts').child(auth.uid).child('privacy').child('currentVersion').val() === 'privacy-2026-11-17-quiz-integrity-1' && root.child('accounts').child(auth.uid).child('privacy').child('acknowledgements').child('privacy-2026-11-17-quiz-integrity-1').val() === root.child('accounts').child(auth.uid).child('privacy').child('acknowledgedAt').val() && root.child('accounts').child(auth.uid).child('role').val() === 'teacher' && !data.exists() && newData.child('ownerId').val() === auth.uid",
+        ".validate": "newData.hasChildren(['ownerId', 'correct']) && newData.child('ownerId').val() === auth.uid && newData.child('ownerId').val() === newData.parent().parent().child('quizzes').child($quizId).child('ownerId').val() && newData.child('correct').hasChildren()",
         "ownerId": {
           ".validate": "newData.isString() && newData.val() === auth.uid"
         },
         "correct": {
+          ".validate": "newData.hasChildren() && newData.child('q_0').exists() && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 1 || newData.child('q_1').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 2 || newData.child('q_2').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 3 || newData.child('q_3').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 4 || newData.child('q_4').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 5 || newData.child('q_5').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 6 || newData.child('q_6').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 7 || newData.child('q_7').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 8 || newData.child('q_8').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 9 || newData.child('q_9').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 10 || newData.child('q_10').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 11 || newData.child('q_11').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 12 || newData.child('q_12').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 13 || newData.child('q_13').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 14 || newData.child('q_14').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 15 || newData.child('q_15').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 16 || newData.child('q_16').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 17 || newData.child('q_17').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 18 || newData.child('q_18').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 19 || newData.child('q_19').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 20 || newData.child('q_20').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 21 || newData.child('q_21').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 22 || newData.child('q_22').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 23 || newData.child('q_23').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 24 || newData.child('q_24').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 25 || newData.child('q_25').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 26 || newData.child('q_26').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 27 || newData.child('q_27').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 28 || newData.child('q_28').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 29 || newData.child('q_29').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 30 || newData.child('q_30').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 31 || newData.child('q_31').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 32 || newData.child('q_32').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 33 || newData.child('q_33').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 34 || newData.child('q_34').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 35 || newData.child('q_35').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 36 || newData.child('q_36').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 37 || newData.child('q_37').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 38 || newData.child('q_38').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 39 || newData.child('q_39').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 40 || newData.child('q_40').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 41 || newData.child('q_41').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 42 || newData.child('q_42').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 43 || newData.child('q_43').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 44 || newData.child('q_44').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 45 || newData.child('q_45').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 46 || newData.child('q_46').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 47 || newData.child('q_47').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 48 || newData.child('q_48').exists()) && (newData.parent().parent().parent().child('quizzes').child($quizId).child('questionCount').val() <= 49 || newData.child('q_49').exists())",
           "$questionId": {
-            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 3"
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 3 && newData.val() % 1 === 0 && $questionId.matches(/^q_[0-9]{1,3}$/) && newData.parent().parent().parent().parent().child('quizzes').child($quizId).child('questions').child($questionId).child('choices').child(newData.val() + '').exists()"
           }
         },
         "$other": {
@@ -493,10 +532,10 @@
     },
     "quizzesByOwner": {
       "$uid": {
-        ".read": "auth != null && $uid === auth.uid",
+        ".read": "auth != null && $uid === auth.uid && root.child('accounts').child(auth.uid).child('status').val() === 'ready' && root.child('accounts').child(auth.uid).child('privacy').child('currentVersion').val() === 'privacy-2026-11-17-quiz-integrity-1' && root.child('accounts').child(auth.uid).child('privacy').child('acknowledgements').child('privacy-2026-11-17-quiz-integrity-1').val() === root.child('accounts').child(auth.uid).child('privacy').child('acknowledgedAt').val()",
         "$quizId": {
-          ".write": "auth != null && $uid === auth.uid && !data.exists() && newData.exists() && $quizId.matches(/^[A-Za-z0-9_-]{1,128}$/)",
-          ".validate": "newData.hasChildren(['code', 'title', 'createdAt']) && newData.child('code').isString() && newData.child('code').val().matches(/^[A-Z0-9]{4}-[A-Z0-9]{4}$/) && newData.child('title').isString() && newData.child('title').val().length >= 1 && newData.child('title').val().length <= 160 && newData.child('createdAt').isNumber() && newData.child('createdAt').val() >= now - 60000 && newData.child('createdAt').val() <= now + 60000",
+          ".write": "auth != null && $uid === auth.uid && root.child('accounts').child(auth.uid).child('status').val() === 'ready' && root.child('accounts').child(auth.uid).child('privacy').child('currentVersion').val() === 'privacy-2026-11-17-quiz-integrity-1' && root.child('accounts').child(auth.uid).child('privacy').child('acknowledgements').child('privacy-2026-11-17-quiz-integrity-1').val() === root.child('accounts').child(auth.uid).child('privacy').child('acknowledgedAt').val() && root.child('accounts').child(auth.uid).child('role').val() === 'teacher' && !data.exists() && newData.exists() && $quizId.matches(/^[A-Za-z0-9_-]{1,128}$/)",
+          ".validate": "newData.hasChildren(['code', 'title', 'createdAt']) && newData.child('code').isString() && newData.child('code').val().matches(/^[A-Z0-9]{4}-[A-Z0-9]{4}$/) && newData.child('title').isString() && newData.child('title').val().length >= 1 && newData.child('title').val().length <= 160 && newData.child('createdAt').isNumber() && newData.child('createdAt').val() >= now - 60000 && newData.child('createdAt').val() <= now + 60000 && newData.child('integrity').exists() === newData.parent().parent().parent().child('quizzes').child($quizId).child('integrity').exists() && (!newData.child('integrity').exists() || (newData.child('integrity').child('enabled').val() === newData.parent().parent().parent().child('quizzes').child($quizId).child('integrity').child('enabled').val() && newData.child('integrity').child('noticeVersion').val() === newData.parent().parent().parent().child('quizzes').child($quizId).child('integrity').child('noticeVersion').val() && newData.child('integrity').child('authorityAcknowledgedAt').val() === newData.parent().parent().parent().child('quizzes').child($quizId).child('integrity').child('authorityAcknowledgedAt').val()))",
           "code": {
             ".validate": "newData.isString() && newData.val().matches(/^[A-Z0-9]{4}-[A-Z0-9]{4}$/)"
           },
@@ -505,6 +544,21 @@
           },
           "createdAt": {
             ".validate": "newData.isNumber()"
+          },
+          "integrity": {
+            ".validate": "newData.hasChildren(['enabled', 'noticeVersion', 'authorityAcknowledgedAt'])",
+            "enabled": {
+              ".validate": "newData.val() === true"
+            },
+            "noticeVersion": {
+              ".validate": "newData.isString() && newData.val() === 'quiz-integrity-v1'"
+            },
+            "authorityAcknowledgedAt": {
+              ".validate": "newData.isNumber() && newData.val() % 1 === 0 && newData.val() > 0 && newData.val() >= now - 60000 && newData.val() <= now + 60000"
+            },
+            "$other": {
+              ".validate": false
+            }
           },
           "$other": {
             ".validate": false
@@ -536,15 +590,15 @@
           ".validate": "newData.isNumber() && newData.val() >= now - 60000 && newData.val() <= now + 60000"
         },
         "privacy": {
-          ".validate": "newData.hasChildren(['currentVersion', 'acknowledgedAt', 'acknowledgements']) && newData.child('currentVersion').val() === 'privacy-2026-11-15-school-quizzes-1' && newData.child('acknowledgedAt').isNumber() && newData.child('acknowledgements').child('privacy-2026-11-15-school-quizzes-1').val() === newData.child('acknowledgedAt').val()",
+          ".validate": "newData.hasChildren(['currentVersion', 'acknowledgedAt', 'acknowledgements']) && newData.child('currentVersion').val() === 'privacy-2026-11-17-quiz-integrity-1' && newData.child('acknowledgedAt').isNumber() && newData.child('acknowledgements').child('privacy-2026-11-17-quiz-integrity-1').val() === newData.child('acknowledgedAt').val()",
           "currentVersion": {
-            ".validate": "newData.val() === 'privacy-2026-11-15-school-quizzes-1'"
+            ".validate": "newData.val() === 'privacy-2026-11-17-quiz-integrity-1'"
           },
           "acknowledgedAt": {
             ".validate": "newData.isNumber()"
           },
           "acknowledgements": {
-            "privacy-2026-11-15-school-quizzes-1": {
+            "privacy-2026-11-17-quiz-integrity-1": {
               ".validate": "newData.isNumber()"
             },
             "$other": {
@@ -608,7 +662,7 @@
         ".read": "auth != null && $uid === auth.uid",
         ".write": "auth != null && $uid === auth.uid && !newData.exists()",
         "$sessionId": {
-          ".write": "auth != null && $uid === auth.uid && (!newData.exists() || (newData.val() === true && newData.parent().parent().parent().child('accounts').child(auth.uid).child('status').val() === 'ready' && newData.parent().parent().parent().child('accounts').child(auth.uid).child('privacy').child('currentVersion').val() === 'privacy-2026-11-15-school-quizzes-1' && newData.parent().parent().parent().child('accounts').child(auth.uid).child('preferences').child('presence').val() === true))",
+          ".write": "auth != null && $uid === auth.uid && (!newData.exists() || (newData.val() === true && newData.parent().parent().parent().child('accounts').child(auth.uid).child('status').val() === 'ready' && newData.parent().parent().parent().child('accounts').child(auth.uid).child('privacy').child('currentVersion').val() === 'privacy-2026-11-17-quiz-integrity-1' && newData.parent().parent().parent().child('accounts').child(auth.uid).child('preferences').child('presence').val() === true))",
           ".validate": "!newData.exists() || newData.val() === true",
           "$other": {
             ".validate": false

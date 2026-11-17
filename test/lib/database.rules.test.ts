@@ -16,12 +16,13 @@ const SHARE_ID = 'share-example'
 const PORTAL_CODE = '0123456789AB'
 const ROTATED_PORTAL_CODE = 'CDEFGHJKMNPQ'
 const PORTAL_LIFETIME_MS = 30 * 24 * 60 * 60 * 1000
-const PRIVACY_VERSION = 'privacy-2026-11-15-school-quizzes-1'
+const PRIVACY_VERSION = 'privacy-2026-11-17-quiz-integrity-1'
 
 function accountRecord(
   uid: string,
   nickname: string,
   preferences = { discoverable: false, presence: false },
+  role?: 'student' | 'teacher',
 ) {
   const now = Date.now()
   return {
@@ -37,6 +38,7 @@ function accountRecord(
       acknowledgements: { [PRIVACY_VERSION]: now },
     },
     preferences,
+    ...(role ? { role, roleUpdatedAt: now } : {}),
   }
 }
 const ONLINE_DECK_ID = 'online-deck-example'
@@ -1036,21 +1038,57 @@ describeRules('quiz code rules', () => {
     return { quizId: 'quiz-one', ownerId, createdAt: now }
   }
 
-  it('lets any signed-in learner resolve codes, including missing ones', async () => {
+  async function seedQuizAccounts(): Promise<void> {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await update(ref(context.database()), {
+        [`accounts/${OWNER_ID}`]: accountRecord(OWNER_ID, 'Teacher_One', undefined, 'teacher'),
+        [`accounts/${RECIPIENT_ID}`]: accountRecord(RECIPIENT_ID, 'Student_One', undefined, 'student'),
+        [`accounts/${OUTSIDER_ID}`]: accountRecord(OUTSIDER_ID, 'Teacher_Two', undefined, 'teacher'),
+      })
+    })
+  }
+
+  it('denies every client code read, including exact keys and enumeration', async () => {
+    await seedQuizAccounts()
+    const teacherDatabase = testEnvironment.authenticatedContext(OWNER_ID).database()
     const learnerDatabase = testEnvironment.authenticatedContext(RECIPIENT_ID).database()
-    const missing = (await get(ref(learnerDatabase, `quizCodes/${CODE}`))).val()
-    expect(missing).toBeNull()
+    const unauthenticatedDatabase = testEnvironment.unauthenticatedContext().database()
+    await assertSucceeds(set(ref(teacherDatabase, `quizCodes/${CODE}`), quizCode(OWNER_ID)))
+
+    await assertFails(get(ref(learnerDatabase, `quizCodes/${CODE}`)))
+    await assertFails(get(ref(learnerDatabase, 'quizCodes/WXYZ-2345')))
+    await assertFails(get(ref(learnerDatabase, 'quizCodes')))
+    await assertFails(get(ref(unauthenticatedDatabase, `quizCodes/${CODE}`)))
+    await assertFails(get(ref(unauthenticatedDatabase, 'quizCodes')))
   })
 
-  it('allows only the owner to publish a well-formed code and rejects forgeries', async () => {
+  it('also denies stale, unready, and unauthenticated callers', async () => {
+    await seedQuizAccounts()
+    const teacherDatabase = testEnvironment.authenticatedContext(OWNER_ID).database()
+    await assertSucceeds(set(ref(teacherDatabase, `quizCodes/${CODE}`), quizCode(OWNER_ID)))
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await update(ref(context.database()), {
+        [`accounts/${RECIPIENT_ID}/privacy/currentVersion`]: 'privacy-stale',
+        [`accounts/${OUTSIDER_ID}/status`]: 'pending',
+      })
+    })
+
+    await assertFails(get(ref(testEnvironment.authenticatedContext(RECIPIENT_ID).database(), `quizCodes/${CODE}`)))
+    await assertFails(get(ref(testEnvironment.authenticatedContext(OUTSIDER_ID).database(), `quizCodes/${CODE}`)))
+    await assertFails(get(ref(testEnvironment.unauthenticatedContext().database(), `quizCodes/${CODE}`)))
+  })
+
+  it('allows only a ready/current teacher to publish a well-formed code', async () => {
+    await seedQuizAccounts()
     const ownerDatabase = testEnvironment.authenticatedContext(OWNER_ID).database()
     const outsiderDatabase = testEnvironment.authenticatedContext(OUTSIDER_ID).database()
+    const studentDatabase = testEnvironment.authenticatedContext(RECIPIENT_ID).database()
     const now = Date.now()
 
     await assertSucceeds(set(ref(ownerDatabase, `quizCodes/${CODE}`), quizCode(OWNER_ID, now)))
-    await assertSucceeds(get(ref(testEnvironment.authenticatedContext(RECIPIENT_ID).database(), `quizCodes/${CODE}`)))
-
+    await assertFails(set(ref(studentDatabase, 'quizCodes/IJKL-MNOP'), quizCode(RECIPIENT_ID, now)))
     await assertFails(set(ref(outsiderDatabase, `quizCodes/${CODE}`), quizCode(OUTSIDER_ID, now)))
+    await assertFails(set(ref(ownerDatabase, `quizCodes/${CODE}`), quizCode(OWNER_ID, now)))
     await assertFails(set(ref(ownerDatabase, 'quizCodes/NOTACODE'), quizCode(OWNER_ID, now)))
     await assertFails(set(ref(ownerDatabase, 'quizCodes/ABCD-EFGH'), { ...quizCode(OWNER_ID, now), ownerId: OUTSIDER_ID }))
   })
@@ -1062,7 +1100,7 @@ describeRules('quiz creation rules', () => {
 
   // Timestamps are computed per test: the ±60s freshness windows in the rules
   // reject values captured at module-load time, long before slow suites finish.
-  function quizRecord(ownerId: string, now: number = Date.now()) {
+  function quizRecord(ownerId: string, now: number = Date.now(), integrity?: unknown) {
     return {
       id: QUIZ_ID,
       ownerId,
@@ -1072,9 +1110,10 @@ describeRules('quiz creation rules', () => {
       questions: {
         q_0: { prompt: 'What is ATP?', choices: { 0: 'Energy currency', 1: 'A protein' } },
         q_1: { prompt: 'Pick B', choices: { 0: 'A', 1: 'B', 2: 'C' } },
-      },
+      } as Record<string, { prompt: string; choices: Record<string, string> }>,
       createdAt: now,
       updatedAt: now,
+      ...(integrity === undefined ? {} : { integrity }),
     }
   }
 
@@ -1082,49 +1121,201 @@ describeRules('quiz creation rules', () => {
     return { ownerId, correct: { q_0: 0, q_1: 1 } }
   }
 
-  it('lets a teacher publish a quiz, answer key, code, and index in one atomic write', async () => {
-    const ownerDatabase = testEnvironment.authenticatedContext(OWNER_ID).database()
-    const now = Date.now()
-    await assertSucceeds(update(ref(ownerDatabase), {
-      [`quizzes/${QUIZ_ID}`]: quizRecord(OWNER_ID, now),
+  async function seedQuizAccounts(options: { ownerRole?: 'student' | 'teacher'; staleOwner?: boolean } = {}): Promise<void> {
+    const owner = accountRecord(OWNER_ID, 'Teacher_One', undefined, options.ownerRole ?? 'teacher')
+    if (options.staleOwner) owner.privacy.currentVersion = 'privacy-stale'
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await update(ref(context.database()), {
+        [`accounts/${OWNER_ID}`]: owner,
+        [`accounts/${RECIPIENT_ID}`]: accountRecord(RECIPIENT_ID, 'Student_One', undefined, 'student'),
+        [`accounts/${OUTSIDER_ID}`]: accountRecord(OUTSIDER_ID, 'Teacher_Two', undefined, 'student'),
+      })
+    })
+  }
+
+  function creationUpdates(now: number, integrity?: unknown): Record<string, unknown> {
+    const integrityFields = integrity === undefined ? {} : { integrity }
+    return {
+      [`quizzes/${QUIZ_ID}`]: quizRecord(OWNER_ID, now, integrity),
       [`quizAnswers/${QUIZ_ID}`]: answerKey(OWNER_ID),
       [`quizCodes/${CODE}`]: { quizId: QUIZ_ID, ownerId: OWNER_ID, createdAt: now },
-      [`quizzesByOwner/${OWNER_ID}/${QUIZ_ID}`]: { code: CODE, title: 'Cell quiz', createdAt: now },
-    }))
+      [`quizzesByOwner/${OWNER_ID}/${QUIZ_ID}`]: { code: CODE, title: 'Cell quiz', createdAt: now, ...integrityFields },
+    }
+  }
+
+  it('lets a ready/current teacher publish a legacy-compatible quiz atomically', async () => {
+    await seedQuizAccounts()
+    const ownerDatabase = testEnvironment.authenticatedContext(OWNER_ID).database()
+    await assertSucceeds(update(ref(ownerDatabase), creationUpdates(Date.now())))
   })
 
-  it('keeps the answer key owner-only while quiz content stays readable', async () => {
+  it('accepts the exact enabled Integrity Mode object on quiz and owner index', async () => {
+    await seedQuizAccounts()
+    const ownerDatabase = testEnvironment.authenticatedContext(OWNER_ID).database()
+    const now = Date.now()
+    const integrity = { enabled: true, noticeVersion: 'quiz-integrity-v1', authorityAcknowledgedAt: now }
+    await assertSucceeds(update(ref(ownerDatabase), creationUpdates(now, integrity)))
+  })
+
+  it('rejects malformed, disabled, stale, extra-field, and mismatched Integrity Mode objects', async () => {
+    const ownerDatabase = testEnvironment.authenticatedContext(OWNER_ID).database()
+    const malformedPolicies: unknown[] = [
+      { enabled: false, noticeVersion: 'quiz-integrity-v1', authorityAcknowledgedAt: Date.now() },
+      { enabled: true, noticeVersion: 'quiz-integrity-v2', authorityAcknowledgedAt: Date.now() },
+      { enabled: true, noticeVersion: 'quiz-integrity-v1' },
+      { enabled: true, noticeVersion: 'quiz-integrity-v1', authorityAcknowledgedAt: Date.now() - 120000 },
+      { enabled: true, noticeVersion: 'quiz-integrity-v1', authorityAcknowledgedAt: Date.now(), extra: true },
+    ]
+    for (const integrity of malformedPolicies) {
+      await seedQuizAccounts()
+      await assertFails(update(ref(ownerDatabase), creationUpdates(Date.now(), integrity)))
+      await testEnvironment.clearDatabase()
+    }
+
+    const validPolicy = { enabled: true, noticeVersion: 'quiz-integrity-v1', authorityAcknowledgedAt: Date.now() }
+    const malformedIndexes: Array<unknown | null> = [
+      null,
+      { enabled: false, noticeVersion: 'quiz-integrity-v1', authorityAcknowledgedAt: Date.now() },
+      { enabled: true, noticeVersion: 'quiz-integrity-v2', authorityAcknowledgedAt: Date.now() },
+      { enabled: true, noticeVersion: 'quiz-integrity-v1' },
+      { enabled: true, noticeVersion: 'quiz-integrity-v1', authorityAcknowledgedAt: Date.now(), extra: true },
+      { enabled: true, noticeVersion: 'quiz-integrity-v1', authorityAcknowledgedAt: Date.now() + 1 },
+    ]
+    for (const integrity of malformedIndexes) {
+      await seedQuizAccounts()
+      const now = Date.now()
+      const updates = creationUpdates(now, validPolicy)
+      updates[`quizzesByOwner/${OWNER_ID}/${QUIZ_ID}`] = integrity === null
+        ? { code: CODE, title: 'Cell quiz', createdAt: now }
+        : { code: CODE, title: 'Cell quiz', createdAt: now, integrity }
+      await assertFails(update(ref(ownerDatabase), updates))
+      await testEnvironment.clearDatabase()
+    }
+  })
+
+  it('requires a ready/current self-asserted teacher on every quiz creation path', async () => {
+    const ownerDatabase = testEnvironment.authenticatedContext(OWNER_ID).database()
+    await seedQuizAccounts({ ownerRole: 'student' })
+    await assertFails(update(ref(ownerDatabase), creationUpdates(Date.now())))
+
+    await testEnvironment.clearDatabase()
+    await seedQuizAccounts({ staleOwner: true })
+    await assertFails(update(ref(ownerDatabase), creationUpdates(Date.now())))
+
+    await testEnvironment.clearDatabase()
+    await assertFails(update(ref(ownerDatabase), creationUpdates(Date.now())))
+  })
+
+  it('keeps quiz content and answer keys owner-only for current-ready accounts', async () => {
+    await seedQuizAccounts()
     const ownerDatabase = testEnvironment.authenticatedContext(OWNER_ID).database()
     const learnerDatabase = testEnvironment.authenticatedContext(RECIPIENT_ID).database()
     await assertSucceeds(set(ref(ownerDatabase, `quizzes/${QUIZ_ID}`), quizRecord(OWNER_ID)))
     await assertSucceeds(set(ref(ownerDatabase, `quizAnswers/${QUIZ_ID}`), answerKey(OWNER_ID)))
 
-    await assertSucceeds(get(ref(learnerDatabase, `quizzes/${QUIZ_ID}`)))
+    await assertSucceeds(get(ref(ownerDatabase, `quizzes/${QUIZ_ID}`)))
+    await assertSucceeds(get(ref(ownerDatabase, `quizAnswers/${QUIZ_ID}`)))
+    await assertFails(get(ref(learnerDatabase, `quizzes/${QUIZ_ID}`)))
     await assertFails(get(ref(learnerDatabase, `quizAnswers/${QUIZ_ID}`)))
     await assertFails(get(ref(learnerDatabase, `quizzesByOwner/${OWNER_ID}`)))
+
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await set(ref(context.database(), `accounts/${OWNER_ID}/privacy/currentVersion`), 'privacy-stale')
+    })
+    await assertFails(get(ref(ownerDatabase, `quizzes/${QUIZ_ID}`)))
+    await assertFails(get(ref(ownerDatabase, `quizAnswers/${QUIZ_ID}`)))
   })
 
-  it('rejects overwrites, forged owners, oversized quizzes, and bad shapes', async () => {
+  it('rejects incomplete, extra, non-integer, and out-of-range answer keys', async () => {
+    const ownerDatabase = testEnvironment.authenticatedContext(OWNER_ID).database()
+    const malformedKeys: Record<string, unknown>[] = [
+      { ownerId: OWNER_ID, correct: { q_0: 0 } },
+      { ownerId: OWNER_ID, correct: { q_0: 0, q_1: 1, q_2: 0 } },
+      { ownerId: OWNER_ID, correct: { q_0: 0.5, q_1: 1 } },
+      { ownerId: OWNER_ID, correct: { q_0: 2, q_1: 1 } },
+      { ownerId: OWNER_ID, correct: { q_0: 0, bad: 1 } },
+    ]
+    for (const key of malformedKeys) {
+      await seedQuizAccounts()
+      await assertSucceeds(set(ref(ownerDatabase, `quizzes/${QUIZ_ID}`), quizRecord(OWNER_ID)))
+      await assertFails(set(ref(ownerDatabase, `quizAnswers/${QUIZ_ID}`), key))
+      await testEnvironment.clearDatabase()
+    }
+  })
+
+  it('rejects overwrites, forged owners, oversized quizzes, fractional counts, and malformed shapes', async () => {
+    await seedQuizAccounts()
     const ownerDatabase = testEnvironment.authenticatedContext(OWNER_ID).database()
     const outsiderDatabase = testEnvironment.authenticatedContext(OUTSIDER_ID).database()
     await assertSucceeds(set(ref(ownerDatabase, `quizzes/${QUIZ_ID}`), quizRecord(OWNER_ID)))
 
     // Quizzes are immutable in v1 — even the owner cannot rewrite one.
     await assertFails(set(ref(ownerDatabase, `quizzes/${QUIZ_ID}`), quizRecord(OWNER_ID)))
-    await assertFails(set(ref(outsiderDatabase, 'quizzes/quiz_forged'), quizRecord(OUTSIDER_ID)))
+    const forged = quizRecord(OUTSIDER_ID)
+    forged.id = 'quiz_forged'
+    await assertFails(set(ref(outsiderDatabase, 'quizzes/quiz_forged'), forged))
     // Space is a valid RTDB path character but violates the quiz-ID pattern.
-    await assertFails(set(ref(ownerDatabase, 'quizzes/quiz_bad id'), quizRecord(OWNER_ID)))
+    const badId = quizRecord(OWNER_ID)
+    badId.id = 'quiz_bad id'
+    await assertFails(set(ref(ownerDatabase, 'quizzes/quiz_bad id'), badId))
 
     const oversized = quizRecord(OWNER_ID)
+    oversized.id = 'quiz_oversized'
+    oversized.questionCount = 51
+    oversized.questions = {}
     for (let index = 0; index < 51; index += 1) oversized.questions[`q_${index}`] = { prompt: 'x', choices: { 0: 'a', 1: 'b' } }
     await assertFails(set(ref(ownerDatabase, 'quizzes/quiz_oversized'), oversized))
+
+    const fractional = quizRecord(OWNER_ID)
+    fractional.id = 'quiz_fractional'
+    fractional.questionCount = 2.5
+    await assertFails(set(ref(ownerDatabase, 'quizzes/quiz_fractional'), fractional))
+
+    const mismatchedCount = quizRecord(OWNER_ID)
+    mismatchedCount.id = 'quiz_mismatched'
+    mismatchedCount.questionCount = 1
+    await assertFails(set(ref(ownerDatabase, 'quizzes/quiz_mismatched'), mismatchedCount))
+
+    const gappedQuestions = quizRecord(OWNER_ID)
+    gappedQuestions.id = 'quiz_gapped'
+    gappedQuestions.questionCount = 3
+    gappedQuestions.questions.q_2 = gappedQuestions.questions.q_1
+    delete gappedQuestions.questions.q_1
+    await assertFails(set(ref(ownerDatabase, 'quizzes/quiz_gapped'), gappedQuestions))
+
+    const tooFewChoices = quizRecord(OWNER_ID)
+    tooFewChoices.id = 'quiz_few_choices'
+    tooFewChoices.questions.q_0.choices = { 0: 'Only' }
+    await assertFails(set(ref(ownerDatabase, 'quizzes/quiz_few_choices'), tooFewChoices))
+
+    const tooManyChoices = quizRecord(OWNER_ID)
+    tooManyChoices.id = 'quiz_many_choices'
+    tooManyChoices.questions.q_0.choices = { 0: 'A', 1: 'B', 2: 'C', 3: 'D', 4: 'E' }
+    await assertFails(set(ref(ownerDatabase, 'quizzes/quiz_many_choices'), tooManyChoices))
+
+    const badQuestionKey = quizRecord(OWNER_ID)
+    badQuestionKey.id = 'quiz_bad_question'
+    badQuestionKey.questions.bad = badQuestionKey.questions.q_1
+    delete badQuestionKey.questions.q_1
+    await assertFails(set(ref(ownerDatabase, 'quizzes/quiz_bad_question'), badQuestionKey))
+
+    const highQuestionKey = quizRecord(OWNER_ID)
+    highQuestionKey.id = 'quiz_high_question'
+    highQuestionKey.questions.q_50 = { prompt: 'Out of range', choices: { 0: 'A', 1: 'B' } }
+    await assertFails(set(ref(ownerDatabase, 'quizzes/quiz_high_question'), highQuestionKey))
+
+    const badChoiceKey = quizRecord(OWNER_ID)
+    badChoiceKey.id = 'quiz_bad_choice'
+    badChoiceKey.questions.q_0.choices = { 0: 'A', 4: 'B' }
+    await assertFails(set(ref(ownerDatabase, 'quizzes/quiz_bad_choice'), badChoiceKey))
   })
 })
 
-describeRules('quiz attempt and stats rules', () => {
+describeRules('quiz attempt, integrity-event, and stats rules', () => {
   const QUIZ_ID = 'quiz_test-quiz'
+  const RETENTION_MS = 30 * 24 * 60 * 60 * 1000
 
-  function quizRecord(ownerId: string, now = Date.now()) {
+  function quizRecord(ownerId: string, now = Date.now(), integrity = false) {
     return {
       id: QUIZ_ID,
       ownerId,
@@ -1136,6 +1327,7 @@ describeRules('quiz attempt and stats rules', () => {
       },
       createdAt: now,
       updatedAt: now,
+      ...(integrity ? { integrity: { enabled: true, noticeVersion: 'quiz-integrity-v1', authorityAcknowledgedAt: now } } : {}),
     }
   }
 
@@ -1158,18 +1350,98 @@ describeRules('quiz attempt and stats rules', () => {
     }
   }
 
-  async function seedQuizWithAttempt() {
+  function activeV2Attempt(now = Date.now()) {
+    return {
+      schemaVersion: 2,
+      status: 'active',
+      attemptId: 'attempt-one',
+      sessionId: 'session-one',
+      uid: RECIPIENT_ID,
+      nickname: 'StudentA',
+      quizId: QUIZ_ID,
+      quizTitle: 'Cell quiz',
+      startedAt: now,
+      questionOrder: ['q_0', 'q_1'],
+      currentIndex: 0,
+      questionStartedAt: now,
+      deadlineAt: now + 30000,
+      answers: {},
+      timings: {},
+      answerOperations: {},
+    }
+  }
+
+  function completedIntegrityAttempt(now = Date.now(), deleteAfter = now + RETENTION_MS) {
+    return {
+      ...activeV2Attempt(now - 1000),
+      status: 'completed',
+      currentIndex: 2,
+      questionStartedAt: now - 500,
+      deadlineAt: now + 29500,
+      answers: { q_0: 0, q_1: 1 },
+      integrity: {
+        enabled: true,
+        noticeVersion: 'quiz-integrity-v1',
+        fullscreenStart: 'entered',
+        authorityAcknowledgedAt: now - 1000,
+        deleteAfter,
+      },
+      completedAt: now,
+      correctCount: 2,
+      questionCount: 2,
+      score: 100,
+      passed: true,
+      gradedAt: now,
+      breakdown: attemptRecord('StudentA', now).breakdown,
+      integritySummary: { eventCount: 1, monitoringLimited: false, deleteAfter },
+    }
+  }
+
+  function integrityEvent(now = Date.now()) {
+    return {
+      eventId: 'event-one',
+      attemptId: 'attempt-one',
+      type: 'page-hidden',
+      startedAt: now - 5000,
+      endedAt: now - 2000,
+      questionId: 'q_0',
+      sequence: 0,
+      receivedAt: now,
+      durationMs: 3000,
+    }
+  }
+
+  async function seedQuizData(options: { activeV2?: boolean; integrity?: boolean; expired?: boolean } = {}) {
+    const now = Date.now()
+    const integrity = options.integrity === true
+    const deleteAfter = options.expired ? now - 1 : now + RETENTION_MS
     await testEnvironment.withSecurityRulesDisabled(async (context) => {
       const database = context.database()
-      await set(ref(database, `quizzes/${QUIZ_ID}`), { ...quizRecord(OWNER_ID), id: QUIZ_ID })
-      await set(ref(database, `quizAttempts/${QUIZ_ID}/${RECIPIENT_ID}`), attemptRecord())
-      await set(ref(database, `roleStats/${RECIPIENT_ID}`), { quizzesTaken: 1, quizzesPassed: 1, currentStreak: 1, bestStreak: 1, totalCorrect: 2, totalQuestions: 2 })
-      await set(ref(database, `badges/${RECIPIENT_ID}/perfect-round`), { awardedAt: Date.now(), type: 'auto' })
+      await update(ref(database), {
+        [`accounts/${OWNER_ID}`]: accountRecord(OWNER_ID, 'Teacher_One', undefined, 'teacher'),
+        [`accounts/${RECIPIENT_ID}`]: accountRecord(RECIPIENT_ID, 'Student_One', undefined, 'student'),
+        [`accounts/${OUTSIDER_ID}`]: accountRecord(OUTSIDER_ID, 'Other_User', undefined, 'student'),
+        [`quizzes/${QUIZ_ID}`]: quizRecord(OWNER_ID, now, integrity),
+        [`quizAttempts/${QUIZ_ID}/${RECIPIENT_ID}`]: options.activeV2
+          ? activeV2Attempt(now)
+          : integrity ? completedIntegrityAttempt(now, deleteAfter) : attemptRecord('StudentA', now),
+        [`roleStats/${RECIPIENT_ID}`]: {
+          quizzesTaken: 1,
+          quizzesPassed: 1,
+          currentStreak: 1,
+          bestStreak: 1,
+          totalCorrect: 2,
+          totalQuestions: 2,
+          appliedAttempts: { [QUIZ_ID]: 'attempt-one' },
+        },
+        [`badges/${RECIPIENT_ID}/perfect-round`]: { awardedAt: now, type: 'auto' },
+        ...(integrity ? { [`quizAttemptEvents/${QUIZ_ID}/${RECIPIENT_ID}/event-one`]: integrityEvent(now) } : {}),
+      })
     })
   }
 
-  it('lets the quiz owner and the subject read an attempt, and denies outsiders', async () => {
-    await seedQuizWithAttempt()
+  it('lets a current subject and quiz owner read legacy attempts, and denies outsiders', async () => {
+    await seedQuizData()
     const ownerDatabase = testEnvironment.authenticatedContext(OWNER_ID).database()
     const subjectDatabase = testEnvironment.authenticatedContext(RECIPIENT_ID).database()
     const outsiderDatabase = testEnvironment.authenticatedContext(OUTSIDER_ID).database()
@@ -1179,23 +1451,67 @@ describeRules('quiz attempt and stats rules', () => {
     await assertFails(get(ref(outsiderDatabase, `quizAttempts/${QUIZ_ID}/${RECIPIENT_ID}`)))
   })
 
-  it('rejects every client write to attempts, role stats, and badges (admin grading only)', async () => {
-    await seedQuizWithAttempt()
+  it('keeps active schema-version 2 attempts readable to their subject and quiz owner', async () => {
+    await seedQuizData({ activeV2: true })
+    await assertSucceeds(get(ref(testEnvironment.authenticatedContext(RECIPIENT_ID).database(), `quizAttempts/${QUIZ_ID}/${RECIPIENT_ID}`)))
+    await assertSucceeds(get(ref(testEnvironment.authenticatedContext(OWNER_ID).database(), `quizAttempts/${QUIZ_ID}/${RECIPIENT_ID}`)))
+  })
+
+  it('requires current privacy acknowledgement for attempt and stats reads', async () => {
+    await seedQuizData()
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await set(ref(context.database(), `accounts/${RECIPIENT_ID}/privacy/currentVersion`), 'privacy-stale')
+    })
+    const subjectDatabase = testEnvironment.authenticatedContext(RECIPIENT_ID).database()
+    await assertFails(get(ref(subjectDatabase, `quizAttempts/${QUIZ_ID}/${RECIPIENT_ID}`)))
+    await assertFails(get(ref(subjectDatabase, `roleStats/${RECIPIENT_ID}`)))
+  })
+
+  it('allows exact unexpired integrity logs to the subject and quiz owner only', async () => {
+    await seedQuizData({ integrity: true })
+    const path = `quizAttemptEvents/${QUIZ_ID}/${RECIPIENT_ID}`
+    await assertSucceeds(get(ref(testEnvironment.authenticatedContext(RECIPIENT_ID).database(), path)))
+    await assertSucceeds(get(ref(testEnvironment.authenticatedContext(OWNER_ID).database(), path)))
+    await assertFails(get(ref(testEnvironment.authenticatedContext(OUTSIDER_ID).database(), path)))
+    await assertFails(get(ref(testEnvironment.unauthenticatedContext().database(), path)))
+  })
+
+  it('denies integrity root and quiz-parent enumeration and expired logs', async () => {
+    await seedQuizData({ integrity: true })
     const subjectDatabase = testEnvironment.authenticatedContext(RECIPIENT_ID).database()
     const ownerDatabase = testEnvironment.authenticatedContext(OWNER_ID).database()
+    await assertFails(get(ref(subjectDatabase, 'quizAttemptEvents')))
+    await assertFails(get(ref(ownerDatabase, `quizAttemptEvents/${QUIZ_ID}`)))
+
+    await testEnvironment.clearDatabase()
+    await seedQuizData({ integrity: true, expired: true })
+    await assertFails(get(ref(subjectDatabase, `quizAttemptEvents/${QUIZ_ID}/${RECIPIENT_ID}`)))
+    await assertFails(get(ref(ownerDatabase, `quizAttemptEvents/${QUIZ_ID}/${RECIPIENT_ID}`)))
+  })
+
+  it('denies every client write to attempts, integrity logs, role stats, and badges', async () => {
+    await seedQuizData({ integrity: true })
+    const subjectDatabase = testEnvironment.authenticatedContext(RECIPIENT_ID).database()
+    const ownerDatabase = testEnvironment.authenticatedContext(OWNER_ID).database()
+    const eventsPath = `quizAttemptEvents/${QUIZ_ID}/${RECIPIENT_ID}`
 
     await assertFails(set(ref(subjectDatabase, `quizAttempts/${QUIZ_ID}/${RECIPIENT_ID}`), attemptRecord('Forged', Date.now())))
+    await assertFails(set(ref(subjectDatabase, `${eventsPath}/forged-event`), integrityEvent()))
+    await assertFails(update(ref(subjectDatabase, eventsPath), { 'forged-event': integrityEvent() }))
+    await assertFails(set(ref(subjectDatabase, eventsPath), null))
+    await assertFails(set(ref(ownerDatabase, `${eventsPath}/owner-forged`), integrityEvent()))
     await assertFails(update(ref(subjectDatabase, `roleStats/${RECIPIENT_ID}`), { quizzesTaken: 9999 }))
     await assertFails(set(ref(subjectDatabase, `badges/${RECIPIENT_ID}/perfect-round`), { awardedAt: Date.now(), type: 'auto' }))
     await assertFails(set(ref(ownerDatabase, `badges/${OWNER_ID}/founders-pick`), { awardedAt: Date.now(), type: 'granted' }))
   })
 
-  it('lets only the subject read their own role stats and badges', async () => {
-    await seedQuizWithAttempt()
+  it('lets only the subject read role stats including internal applied-attempt markers and their badges', async () => {
+    await seedQuizData()
     const subjectDatabase = testEnvironment.authenticatedContext(RECIPIENT_ID).database()
     const outsiderDatabase = testEnvironment.authenticatedContext(OUTSIDER_ID).database()
 
-    await assertSucceeds(get(ref(subjectDatabase, `roleStats/${RECIPIENT_ID}`)))
+    const stats = (await get(ref(subjectDatabase, `roleStats/${RECIPIENT_ID}`))).val()
+    expect(stats.appliedAttempts).toEqual({ [QUIZ_ID]: 'attempt-one' })
     await assertSucceeds(get(ref(subjectDatabase, `badges/${RECIPIENT_ID}`)))
     await assertFails(get(ref(outsiderDatabase, `roleStats/${RECIPIENT_ID}`)))
     await assertFails(get(ref(outsiderDatabase, `badges/${RECIPIENT_ID}`)))
