@@ -38,21 +38,16 @@ describe('privacy-version configuration drift', () => {
     }
   })
 
-  it('keeps the Functions source/runtime and documented server environment contract deployable', () => {
+  it('keeps Firebase deployment rules-only and documents server environment names', () => {
     const firebaseConfig = JSON.parse(source('firebase.json')) as {
-      functions?: { source?: unknown; runtime?: unknown; predeploy?: unknown }
+      functions?: unknown
+      database?: { rules?: unknown }
+      emulators?: Record<string, unknown>
     }
-    const functionsPackage = JSON.parse(source('functions/package.json')) as {
-      engines?: { node?: unknown }
-    }
-    const nodeMajor = functionsPackage.engines?.node
 
-    expect(typeof nodeMajor).toBe('string')
-    expect(firebaseConfig.functions).toEqual({
-      source: 'functions',
-      runtime: `nodejs${nodeMajor}`,
-      predeploy: ['npm --prefix functions run build'],
-    })
+    expect(firebaseConfig.functions).toBeUndefined()
+    expect(firebaseConfig.database).toEqual({ rules: 'database.rules.json' })
+    expect(firebaseConfig.emulators).not.toHaveProperty('functions')
 
     const environmentExample = source('.env.example')
     expect(environmentExample).not.toMatch(/^\s*(?:export\s+)?(?:set\s+)?DOTENV_CONFIG_PATH\s*=/mi)
@@ -68,8 +63,12 @@ describe('privacy-version configuration drift', () => {
       expect(declarations, `${name} must appear exactly once without a committed value`).toHaveLength(1)
     }
 
+    const packageJson = JSON.parse(source('package.json')) as { scripts?: Record<string, unknown> }
+    expect(packageJson.scripts).not.toHaveProperty('deploy:functions')
+    expect(packageJson.scripts?.emulators).toBe('firebase emulators:start --only database')
+
     const readme = source('README.md')
-    expect(readme).toContain('npm run deploy:functions')
-    expect(readme).toContain('Node.js 22 Functions source from `functions/`')
+    expect(readme).not.toContain('npm run deploy:functions')
+    expect(readme).toContain('Firebase deployment is intentionally limited to Realtime Database rules')
   })
 })

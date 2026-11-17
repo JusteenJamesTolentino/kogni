@@ -14,8 +14,7 @@
     "test": "vitest run --exclude functions/**",
     "test:functions": "npm --prefix functions test",
     "test:rules": "firebase emulators:exec --only database --config firebase.test.json --project demo-kognit-rules \"vitest run test/lib/database.rules.test.ts\"",
-    "emulators": "firebase emulators:start --only database,functions",
-    "deploy:functions": "firebase deploy --only functions",
+    "emulators": "firebase emulators:start --only database",
     "preview": "next start"
   },
   "dependencies": {

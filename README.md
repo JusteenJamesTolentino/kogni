@@ -27,7 +27,7 @@ copy .env.example .env.local
 cp .env.example .env.local
 ```
 
-Configure the public Firebase web values and server-only Firebase Admin, Functions, and R2 values in `.env.local`:
+Configure the public Firebase web values and server-only Firebase Admin and R2 values in `.env.local`:
 
 ```dotenv
 NEXT_PUBLIC_FIREBASE_API_KEY=your_firebase_web_api_key
@@ -52,7 +52,7 @@ R2_SECRET_ACCESS_KEY=your_r2_secret_access_key
 R2_PUBLIC_URL=https://your-public-r2-host.example
 ```
 
-`NEXT_PUBLIC_*` Firebase values identify the web app and are not server secrets. `FIREBASE_*` Admin credentials and `R2_*` credentials are server-only; never expose them through public variables or commit `.env.local`. `KOGNIT_PRIVACY_VERSION` is a non-secret Functions/Next.js server setting: leave it unset to use the code default, or set it to exactly `privacy-2026-11-17-quiz-integrity-1`. The account export, API default, Functions default, Realtime Database rules, privacy notice, and deployment value must stay aligned; `test/lib/privacy-version.test.ts` guards this contract.
+`NEXT_PUBLIC_*` Firebase values identify the web app and are not server secrets. `FIREBASE_*` Admin credentials and `R2_*` credentials are server-only; never expose them through public variables or commit `.env.local`. `KOGNIT_PRIVACY_VERSION` is a non-secret Next.js server setting: leave it unset to use the code default, or set it to exactly `privacy-2026-11-17-quiz-integrity-1`. The account export, API default, Realtime Database rules, privacy notice, and deployment value must stay aligned; `test/lib/privacy-version.test.ts` guards this contract.
 
 ## Architecture & Data Flow
 
@@ -66,7 +66,6 @@ Signed-in browser
   │    ├─ immutable quizzes, owner-only answer keys, exact code lookup, and owner indexes
   │    ├─ server-owned quiz attempts and optional 30-day Integrity Mode signal logs
   │    └─ private account and privacy acknowledgement
-  ├─ Firebase Cloud Functions (`functions/`) ── trusted projections and social callables
   ├─ Next.js quiz APIs ── Firebase Admin ── timed attempts, grading, and integrity signals
   ├─ Next.js /api/decks ── Firebase Admin ── owner-only deck metadata
   ├─ Gemini API (optional BYOK generation from the browser)
@@ -80,7 +79,7 @@ The owner-only `GET /api/decks` endpoint authenticates a Firebase ID token, requ
 
 Quiz creation is a client-side atomic multi-location write and requires a ready/current account whose self-asserted role is `teacher`. It stores immutable answer-free content, an owner-only answer key, a join code, and an owner index. Roles are honor-system labels rather than verified school authority. Client reads of the code collection and learner reads of quiz content are denied; quiz owners retain direct access for roster rendering. The trusted resolve API performs exact code lookup and returns metadata only, and the start/answer APIs reveal one current question at a time.
 
-Timed quiz state is written only by trusted Next.js API code through Firebase Admin. The start/answer flow owns each 30-second per-question deadline, grades the result, and idempotently updates private statistics. When the Functions package is deployed, a daily cleanup advances abandoned attempts after their final deadline and physically removes expired raw signal logs; until then, expired logs are inaccessible under database rules but remain stored. Optional Integrity Mode is off by default. When enabled, the browser sends bounded focus/page-visibility, fullscreen, browser-reported connection, and session-replacement observations to trusted API routes; the server supplies receipt times. The student and quiz owner can read exact unexpired logs, while every client write to attempts and logs is denied. Raw signal access expires 30 days after grading.
+Timed quiz state is written only by trusted Next.js API code through Firebase Admin. The start/answer flow owns each 30-second per-question deadline, grades the result, and idempotently updates private statistics. Optional Integrity Mode is off by default. When enabled, the browser sends bounded focus/page-visibility, fullscreen, browser-reported connection, and session-replacement observations to trusted API routes; the server supplies receipt times. The student and quiz owner can read exact unexpired logs, while every client write to attempts and logs is denied. Raw signal access expires 30 days after grading. Physical cleanup must run from the chosen free Next.js host or another free scheduler; Firebase Functions are intentionally not configured.
 
 Legacy recovery is the only path that reads `FlashcardAppDB`. It lists existing device decks without modifying them, shows a content preview, and creates a deterministic private cloud copy only after confirmation. The original cards and schedule stay in IndexedDB unchanged, while the cloud schedule begins fresh.
 
@@ -103,26 +102,24 @@ Available verification commands:
 | `npm run typecheck` | Check browser and Next.js API TypeScript. |
 | `npm run lint` | Lint `src/` and `app/` with Oxlint. |
 | `npm run test` | Run the Vitest suite outside `functions/`. |
-| `npm run test:functions` | Run Functions tests. |
+| `npm run test:functions` | Run tests for the shared pure server modules under `functions/`; they are not deployed as Firebase Functions. |
 | `npm run test:rules` | Run Realtime Database authorization tests in the demo emulator. |
-| `npm run deploy:functions` | Build and deploy the Node.js 22 Functions source from `functions/` via the Firebase predeploy hook. |
 | `npm run build` | Create the production Next.js build. |
 | `npm run preview` | Serve the production build locally. |
 
 ### Deployment and privacy version
 
-Build and test with the same non-secret privacy version expected at runtime. The checked-in default is `privacy-2026-11-17-quiz-integrity-1`; if `KOGNIT_PRIVACY_VERSION` is supplied to Next.js or Firebase Functions, set exactly that value before deploying. Deploy Functions and Realtime Database rules as separate reviewed operations.
+Build and test with the same non-secret privacy version expected at runtime. The checked-in default is `privacy-2026-11-17-quiz-integrity-1`; if `KOGNIT_PRIVACY_VERSION` is supplied to the Next.js host, set exactly that value. Firebase deployment is intentionally limited to Realtime Database rules and does not configure Functions, Cloud Build, Artifact Registry, or Cloud Scheduler.
 
 ```bash
 npm run test
 npm run test:functions
 npm run test:rules
 npm run build
-npm run deploy:functions
-# Rules deployment is a separate reviewed operator step.
+firebase deploy --only database --project kogni-ai
 ```
 
-A version bump intentionally gates stale accounts until they acknowledge the revised Integrity Mode disclosure. Do not deploy mismatched app, API, Functions, or rules versions. Deploying Functions adds `reconcileQuizAttemptProjection` for retry-safe rank/badge effects and `cleanupQuizIntegrityRetention` for daily abandoned-attempt completion and raw-log deletion. Firebase requires the Blaze plan plus Cloud Build, Artifact Registry, and Cloud Scheduler APIs for this deployment.
+A version bump intentionally gates stale accounts until they acknowledge the revised Integrity Mode disclosure. Do not deploy mismatched app/API and rules versions. The `functions/` directory currently contains shared pure server logic and tests imported by the Next.js backend; it is not a Firebase Functions deployment source.
 
 ### Deck lifecycle
 
@@ -224,7 +221,7 @@ The presigned upload deliberately pins only `Content-Type` and `Content-Length` 
 - Quiz publication retries an atomic write with a fresh code up to five times when rules return permission denied (the indistinguishable code-collision signal). Persistent permission errors—such as a stale privacy acknowledgement or non-teacher role—surface after the bounded retries.
 - Integrity signals can be missing, delayed, blocked, duplicated, or forged and never alter scores automatically. They cannot expose other tabs/apps, split-view content, screens/devices, camera, microphone, screen recordings, keystrokes, location, IP address, or a device fingerprint.
 - Server-owned 30-second question deadlines continue while hidden, suspended, or offline. Answers not received by the server by the deadline expire; local/offline timestamps do not make them timely.
-- The student and quiz owner can read an exact Integrity Mode log until its 30-day expiration timestamp. The deployable daily cleanup completes abandoned attempts and deletes expired raw logs; it is not active until Functions are deployed, and backups follow separately reviewed retention.
+- The student and quiz owner can read an exact Integrity Mode log until its 30-day expiration timestamp. Database rules deny access after expiry. Physical cleanup must be scheduled on the chosen free Next.js host or another free scheduler because Firebase Functions are intentionally disabled.
 - Learner reads of quiz codes and quiz content are denied; quiz owners retain direct read access to their own immutable content and roster. The authenticated resolve API performs one exact code lookup and discloses metadata only, and start/answer responses reveal one current question at a time.
 - Quiz roles are honor-system labels. They must not be treated as verified teacher/student identity or institutional authorization.
 - `KOGNIT_PRIVACY_VERSION` must be configured consistently on every deployed server surface. A stale host value fails closed and will reject otherwise current accounts until corrected.
